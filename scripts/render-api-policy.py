@@ -16,7 +16,7 @@ policy = {"apiVersion": "networking.k8s.io/v1", "kind": "NetworkPolicy",
           "metadata": {"name": "traefik-api-access"},
           "spec": {"podSelector": {"matchLabels": {"app": "traefik"}}, "policyTypes": ["Egress"],
                    "egress": [{"to": networks, "ports": [{"protocol": "TCP", "port": 443},
-                                                          {"protocol": "TCP", "port": 6443}]}]}}
+                                                         {"protocol": "TCP", "port": 6443}]}]}}
 root = Path(__file__).resolve().parent.parent
 (root / "infra/.generated-api-policy.yaml").write_text(json.dumps(policy, indent=2) + "\n")
 print("Rendered API egress restricted to", ", ".join(addresses))

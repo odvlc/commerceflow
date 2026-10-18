@@ -10,26 +10,27 @@ import org.springframework.stereotype.Component;
 
 @Component
 @ConditionalOnProperty(
-    name = {"commerceflow.messaging.enabled", "catalog.search.enabled"},
-    havingValue = "true",
-    matchIfMissing = true)
+        name = {"commerceflow.messaging.enabled", "catalog.search.enabled"},
+        havingValue = "true",
+        matchIfMissing = true)
 public class SearchConsumer {
-  private final ProductSearch search;
-  private final EventCodec codec;
 
-  public SearchConsumer(ProductSearch search, EventCodec codec) {
-    this.search = search;
-    this.codec = codec;
-  }
+    private final ProductSearch search;
+    private final EventCodec codec;
 
-  @KafkaListener(topics = Topics.CATALOG, groupId = "catalog-search-v1")
-  public void handle(ConsumerRecord<String, String> record) {
-    var event = codec.decode(record);
-    if (!event.eventType().equals("ProductChanged"))
-      throw new IllegalArgumentException("Unexpected catalog event");
-    var product = codec.payload(event, ProductChanged.class);
-    if (!product.id().equals(event.aggregateId()))
-      throw new IllegalArgumentException("Product id differs from aggregate");
-    search.index(product);
-  }
+    public SearchConsumer(ProductSearch search, EventCodec codec) {
+        this.search = search;
+        this.codec = codec;
+    }
+
+    @KafkaListener(topics = Topics.CATALOG, groupId = "catalog-search-v1")
+    public void handle(ConsumerRecord<String, String> record) {
+        var event = codec.decode(record);
+        if (!event.eventType().equals("ProductChanged"))
+            throw new IllegalArgumentException("Unexpected catalog event");
+        var product = codec.payload(event, ProductChanged.class);
+        if (!product.id().equals(event.aggregateId()))
+            throw new IllegalArgumentException("Product id differs from aggregate");
+        search.index(product);
+    }
 }

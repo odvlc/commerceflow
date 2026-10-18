@@ -1,6 +1,7 @@
 package com.commerceflow.catalog.domain;
 
 import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -8,98 +9,103 @@ import java.util.UUID;
 @Entity
 @Table(name = "products")
 public class Product {
-  @Id private UUID id;
-  private String sku;
-  private String name;
 
-  @Column(length = 4000)
-  private String description;
+    @Id
+    private UUID id;
+    private String sku;
+    private String name;
 
-  private String category;
+    @Column(length = 4000)
+    private String description;
 
-  @Column(precision = 19, scale = 2)
-  private BigDecimal price;
+    private String category;
 
-  private String currency;
-  private boolean active;
-  @Version private Long version;
-  private Instant createdAt;
-  private Instant updatedAt;
-  private String idempotencyKey;
-  private String requestHash;
+    @Column(precision = 19, scale = 2)
+    private BigDecimal price;
 
-  protected Product() {}
+    private String currency;
+    private boolean active;
 
-  public Product(UUID id, String idempotencyKey, String requestHash) {
-    this.id = id;
-    this.idempotencyKey = idempotencyKey;
-    this.requestHash = requestHash;
-    this.createdAt = Instant.now();
-  }
+    @Version
+    private Long version;
+    private Instant createdAt;
+    private Instant updatedAt;
+    private String idempotencyKey;
+    private String requestHash;
 
-  public void revise(
-      String sku,
-      String name,
-      String description,
-      String category,
-      BigDecimal price,
-      String currency,
-      boolean active) {
-    this.sku = sku;
-    this.name = name;
-    this.description = description;
-    this.category = category;
-    this.price = price;
-    this.currency = currency;
-    this.active = active;
-    this.updatedAt = Instant.now();
-  }
+    protected Product() {
+    }
 
-  public UUID getId() {
-    return id;
-  }
+    public Product(UUID id, String idempotencyKey, String requestHash) {
+        this.id = id;
+        this.idempotencyKey = idempotencyKey;
+        this.requestHash = requestHash;
+        this.createdAt = Instant.now();
+    }
 
-  public String getSku() {
-    return sku;
-  }
+    public void revise(
+            String sku,
+            String name,
+            String description,
+            String category,
+            BigDecimal price,
+            String currency,
+            boolean active) {
+        this.sku = sku;
+        this.name = name;
+        this.description = description;
+        this.category = category;
+        this.price = price;
+        this.currency = currency;
+        this.active = active;
+        this.updatedAt = Instant.now();
+    }
 
-  public String getName() {
-    return name;
-  }
+    public UUID getId() {
+        return id;
+    }
 
-  public String getDescription() {
-    return description;
-  }
+    public String getSku() {
+        return sku;
+    }
 
-  public String getCategory() {
-    return category;
-  }
+    public String getName() {
+        return name;
+    }
 
-  public BigDecimal getPrice() {
-    return price;
-  }
+    public String getDescription() {
+        return description;
+    }
 
-  public String getCurrency() {
-    return currency;
-  }
+    public String getCategory() {
+        return category;
+    }
 
-  public boolean isActive() {
-    return active;
-  }
+    public BigDecimal getPrice() {
+        return price;
+    }
 
-  public Long getVersion() {
-    return version;
-  }
+    public String getCurrency() {
+        return currency;
+    }
 
-  public Instant getCreatedAt() {
-    return createdAt;
-  }
+    public boolean isActive() {
+        return active;
+    }
 
-  public Instant getUpdatedAt() {
-    return updatedAt;
-  }
+    public Long getVersion() {
+        return version;
+    }
 
-  public String getRequestHash() {
-    return requestHash;
-  }
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public String getRequestHash() {
+        return requestHash;
+    }
 }

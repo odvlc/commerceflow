@@ -8,7 +8,8 @@ import org.springframework.context.annotation.Import;
 @SpringBootApplication
 @Import(ServiceConfiguration.class)
 public class OrderApplication {
-  public static void main(String[] args) {
-    SpringApplication.run(OrderApplication.class, args);
-  }
+
+    public static void main(String[] args) {
+        SpringApplication.run(OrderApplication.class, args);
+    }
 }

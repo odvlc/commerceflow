@@ -5,7 +5,7 @@
     "name": "namespace-boundary"
   },
   "spec": {
-    "podSelector": {},
+    "podSelector": { },
     "policyTypes": [
       "Ingress",
       "Egress"
@@ -14,7 +14,7 @@
       {
         "from": [
           {
-            "podSelector": {}
+            "podSelector": { }
           }
         ]
       }
@@ -23,7 +23,7 @@
       {
         "to": [
           {
-            "podSelector": {}
+            "podSelector": { }
           }
         ]
       },

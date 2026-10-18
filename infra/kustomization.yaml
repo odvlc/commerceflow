@@ -13,17 +13,17 @@ generatorOptions:
   disableNameSuffixHash: true
 secretGenerator:
   - name: commerceflow-secrets
-    envs: [.env]
+    envs: [ .env ]
 configMapGenerator:
   - name: postgres-init
-    files: [postgres/init.sh]
+    files: [ postgres/init.sh ]
   - name: keycloak-realm
-    files: [keycloak/commerceflow-realm.json]
+    files: [ keycloak/commerceflow-realm.json ]
   - name: prometheus-config
-    files: [prometheus.yaml=.generated-prometheus.yaml,prometheus/alerts.yaml]
+    files: [ prometheus.yaml=.generated-prometheus.yaml,prometheus/alerts.yaml ]
   - name: grafana-datasource
-    files: [grafana/provisioning/datasources/prometheus.yaml]
+    files: [ grafana/provisioning/datasources/prometheus.yaml ]
   - name: grafana-provider
-    files: [grafana/provisioning/dashboards/dashboards.yaml]
+    files: [ grafana/provisioning/dashboards/dashboards.yaml ]
   - name: grafana-dashboards
-    files: [grafana/dashboards/service-health.json,grafana/dashboards/order-processing.json]
+    files: [ grafana/dashboards/service-health.json,grafana/dashboards/order-processing.json ]

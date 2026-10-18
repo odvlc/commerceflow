@@ -76,12 +76,12 @@ jobs:
           .cache/tools/kustomize build infra > .cache/verification/kubernetes.yaml
           .cache/tools/kubeconform -strict -summary .cache/verification/kubernetes.yaml
   docker:
-    needs: [verify, manifests]
+    needs: [ verify, manifests ]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        module: [catalog-service,cart-service,order-service,inventory-service,payment-service,notification-service,api-gateway,frontend]
+        module: [ catalog-service,cart-service,order-service,inventory-service,payment-service,notification-service,api-gateway,frontend ]
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: docker/setup-buildx-action@v4.4.1

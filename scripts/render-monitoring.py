@@ -33,9 +33,11 @@ else:
     provisioning = directory / "provisioning"
     (provisioning / "datasources").mkdir(parents=True, exist_ok=True)
     (provisioning / "dashboards").mkdir(parents=True, exist_ok=True)
-    datasource = (root / "infra/grafana/provisioning/datasources/prometheus.yaml").read_text().replace("http://prometheus:9090", "http://localhost:9090")
+    datasource = (root / "infra/grafana/provisioning/datasources/prometheus.yaml").read_text().replace(
+        "http://prometheus:9090", "http://localhost:9090")
     (provisioning / "datasources/prometheus.yaml").write_text(datasource)
-    provider = (root / "infra/grafana/provisioning/dashboards/dashboards.yaml").read_text().replace("/var/lib/grafana/dashboards", str(root / "infra/grafana/dashboards"))
+    provider = (root / "infra/grafana/provisioning/dashboards/dashboards.yaml").read_text().replace(
+        "/var/lib/grafana/dashboards", str(root / "infra/grafana/dashboards"))
     (provisioning / "dashboards/dashboards.yaml").write_text(provider)
     (directory / "grafana.ini").write_text(f"""[server]
 http_addr = 127.0.0.1

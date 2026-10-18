@@ -58,7 +58,8 @@ token = login()
 def call(path, method="GET", body=None, headers=None):
     request_headers = {"Authorization": "Bearer " + token, "Content-Type": "application/json", **(headers or {})}
     data = None if body is None else json.dumps(body).encode()
-    with urlopen(Request(api + "/api/v1" + path, data=data, headers=request_headers, method=method), timeout=15) as response:
+    with urlopen(Request(api + "/api/v1" + path, data=data, headers=request_headers, method=method),
+                 timeout=15) as response:
         return json.load(response)
 
 
@@ -78,8 +79,10 @@ if len(sys.argv) < 2 or sys.argv[1] == "seed":
         product = existing.get(sku)
         if product is None:
             product = call("/admin/products", "POST", {"sku": sku, "name": name, "category": category,
-                           "description": "A considered essential for everyday life.", "price": price,
-                           "currency": "USD", "active": True}, {"Idempotency-Key": "commerceflow-demo-" + sku})
+                                                       "description": "A considered essential for everyday life.",
+                                                       "price": price,
+                                                       "currency": "USD", "active": True},
+                           {"Idempotency-Key": "commerceflow-demo-" + sku})
         try:
             stock = call("/admin/inventory/" + product["id"])
             if stock["reservedQuantity"]:

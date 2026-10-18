@@ -134,7 +134,7 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": {}
+            "emptyDir": { }
           }
         ],
         "initContainers": [
@@ -327,7 +327,7 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": {}
+            "emptyDir": { }
           }
         ]
       }
@@ -495,7 +495,7 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": {}
+            "emptyDir": { }
           }
         ],
         "initContainers": [
@@ -705,7 +705,7 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": {}
+            "emptyDir": { }
           }
         ],
         "initContainers": [
@@ -915,7 +915,7 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": {}
+            "emptyDir": { }
           }
         ],
         "initContainers": [
@@ -1125,7 +1125,7 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": {}
+            "emptyDir": { }
           }
         ],
         "initContainers": [
@@ -1342,7 +1342,7 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": {}
+            "emptyDir": { }
           }
         ]
       }
@@ -1418,7 +1418,7 @@
                 "memory": "128Mi"
               }
             },
-            "env": [],
+            "env": [ ],
             "securityContext": {
               "runAsNonRoot": true,
               "runAsUser": 101,
@@ -1468,7 +1468,7 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": {}
+            "emptyDir": { }
           }
         ]
       }

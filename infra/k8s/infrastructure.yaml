@@ -391,7 +391,7 @@
             }
           }
         ],
-        "volumes": [],
+        "volumes": [ ],
         "securityContext": {
           "fsGroup": 1000
         }
@@ -506,7 +506,7 @@
                 "memory": "384Mi"
               }
             },
-            "env": [],
+            "env": [ ],
             "volumeMounts": [
               {
                 "name": "data",
@@ -551,7 +551,7 @@
             }
           }
         ],
-        "volumes": [],
+        "volumes": [ ],
         "securityContext": {
           "fsGroup": 1000
         }
@@ -710,7 +710,7 @@
             }
           }
         ],
-        "volumes": [],
+        "volumes": [ ],
         "securityContext": {
           "fsGroup": 1000
         }
@@ -989,7 +989,7 @@
                 "memory": "384Mi"
               }
             },
-            "env": [],
+            "env": [ ],
             "volumeMounts": [
               {
                 "name": "data",

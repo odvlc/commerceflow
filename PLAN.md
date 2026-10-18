@@ -1,15 +1,24 @@
 # CommerceFlow implementation plan
 
-The scope and phase order come from `CODEX_PROMPT.md`. A checked box means implemented **and verified**; unchecked includes partial work. Each phase depends on the preceding phase; additional dependencies appear below. Runtime blockers do not count as successful validation.
+The scope and phase order come from `CODEX_PROMPT.md`. A checked box means implemented **and verified**; unchecked
+includes partial work. Each phase depends on the preceding phase; additional dependencies appear below. Runtime blockers
+do not count as successful validation.
 
-**Current state (2026-10-17):** all seven applications and the frontend run against real native infrastructure. The final reactor passes 43 tests with no failures or skips; frontend lint/build, 2 unit tests and 4 Chrome cases pass. Phases 2–10 have native execution evidence. Phases 1, 11–13 retain deployment/remote-CI acceptance checks because Docker, kind and kubectl are absent. [Executed verification](docs/verification.md) distinguishes these limits from source/schema validation.
+**Current state (2026-10-17):** all seven applications and the frontend run against real native infrastructure. The
+final reactor passes 43 tests with no failures or skips; frontend lint/build, 2 unit tests and 4 Chrome cases pass.
+Phases 2–10 have native execution evidence. Phases 1, 11–13 retain deployment/remote-CI acceptance checks because
+Docker, kind and kubectl are absent. [Executed verification](docs/verification.md) distinguishes these limits from
+source/schema validation.
 
 ## Phase 1 — Maven repository and local infrastructure
 
 - [x] Inspect repository/specification and create persistent engineering rules (`AGENTS.md`).
 - [x] Verify official dependency/image compatibility and record pins and sources (runtime image checks remain blocked).
-- [x] Build Java 25 Maven parent, contracts module, wrapper, reproducible test configuration, and service build conventions.
-- [x] Configure PostgreSQL with separate service databases/users, Kafka internal/external listeners, Redis, Elasticsearch, and Keycloak; persistent volumes, health checks, localhost ports, lightweight profiles, local-only credentials (Compose configuration validated).
+- [x] Build Java 25 Maven parent, contracts module, wrapper, reproducible test configuration, and service build
+  conventions.
+- [x] Configure PostgreSQL with separate service databases/users, Kafka internal/external listeners, Redis,
+  Elasticsearch, and Keycloak; persistent volumes, health checks, localhost ports, lightweight profiles, local-only
+  credentials (Compose configuration validated).
 - [x] Compile/test the Maven reactor and validate the full Compose configuration.
 - [ ] Start container infrastructure and verify its health (Docker runtime absent).
 - Acceptance: reproducible Maven build and healthy local infrastructure; no shared service database credentials.
@@ -17,17 +26,22 @@ The scope and phase order come from `CODEX_PROMPT.md`. A checked box means imple
 ## Phase 2 — Catalog Service and PostgreSQL
 
 - [x] Implement Flyway products/categories/outbox schema, constraints, indexes, JPA versioning and repositories.
-- [x] Implement catalog list/detail and admin create/update with typed DTOs, validation, pagination, errors, correlation IDs, OpenAPI and transactional writes.
-- [x] Implement integration/HTTP tests against real PostgreSQL including rollback, constraints, stale-version rejection, concurrent idempotency and validation.
+- [x] Implement catalog list/detail and admin create/update with typed DTOs, validation, pagination, errors, correlation
+  IDs, OpenAPI and transactional writes.
+- [x] Implement integration/HTTP tests against real PostgreSQL including rollback, constraints, stale-version rejection,
+  concurrent idempotency and validation.
 - [x] Build, migrate, run and smoke-test the catalog in the Spring integration context; record evidence.
 - Acceptance: real PostgreSQL-backed CRUD with trusted money and transactional outbox intent; no runtime mocks.
 
 ## Phase 3 — Order and Inventory Services
 
 - [x] Implement owned schemas for orders/items/saga steps/outbox/processed events and inventory/reservations.
-- [x] Implement trusted catalog pricing, request-hash idempotency, ownership-ready order queries, cancellation and explicit transitions.
-- [x] Implement atomic stock reservation/commit/release and idempotent operations, inventory administration and expiry reconciliation.
-- [x] Verify 100 reservations against stock 10 yield exactly 10 successes; test transactions, duplicate operations and legal transitions.
+- [x] Implement trusted catalog pricing, request-hash idempotency, ownership-ready order queries, cancellation and
+  explicit transitions.
+- [x] Implement atomic stock reservation/commit/release and idempotent operations, inventory administration and expiry
+  reconciliation.
+- [x] Verify 100 reservations against stock 10 yield exactly 10 successes; test transactions, duplicate operations and
+  legal transitions.
 - Acceptance: durable orders and reservations, no overselling, no cross-service SQL.
 
 ## Phase 4 — Kafka and transactional outbox
@@ -41,7 +55,8 @@ The scope and phase order come from `CODEX_PROMPT.md`. A checked box means imple
 ## Phase 5 — Payment Service and saga orchestration
 
 - [x] Implement simulated authorize/decline/timeout/delay/refund, payments/attempts schema and idempotency.
-- [x] Implement durable saga with reservation, payment, commitment, confirmation, release/cancellation and reconciliation.
+- [x] Implement durable saga with reservation, payment, commitment, confirmation, release/cancellation and
+  reconciliation.
 - [x] Verify success, insufficient stock, decline, timeout, late authorization, duplicate events and process restart.
 - Acceptance: correct final money/stock/order state under each failure; no double charge.
 
@@ -63,172 +78,295 @@ The scope and phase order come from `CODEX_PROMPT.md`. A checked box means imple
 ## Phase 8 — Keycloak and security
 
 - [x] Configure local realm, CUSTOMER/ADMIN/SUPPORT roles, public PKCE client and service identities.
-- [x] Implement gateway routing, JWT validation in all services, method/route authorization, ownership and service-to-service tokens.
+- [x] Implement gateway routing, JWT validation in all services, method/route authorization, ownership and
+  service-to-service tokens.
 - [x] Verify 401/403, cross-customer isolation, administrative access and issuer/audience behavior.
 - Acceptance: authenticated workflow with no custom identity/password system.
 
 ## Phase 9 — Notifications and React frontend
 
 - [x] Implement durable asynchronous local notifications and replay-safe consumption.
-- [x] Build responsive typed React/Vite application: catalog/search/details, cart, login/logout, checkout/history/status and admin products/stock/orders.
+- [x] Build responsive typed React/Vite application: catalog/search/details, cart, login/logout, checkout/history/status
+  and admin products/stock/orders.
 - [x] Implement accessible forms, validation/loading/errors, duplicate checkout protection and tests.
 - [x] Verify frontend lint/test/build and authenticated end-to-end purchase flows.
 - Acceptance: usable UI backed by real secured services and durable notifications.
 
 ## Phase 10 — Observability and load testing
 
-- [x] Implement Actuator, Micrometer, JSON logs, propagation and specified HTTP/JVM/DB/Kafka/outbox/saga/cache/search metrics; inspect authenticated live samples.
+- [x] Implement Actuator, Micrometer, JSON logs, propagation and specified HTTP/JVM/DB/Kafka/outbox/saga/cache/search
+  metrics; inspect authenticated live samples.
 - [x] Provision native Prometheus, Service Health and Order Processing dashboards, and four validated example alerts.
-- [x] Add reproducible k6 catalog/checkout scenarios and platform/virtual-thread configuration; execute both thread baselines and approval/decline checkout smoke runs.
-- [x] Verify seven scrape targets, dashboard queries and datasource health; record actual throughput, p95/p99, end-of-run memory, platform-thread and pool samples.
-- [ ] Extend short smoke measurements to repeated sustained runs, peak pool/memory sampling and virtual-thread population profiling (future performance work; no capacity claim).
+- [x] Add reproducible k6 catalog/checkout scenarios and platform/virtual-thread configuration; execute both thread
+  baselines and approval/decline checkout smoke runs.
+- [x] Verify seven scrape targets, dashboard queries and datasource health; record actual throughput, p95/p99,
+  end-of-run memory, platform-thread and pool samples.
+- [ ] Extend short smoke measurements to repeated sustained runs, peak pool/memory sampling and virtual-thread
+  population profiling (future performance work; no capacity claim).
 - Acceptance: meaningful live monitoring and reproducible measured benchmark artifacts.
 
 ## Phase 11 — Complete Docker Compose stack
 
-- [x] Add multi-stage application/frontend Dockerfiles and all application/monitoring services; validate configuration and compile/run the Java readiness helper.
-- [x] Validate profiles, environment references, dependency declarations, volumes and resource budgets with standalone Compose; check shell/Python syntax.
+- [x] Add multi-stage application/frontend Dockerfiles and all application/monitoring services; validate configuration
+  and compile/run the Java readiness helper.
+- [x] Validate profiles, environment references, dependency declarations, volumes and resource budgets with standalone
+  Compose; check shell/Python syntax.
 - [ ] Execute image builds and verify container probes, dependencies, resource behavior and service discovery.
 - [ ] Build/start full stack and run success/decline/search/cache/monitoring demonstration.
 - Acceptance: documented reproducible Compose startup on a 32 GB Mac.
 
 ## Phase 12 — Complete Kubernetes deployment
 
-- [x] Implement kind/Kustomize namespace, config/secrets templates, Deployments/Services/Ingress and stateful infrastructure/PVCs; render and schema-check all 61 resources.
-- [x] Configure schema-valid startup/readiness/liveness probes, resource limits, rollout strategy, HPAs and NetworkPolicies.
-- [x] Add syntax-checked local image loading/startup/teardown/diagnostics/recovery scripts and Kubernetes DNS; document single-node availability limits.
+- [x] Implement kind/Kustomize namespace, config/secrets templates, Deployments/Services/Ingress and stateful
+  infrastructure/PVCs; render and schema-check all 61 resources.
+- [x] Configure schema-valid startup/readiness/liveness probes, resource limits, rollout strategy, HPAs and
+  NetworkPolicies.
+- [x] Add syntax-checked local image loading/startup/teardown/diagnostics/recovery scripts and Kubernetes DNS; document
+  single-node availability limits.
 - [ ] Deploy and verify ingress, probes, rollouts, HPAs and CNI policy enforcement.
 - [ ] Execute restart/PVC durability and recovery demonstrations on kind.
 - Acceptance: working local kind deployment with persisted data after restarts.
 
 ## Phase 13 — Failure tests, CI, documentation and polish
 
-- [x] Execute critical failure scenarios 1–8 and the full native E2E suite; additionally restart the real Kafka broker over retained logs and recover a pending outbox command.
+- [x] Execute critical failure scenarios 1–8 and the full native E2E suite; additionally restart the real Kafka broker
+  over retained logs and recover a pending outbox command.
 - [ ] Execute critical scenario 9: Kubernetes service restarts preserve durable data.
-- [x] Add CI Java/frontend/integration checks and eight-image Docker build matrix; validate workflow with actionlint and shell syntax checks.
+- [x] Add CI Java/frontend/integration checks and eight-image Docker build matrix; validate workflow with actionlint and
+  shell syntax checks.
 - [ ] Execute GitHub Actions and its Docker builds (no Git repository/remote or Docker runtime configured here).
-- [x] Complete/review README, Mermaid architecture, data/API/event/security/observability docs, ADR, recovery guide and measured load results.
-- [x] Add and execute native five-minute successful/declined purchase, exact stock compensation, search/cache and provisioned Grafana demo.
+- [x] Complete/review README, Mermaid architecture, data/API/event/security/observability docs, ADR, recovery guide and
+  measured load results.
+- [x] Add and execute native five-minute successful/declined purchase, exact stock compensation, search/cache and
+  provisioned Grafana demo.
 - [ ] Execute the demonstration on the full Compose/kind deployment.
 - [x] Audit every final acceptance criterion and retain an explicit evidence/remaining-work matrix below.
 - Acceptance: reproducible setup, passing required checks and documented recovery; remaining limitations explicit.
 
 ## Execution log, decisions and blockers
 
-- Initial inspection (2026-10-17): only `CODEX_PROMPT.md` and IDE metadata exist; directory has no Git repository. Existing files preserved.
-- Java 25.0.4.1 is installed. `mvn`, `docker`, `kubectl`, and `kind` are not on PATH. Node/npm and Python are available. Initial sandbox request to Maven Central failed DNS resolution; investigate authorized network access and available local tooling before choosing a fallback.
-- Official Spring documentation reports Boot 4.1.1 supports Java 25 and Spring Data Elasticsearch 6.1.x aligns with Elasticsearch 9.4.5. Pin only after checking artifact availability; exact sources/results will be retained in `docs/dependencies.md`.
+- Initial inspection (2026-10-17): only `CODEX_PROMPT.md` and IDE metadata exist; directory has no Git repository.
+  Existing files preserved.
+- Java 25.0.4.1 is installed. `mvn`, `docker`, `kubectl`, and `kind` are not on PATH. Node/npm and Python are available.
+  Initial sandbox request to Maven Central failed DNS resolution; investigate authorized network access and available
+  local tooling before choosing a fallback.
+- Official Spring documentation reports Boot 4.1.1 supports Java 25 and Spring Data Elasticsearch 6.1.x aligns with
+  Elasticsearch 9.4.5. Pin only after checking artifact availability; exact sources/results will be retained in
+  `docs/dependencies.md`.
 
 ## Next action
 
-On a Docker-enabled Mac, execute `bash scripts/compose-up.sh`, repeat the documented demonstration and verify persisted volumes after restart. Then run `bash scripts/kind-up.sh`, diagnostics and recovery checks, including critical scenario 9. Verify image tags/pulls and runtime resource budgets during these runs. Initialize/connect Git only when desired, then execute the supplied CI. Longer performance trials are separate from the recorded smoke baselines. No outstanding runtime deployment task is marked complete.
+On a Docker-enabled Mac, execute `bash scripts/compose-up.sh`, repeat the documented demonstration and verify persisted
+volumes after restart. Then run `bash scripts/kind-up.sh`, diagnostics and recovery checks, including critical scenario
+
+9. Verify image tags/pulls and runtime resource budgets during these runs. Initialize/connect Git only when desired,
+   then execute the supplied CI. Longer performance trials are separate from the recorded smoke baselines. No
+   outstanding
+   runtime deployment task is marked complete.
 
 ### Phase 1 verification
 
 - `./mvnw -B verify`: PASS, 2 contract tests, Java 25, Boot 4.1.1.
-- Docker Compose v5.6.0 standalone `-f infra/compose.yaml --profile full config --quiet`: PASS. `bash -n infra/postgres/init.sh`: PASS.
-- Docker daemon/CLI and kind/kubectl absent, with no Docker socket. Infrastructure startup remains unchecked. Proceeding to Phase 2 under the specification’s environment-limits rule using real native PostgreSQL for integration tests.
+- Docker Compose v5.6.0 standalone `-f infra/compose.yaml --profile full config --quiet`: PASS.
+  `bash -n infra/postgres/init.sh`: PASS.
+- Docker daemon/CLI and kind/kubectl absent, with no Docker socket. Infrastructure startup remains unchecked. Proceeding
+  to Phase 2 under the specification’s environment-limits rule using real native PostgreSQL for integration tests.
 
 ### Phase 2 verification
 
-- `./mvnw -B verify`: PASS, 7 tests total (2 contracts, 5 catalog integration), no skips. Real native PostgreSQL 18.6.0, Flyway migration and Hibernate validation, full Spring HTTP stack via MockMvc; executable jar packaged.
-- Initial integration run failed on JDBC `Instant` binding; fixed with explicit SQL `Timestamp`, rerun passed. Tests include 20 concurrent retries producing exactly one product/outbox row, unique-SKU rollback including category, stale version conflict, deactivation, paging/input validation and OpenAPI generation.
-- Catalog search/cache remain their specified later phases. Early security baseline will be introduced with Phase 3 because order ownership needs authenticated identity. Keycloak realm provisioning and end-to-end login remain Phase 8.
+- `./mvnw -B verify`: PASS, 7 tests total (2 contracts, 5 catalog integration), no skips. Real native PostgreSQL 18.6.0,
+  Flyway migration and Hibernate validation, full Spring HTTP stack via MockMvc; executable jar packaged.
+- Initial integration run failed on JDBC `Instant` binding; fixed with explicit SQL `Timestamp`, rerun passed. Tests
+  include 20 concurrent retries producing exactly one product/outbox row, unique-SKU rollback including category, stale
+  version conflict, deactivation, paging/input validation and OpenAPI generation.
+- Catalog search/cache remain their specified later phases. Early security baseline will be introduced with Phase 3
+  because order ownership needs authenticated identity. Keycloak realm provisioning and end-to-end login remain Phase 8.
 
 ### Phase 3 verification
 
 - `./mvnw -B verify`: PASS, 19 tests, no skips. Catalog (5), inventory (5), order (7), contracts (2).
-- Real PostgreSQL: 100 concurrent reservation transactions against stock 10 yielded exactly 10 reservations and 90 rejections; stock stayed nonnegative. Also checked replay/release/commit accounting, multi-item rejection, cancellation tombstones and expiry reconciliation intent.
-- Orders: trusted catalog quote boundary (test mock only), 20 concurrent retries yield one order/event and one pricing call; price-service failure rolls back; HTTP ownership, ADMIN role, service scopes, 401/403/404 behavior and cancellation intent verified. Actual cross-process catalog pricing is not yet verified.
-- Added `service-support` library for database-local infrastructure/web/security helpers, with no JPA entities or foreign-service access. JWT issuer/audience/roles/scopes enforced; Keycloak realm/login still pending.
+- Real PostgreSQL: 100 concurrent reservation transactions against stock 10 yielded exactly 10 reservations and 90
+  rejections; stock stayed nonnegative. Also checked replay/release/commit accounting, multi-item rejection,
+  cancellation tombstones and expiry reconciliation intent.
+- Orders: trusted catalog quote boundary (test mock only), 20 concurrent retries yield one order/event and one pricing
+  call; price-service failure rolls back; HTTP ownership, ADMIN role, service scopes, 401/403/404 behavior and
+  cancellation intent verified. Actual cross-process catalog pricing is not yet verified.
+- Added `service-support` library for database-local infrastructure/web/security helpers, with no JPA entities or
+  foreign-service access. JWT issuer/audience/roles/scopes enforced; Keycloak realm/login still pending.
 
 ### Phase 4 verification
 
 - `./mvnw -B verify`: PASS, 23 tests, no skips, including 4 real KRaft Kafka + PostgreSQL delivery tests.
-- Replayed one Kafka event 5 times: one reservation, one consumer marker and one result event. Failed business effect rolled back its marker and succeeded on retry. Unreachable broker retained outbox rows; restoring delivery published in aggregate sequence. Malformed message reached the shared dead-letter topic after bounded retries.
-- Native test broker is real Apache Kafka, not a mock; container lifecycle checks remain blocked. Consumer retries are bounded; outbox retries continue with capped backoff to preserve committed events.
+- Replayed one Kafka event 5 times: one reservation, one consumer marker and one result event. Failed business effect
+  rolled back its marker and succeeded on retry. Unreachable broker retained outbox rows; restoring delivery published
+  in aggregate sequence. Malformed message reached the shared dead-letter topic after bounded retries.
+- Native test broker is real Apache Kafka, not a mock; container lifecycle checks remain blocked. Consumer retries are
+  bounded; outbox retries continue with capped backoff to preserve committed events.
 
 ### Phase 5 verification
 
-- `./mvnw -B verify`: PASS, 33 tests, no skips (contracts 2, catalog 5, inventory 9, order 7, payment 3, four-service workflow 7).
-- Four real HTTP applications, Kafka KRaft and one PostgreSQL server with four separately owned databases/roles exercised successful checkout, insufficient stock without charging, declined payment compensation, timeout cancellation, delayed result reconciliation, valid delayed authorization, repeated payment command and durable order-service restart.
-- Real signed JWTs validated against a test-only JWKS fixture: wrong issuer/audience denied, roles enforced, cross-customer access hidden. This does not verify Keycloak realm provisioning or PKCE login.
-- Payment tests: 20 concurrent authorizations produce one charge attempt, repeated cancellation produces one refund attempt, cancel-before-authorize prevents charging; 20 cancellation/settlement races end cancelled or refunded.
+- `./mvnw -B verify`: PASS, 33 tests, no skips (contracts 2, catalog 5, inventory 9, order 7, payment 3, four-service
+  workflow 7).
+- Four real HTTP applications, Kafka KRaft and one PostgreSQL server with four separately owned databases/roles
+  exercised successful checkout, insufficient stock without charging, declined payment compensation, timeout
+  cancellation, delayed result reconciliation, valid delayed authorization, repeated payment command and durable
+  order-service restart.
+- Real signed JWTs validated against a test-only JWKS fixture: wrong issuer/audience denied, roles enforced,
+  cross-customer access hidden. This does not verify Keycloak realm provisioning or PKCE login.
+- Payment tests: 20 concurrent authorizations produce one charge attempt, repeated cancellation produces one refund
+  attempt, cancel-before-authorize prevents charging; 20 cancellation/settlement races end cancelled or refunded.
 - Security errors now carry ProblemDetail and correlation IDs. No full Compose stack or frontend exists yet.
 
 ### Phase 6 verification
 
-- `./mvnw -B verify`: PASS, 36 tests, no skips. Five real HTTP applications and Redis 8.10.2 added to the four-service suite.
-- 100 concurrent cart increments retained all changes; replayed request key had one effect; user isolation, HTTP add/set/delete, TTL expiry and checkout using cart contents verified. Cart request deduplication is bounded to cart TTL and 1000 operations per live cart.
-- Catalog cache hits, after-commit invalidation, Kafka invalidation and stale-fill version fences verified. Checkout requests bypass cache and validate prices from PostgreSQL.
-- Stopping Redis produced explicit cart 503, while catalog fallback and a complete authoritative checkout still worked; cache failure metric incremented.
-- Initial top-level Redis build failed on optional modules; core-only `make -C src redis-server` succeeded. Reproducible test-tool bootstrap script pins the downloaded source checksum. Native Redis is used here; Testcontainers fallback compiles but cannot run without Docker.
+- `./mvnw -B verify`: PASS, 36 tests, no skips. Five real HTTP applications and Redis 8.10.2 added to the four-service
+  suite.
+- 100 concurrent cart increments retained all changes; replayed request key had one effect; user isolation, HTTP
+  add/set/delete, TTL expiry and checkout using cart contents verified. Cart request deduplication is bounded to cart
+  TTL and 1000 operations per live cart.
+- Catalog cache hits, after-commit invalidation, Kafka invalidation and stale-fill version fences verified. Checkout
+  requests bypass cache and validate prices from PostgreSQL.
+- Stopping Redis produced explicit cart 503, while catalog fallback and a complete authoritative checkout still worked;
+  cache failure metric incremented.
+- Initial top-level Redis build failed on optional modules; core-only `make -C src redis-server` succeeded. Reproducible
+  test-tool bootstrap script pins the downloaded source checksum. Native Redis is used here; Testcontainers fallback
+  compiles but cannot run without Docker.
 
 ### Phase 7 verification
 
-- `./mvnw -B verify`: PASS, 37 tests, no skips, with a real native Elasticsearch 9.4.5 server (bundled JVM 26) and Boot-managed Spring Data Elasticsearch 6.1.1/client 9.4.5.
-- Actual Kafka creation/update/deactivation became searchable; category/currency/price filters, text matching and sorting exercised. External PostgreSQL versions rejected an older replay. Full rebuild created a fresh mapped index and swapped read/write aliases while retaining deactivation tombstones. Search outage returned 503; catalog browsing and checkout still completed.
-- Initial search compilation found an ambiguous Timer import; fixed and full suite passed. Rebuild retains prior indices for explicit operator cleanup, and serializes with index consumers using a database advisory lock; PostgreSQL writes continue with durable follow-up events.
+- `./mvnw -B verify`: PASS, 37 tests, no skips, with a real native Elasticsearch 9.4.5 server (bundled JVM 26) and
+  Boot-managed Spring Data Elasticsearch 6.1.1/client 9.4.5.
+- Actual Kafka creation/update/deactivation became searchable; category/currency/price filters, text matching and
+  sorting exercised. External PostgreSQL versions rejected an older replay. Full rebuild created a fresh mapped index
+  and swapped read/write aliases while retaining deactivation tombstones. Search outage returned 503; catalog browsing
+  and checkout still completed.
+- Initial search compilation found an ambiguous Timer import; fixed and full suite passed. Rebuild retains prior indices
+  for explicit operator cleanup, and serializes with index consumers using a database advisory lock; PostgreSQL writes
+  continue with durable follow-up events.
 
 ### Phase 8 verification
 
-- `./mvnw -B verify`: PASS, 40 tests, no skips; real Keycloak 26.8.1 on a separately owned PostgreSQL database and Spring Cloud Gateway MVC 5.0.3 (Cloud BOM 2025.1.3) exercised. Official Cloud release documentation confirms Boot 4.1 compatibility. Requested newer BOM 2025.1.4 was absent from Maven Central; used the officially verified available 2025.1.3 release.
-- Real login-form Authorization Code + S256 PKCE exchange produced tokens used through gateway and directly at backends. Verified ADMIN mutations, CUSTOMER denial, ownership isolation, client-credentials internal scope, disabled password grant and rejected missing PKCE.
-- Tests caught realm imports lacking default roles/basic subject mappers; added explicit roles/username/basic scope and UUID-subject validation, and fixed the HTTP test client to preserve browser-style auth cookies. Full suite passed after fixes. Native test-tool bootstrap and updated full-profile Compose configuration validated.
+- `./mvnw -B verify`: PASS, 40 tests, no skips; real Keycloak 26.8.1 on a separately owned PostgreSQL database and
+  Spring Cloud Gateway MVC 5.0.3 (Cloud BOM 2025.1.3) exercised. Official Cloud release documentation confirms Boot 4.1
+  compatibility. Requested newer BOM 2025.1.4 was absent from Maven Central; used the officially verified available
+  2025.1.3 release.
+- Real login-form Authorization Code + S256 PKCE exchange produced tokens used through gateway and directly at backends.
+  Verified ADMIN mutations, CUSTOMER denial, ownership isolation, client-credentials internal scope, disabled password
+  grant and rejected missing PKCE.
+- Tests caught realm imports lacking default roles/basic subject mappers; added explicit roles/username/basic scope and
+  UUID-subject validation, and fixed the HTTP test client to preserve browser-style auth cookies. Full suite passed
+  after fixes. Native test-tool bootstrap and updated full-profile Compose configuration validated.
 
 ### Phase 9 verification
 
-- Java `./mvnw -B verify dependency:build-classpath -Dmdep.outputFile=target/test-classpath.txt -Dmdep.includeScope=test`: PASS, 41 tests, no skips. Notification replay/logical deduplication and customer isolation verified on its owned PostgreSQL database.
-- Frontend `npm run lint`, `npm test` (2 tests) and `npm run build`: PASS. Compatible pinned registry versions: React 19.3.1, Vite 8.3.4, TypeScript 6.0.3 (TypeScript 7 excluded because typescript-eslint requires <6.1), Keycloak JS 26.2.4.
-- Real Chrome `npm run test:e2e`: PASS, 3 tests against real native infrastructure and all seven applications: PKCE login, successful checkout, decline compensation and notifications, real search/mobile viewport, admin product creation and stock setting. Screenshot visually inspected at `.cache/verification/storefront.png`.
-- Fixed gateway routes to use explicit Java configuration rather than depend on application-resource ordering in multi-service tests. Fixed TypeScript UUID key inference, unit/E2E runner discovery boundaries, and the stock selector accessible name; reran affected checks successfully.
-- Native browser harness is ephemeral test infrastructure; it does not replace the required persistent Docker/Kubernetes deployments. Remaining operational runtime acceptance is blocked by missing Docker/kind. Proceeding with verifiable operational code/configuration and recording runtime checks separately.
+- Java
+  `./mvnw -B verify dependency:build-classpath -Dmdep.outputFile=target/test-classpath.txt -Dmdep.includeScope=test`:
+  PASS, 41 tests, no skips. Notification replay/logical deduplication and customer isolation verified on its owned
+  PostgreSQL database.
+- Frontend `npm run lint`, `npm test` (2 tests) and `npm run build`: PASS. Compatible pinned registry versions: React
+  19.3.1, Vite 8.3.4, TypeScript 6.0.3 (TypeScript 7 excluded because typescript-eslint requires <6.1), Keycloak JS
+  26.2.4.
+- Real Chrome `npm run test:e2e`: PASS, 3 tests against real native infrastructure and all seven applications: PKCE
+  login, successful checkout, decline compensation and notifications, real search/mobile viewport, admin product
+  creation and stock setting. Screenshot visually inspected at `.cache/verification/storefront.png`.
+- Fixed gateway routes to use explicit Java configuration rather than depend on application-resource ordering in
+  multi-service tests. Fixed TypeScript UUID key inference, unit/E2E runner discovery boundaries, and the stock selector
+  accessible name; reran affected checks successfully.
+- Native browser harness is ephemeral test infrastructure; it does not replace the required persistent Docker/Kubernetes
+  deployments. Remaining operational runtime acceptance is blocked by missing Docker/kind. Proceeding with verifiable
+  operational code/configuration and recording runtime checks separately.
 
 ### Phase 10 verification
 
-- Native Prometheus 3.15.0 scraped seven authenticated service endpoints; Grafana 13.2.4 provisioned both dashboards, datasource health passed, and a datasource-proxy query returned real order outcomes. `promtool check config` passed with four valid alert rules. Evidence is retained under `.cache/verification`.
-- k6 2.3.0, 10 users / 15 seconds / three catalog reads per iteration: virtual 4,051 requests, 268.00 requests/s, p95 6.60 ms, p99 11.01 ms; platform 4,081 requests, 270.03 requests/s, p95 6.19 ms, p99 9.20 ms. No failed HTTP requests. Both modes also ran the browser suite.
-- Real memory/platform-thread/pool samples and search/cache/Kafka processing observations are recorded in `docs/load-tests.md` and raw `docs/load-results` JSON. These short sequential shared-JVM runs are smoke baselines, not a statistically supported winner/capacity claim. Peak/under-load profiling remains unchecked.
-- Authenticated k6 checkout: two users, four approval iterations and four decline iterations; all 16 acceptance/outcome checks passed. Direct stock verification found exactly four committed units and zero remaining reservations.
+- Native Prometheus 3.15.0 scraped seven authenticated service endpoints; Grafana 13.2.4 provisioned both dashboards,
+  datasource health passed, and a datasource-proxy query returned real order outcomes. `promtool check config` passed
+  with four valid alert rules. Evidence is retained under `.cache/verification`.
+- k6 2.3.0, 10 users / 15 seconds / three catalog reads per iteration: virtual 4,051 requests, 268.00 requests/s, p95
+  6.60 ms, p99 11.01 ms; platform 4,081 requests, 270.03 requests/s, p95 6.19 ms, p99 9.20 ms. No failed HTTP requests.
+  Both modes also ran the browser suite.
+- Real memory/platform-thread/pool samples and search/cache/Kafka processing observations are recorded in
+  `docs/load-tests.md` and raw `docs/load-results` JSON. These short sequential shared-JVM runs are smoke baselines, not
+  a statistically supported winner/capacity claim. Peak/under-load profiling remains unchecked.
+- Authenticated k6 checkout: two users, four approval iterations and four decline iterations; all 16 acceptance/outcome
+  checks passed. Direct stock verification found exactly four committed units and zero remaining reservations.
 
 ### Phase 11 verification
 
-- Full standalone Compose 5.6.0 configuration validates after final changes. Every application has a multi-stage nonroot Java image, frontend a Node/nginx build; source includes persistent infrastructure, all services, profiles, health dependencies and monitoring. The Java readiness helper compiled and passed against an actual native endpoint.
-- Container image builds, pulls, health behavior, full startup, persistent restart and runtime resource budgets remain unexecuted: there is no Docker daemon/CLI/socket. Source validation and native app execution do not close those acceptance criteria.
+- Full standalone Compose 5.6.0 configuration validates after final changes. Every application has a multi-stage nonroot
+  Java image, frontend a Node/nginx build; source includes persistent infrastructure, all services, profiles, health
+  dependencies and monitoring. The Java readiness helper compiled and passed against an actual native endpoint.
+- Container image builds, pulls, health behavior, full startup, persistent restart and runtime resource budgets remain
+  unexecuted: there is no Docker daemon/CLI/socket. Source validation and native app execution do not close those
+  acceptance criteria.
 
 ### Phase 12 verification
 
-- `kustomize build infra` and `kubeconform -strict -summary`: PASS, 61 valid resources, zero invalid/errors/skips. Shell/Python syntax checks passed for render/startup/teardown/diagnostics/recovery scripts. These checks do not execute the scripts against a cluster.
-- Includes pinned kind node, service DNS, persistent infrastructure, app probes/budgets/rollouts, local image loading, ingress, HPAs, monitoring, namespace RBAC and NetworkPolicies. Controller API egress is generated from discovered exact private API addresses (/32 or /128); broad public egress is not used.
-- A broad controller-egress proposal was rejected by automatic approval review. It was replaced with the approved exact-address generation above; no approval remains outstanding. Default kind networking does not establish CNI enforcement.
-- No kind deployment, image loading, ingress/HPA/policy behavior or restart/PVC durability has executed because Docker, kind and kubectl are unavailable. Critical scenario 9 remains open.
+- `kustomize build infra` and `kubeconform -strict -summary`: PASS, 61 valid resources, zero invalid/errors/skips.
+  Shell/Python syntax checks passed for render/startup/teardown/diagnostics/recovery scripts. These checks do not
+  execute the scripts against a cluster.
+- Includes pinned kind node, service DNS, persistent infrastructure, app probes/budgets/rollouts, local image loading,
+  ingress, HPAs, monitoring, namespace RBAC and NetworkPolicies. Controller API egress is generated from discovered
+  exact private API addresses (/32 or /128); broad public egress is not used.
+- A broad controller-egress proposal was rejected by automatic approval review. It was replaced with the approved
+  exact-address generation above; no approval remains outstanding. Default kind networking does not establish CNI
+  enforcement.
+- No kind deployment, image loading, ingress/HPA/policy behavior or restart/PVC durability has executed because Docker,
+  kind and kubectl are unavailable. Critical scenario 9 remains open.
 
 ### Phase 13 verification and final audit
 
-- Final `./mvnw -B verify dependency:build-classpath -Dmdep.outputFile=target/test-classpath.txt -Dmdep.includeScope=test`: PASS, **43 tests, zero failures/errors/skips**. Contracts 2, catalog 5, inventory 6, Kafka 5, orders 7, payments 3, multi-service workflows 12, real Keycloak 3. Full report: `docs/verification.md`; latest log: `.cache/verification/java-final.log`.
-- Final hardening verified canonical PostgreSQL UUID lock ordering under concurrent mixed-product reservation/release, configurable initial saga deadlines, issue/retry-based attempt accounting and the shared customer-addressed notification contract. The full reactor passed after these changes.
-- New real broker failure test stops/restarts the Kafka broker server with retained logs and the same listener, proves the pre-restart acknowledged event remains readable, keeps a PostgreSQL outbox command pending during outage and commits inventory once after recovery. This is broker lifecycle recovery inside the test JVM; container/JVM/controller restart remains a deployment check.
-- Frontend lint, 2 unit tests, TypeScript/Vite production build and 4 Chrome E2E cases pass. PKCE session refresh, success, decline/notification compensation, search/mobile, admin products/stock and SUPPORT monitoring exercised. Repeated demo runs use product search so newly created admin products cannot displace fixture products from the first catalog page.
-- `SERVICE_CLIENT_SECRET=local-test-service-only bash scripts/demo.sh`: PASS. Verified exact approved/declined stock, cache reads, seven authenticated metric captures and both Grafana dashboards. Screenshot inspected at `.cache/verification/storefront.png`. The complete native demo passed after final E2E changes.
-- CI source passes actionlint 1.7.12 with embedded shellcheck disabled because it is absent; all shell scripts separately pass `bash -n`, Python scripts parse, Compose validates and all 61 Kubernetes resources schema-check. GitHub execution and Docker builds have not run.
-- Initial failures (JDBC timestamp binding, source imports, realm scope mappers, runner discovery and accessible selectors) were corrected and affected/full suites rerun; no failing tests are excluded. Native server fixtures are real services and synthetic data; no H2/runtime mocks or paid external resources were used.
+- Final
+  `./mvnw -B verify dependency:build-classpath -Dmdep.outputFile=target/test-classpath.txt -Dmdep.includeScope=test`:
+  PASS, **43 tests, zero failures/errors/skips**. Contracts 2, catalog 5, inventory 6, Kafka 5, orders 7, payments 3,
+  multi-service workflows 12, real Keycloak 3. Full report: `docs/verification.md`; latest log:
+  `.cache/verification/java-final.log`.
+- Final hardening verified canonical PostgreSQL UUID lock ordering under concurrent mixed-product reservation/release,
+  configurable initial saga deadlines, issue/retry-based attempt accounting and the shared customer-addressed
+  notification contract. The full reactor passed after these changes.
+- New real broker failure test stops/restarts the Kafka broker server with retained logs and the same listener, proves
+  the pre-restart acknowledged event remains readable, keeps a PostgreSQL outbox command pending during outage and
+  commits inventory once after recovery. This is broker lifecycle recovery inside the test JVM; container/JVM/controller
+  restart remains a deployment check.
+- Frontend lint, 2 unit tests, TypeScript/Vite production build and 4 Chrome E2E cases pass. PKCE session refresh,
+  success, decline/notification compensation, search/mobile, admin products/stock and SUPPORT monitoring exercised.
+  Repeated demo runs use product search so newly created admin products cannot displace fixture products from the first
+  catalog page.
+- `SERVICE_CLIENT_SECRET=local-test-service-only bash scripts/demo.sh`: PASS. Verified exact approved/declined stock,
+  cache reads, seven authenticated metric captures and both Grafana dashboards. Screenshot inspected at
+  `.cache/verification/storefront.png`. The complete native demo passed after final E2E changes.
+- CI source passes actionlint 1.7.12 with embedded shellcheck disabled because it is absent; all shell scripts
+  separately pass `bash -n`, Python scripts parse, Compose validates and all 61 Kubernetes resources schema-check.
+  GitHub execution and Docker builds have not run.
+- Initial failures (JDBC timestamp binding, source imports, realm scope mappers, runner discovery and accessible
+  selectors) were corrected and affected/full suites rerun; no failing tests are excluded. Native server fixtures are
+  real services and synthetic data; no H2/runtime mocks or paid external resources were used.
 
-| Specification final acceptance criterion | Evidence / remaining check |
-|---|---|
-| Reproducible Docker Compose startup | Configuration valid; image build/startup **unverified**, Docker runtime absent. |
-| Authenticated React interface | Real Chrome PKCE/session/purchase/admin/support flows pass. |
-| Elasticsearch product search | Native search/index/update/deactivation/rebuild/outage tests and browser search pass. |
-| Redis cart/catalog cache | Atomic concurrency, TTL, invalidation, isolation and outage tests pass; browser and live hit/miss samples observed. |
-| Kafka-powered checkout | Real broker, HTTP services and separately owned databases pass success/failure/replay/restart checks. |
-| PostgreSQL integrity | Real migrations/constraints/rollback/idempotency/ownership tests pass. |
-| Durable saga/compensation | Timeout, late authorization, decline and order-application restart tests pass. |
-| Reliable outbox/replay-safe consumers | Broker outage/lifecycle restart, retained logs, deduplication and poison-message DLT tests pass. |
-| Successful/declined simulated payments | Integration, Chrome demo and authenticated k6 checkout checks pass with exact stock verification. |
-| Concurrency-safe inventory | 100 requests / stock 10 gives exactly 10 reservations; mixed-product reserve/release conservation passes. |
-| Meaningful Grafana metrics | Seven targets up, both dashboards provisioned, datasource health/query pass on native monitoring. |
-| Runnable automated tests | 43 Java + 2 frontend unit + 4 Chrome tests; documented scripts/commands. Remote CI and Docker fallback execution remain unverified. |
-| Local Kubernetes/restart recovery | 61 resources schema-valid; deployment and restart/PVC recovery **unverified**, Docker/kind/kubectl absent. |
-| Security/authorization | Real Keycloak PKCE/service scope tests, issuer/audience/UUID subjects, roles and cross-customer ownership tests pass. |
-| Architecture/setup/API/troubleshooting docs | Written/reviewed and linked from README; blocked deployment instructions explicitly identified as unexecuted. |
+| Specification final acceptance criterion    | Evidence / remaining check                                                                                                          |
+|---------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| Reproducible Docker Compose startup         | Configuration valid; image build/startup **unverified**, Docker runtime absent.                                                     |
+| Authenticated React interface               | Real Chrome PKCE/session/purchase/admin/support flows pass.                                                                         |
+| Elasticsearch product search                | Native search/index/update/deactivation/rebuild/outage tests and browser search pass.                                               |
+| Redis cart/catalog cache                    | Atomic concurrency, TTL, invalidation, isolation and outage tests pass; browser and live hit/miss samples observed.                 |
+| Kafka-powered checkout                      | Real broker, HTTP services and separately owned databases pass success/failure/replay/restart checks.                               |
+| PostgreSQL integrity                        | Real migrations/constraints/rollback/idempotency/ownership tests pass.                                                              |
+| Durable saga/compensation                   | Timeout, late authorization, decline and order-application restart tests pass.                                                      |
+| Reliable outbox/replay-safe consumers       | Broker outage/lifecycle restart, retained logs, deduplication and poison-message DLT tests pass.                                    |
+| Successful/declined simulated payments      | Integration, Chrome demo and authenticated k6 checkout checks pass with exact stock verification.                                   |
+| Concurrency-safe inventory                  | 100 requests / stock 10 gives exactly 10 reservations; mixed-product reserve/release conservation passes.                           |
+| Meaningful Grafana metrics                  | Seven targets up, both dashboards provisioned, datasource health/query pass on native monitoring.                                   |
+| Runnable automated tests                    | 43 Java + 2 frontend unit + 4 Chrome tests; documented scripts/commands. Remote CI and Docker fallback execution remain unverified. |
+| Local Kubernetes/restart recovery           | 61 resources schema-valid; deployment and restart/PVC recovery **unverified**, Docker/kind/kubectl absent.                          |
+| Security/authorization                      | Real Keycloak PKCE/service scope tests, issuer/audience/UUID subjects, roles and cross-customer ownership tests pass.               |
+| Architecture/setup/API/troubleshooting docs | Written/reviewed and linked from README; blocked deployment instructions explicitly identified as unexecuted.                       |
 
-The repository intentionally remains partially accepted until the unchecked deployment/runtime items above execute successfully. No remote deployment, Git initialization/commit or persisted user-data deletion was performed.
+The repository intentionally remains partially accepted until the unchecked deployment/runtime items above execute
+successfully. No remote deployment, Git initialization/commit or persisted user-data deletion was performed.
+
+### IntelliJ cache exclusion follow-up
+
+- [x] Inspect the read-only dialog and file permissions: listed files are downloaded Elasticsearch binaries under
+  `.cache/tools`; `catalog-service/pom.xml` is writable.
+- [x] Exclude `.cache` in the existing `commerceflow.iml` content root while preserving other module settings.
+  Parse/validate the module XML and catalog POM; verify the exclusion and POM write access.
+- [ ] Confirm the original operation in IntelliJ after reloading the project. Live dialog dismissal/retry was not
+  exercised by the command-line validation.

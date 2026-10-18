@@ -4,30 +4,33 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
-/** Wire contract only. Delivery is at least once; eventId is the consumer deduplication key. */
+/**
+ * Wire contract only. Delivery is at least once; eventId is the consumer deduplication key.
+ */
 public record EventEnvelope<T>(
-    UUID eventId,
-    String eventType,
-    int schemaVersion,
-    UUID aggregateId,
-    String correlationId,
-    Instant occurredAt,
-    T payload) {
-  public EventEnvelope {
-    Objects.requireNonNull(eventId, "eventId");
-    Objects.requireNonNull(aggregateId, "aggregateId");
-    Objects.requireNonNull(occurredAt, "occurredAt");
-    Objects.requireNonNull(payload, "payload");
-    if (eventType == null || eventType.isBlank())
-      throw new IllegalArgumentException("eventType required");
-    if (schemaVersion != 1) throw new IllegalArgumentException("Unsupported schema version");
-    if (correlationId == null || correlationId.isBlank() || correlationId.length() > 128)
-      throw new IllegalArgumentException("Invalid correlationId");
-  }
+        UUID eventId,
+        String eventType,
+        int schemaVersion,
+        UUID aggregateId,
+        String correlationId,
+        Instant occurredAt,
+        T payload) {
 
-  public static <T> EventEnvelope<T> create(
-      String type, UUID aggregateId, String correlationId, T payload) {
-    return new EventEnvelope<>(
-        UUID.randomUUID(), type, 1, aggregateId, correlationId, Instant.now(), payload);
-  }
+    public EventEnvelope {
+        Objects.requireNonNull(eventId, "eventId");
+        Objects.requireNonNull(aggregateId, "aggregateId");
+        Objects.requireNonNull(occurredAt, "occurredAt");
+        Objects.requireNonNull(payload, "payload");
+        if (eventType == null || eventType.isBlank())
+            throw new IllegalArgumentException("eventType required");
+        if (schemaVersion != 1) throw new IllegalArgumentException("Unsupported schema version");
+        if (correlationId == null || correlationId.isBlank() || correlationId.length() > 128)
+            throw new IllegalArgumentException("Invalid correlationId");
+    }
+
+    public static <T> EventEnvelope<T> create(
+            String type, UUID aggregateId, String correlationId, T payload) {
+        return new EventEnvelope<>(
+                UUID.randomUUID(), type, 1, aggregateId, correlationId, Instant.now(), payload);
+    }
 }

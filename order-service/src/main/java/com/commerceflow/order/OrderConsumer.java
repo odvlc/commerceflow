@@ -12,46 +12,44 @@ import org.springframework.stereotype.Component;
 
 @Component
 @ConditionalOnProperty(
-    name = "commerceflow.messaging.enabled",
-    havingValue = "true",
-    matchIfMissing = true)
+        name = "commerceflow.messaging.enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class OrderConsumer {
-  private final EventCodec codec;
-  private final ProcessedEvents processed;
-  private final SagaCoordinator saga;
 
-  public OrderConsumer(EventCodec codec, ProcessedEvents processed, SagaCoordinator saga) {
-    this.codec = codec;
-    this.processed = processed;
-    this.saga = saga;
-  }
+    private final EventCodec codec;
+    private final ProcessedEvents processed;
+    private final SagaCoordinator saga;
 
-  @KafkaListener(
-      topics = {Topics.INVENTORY, Topics.PAYMENT},
-      groupId = "order-saga-v1")
-  public void handle(ConsumerRecord<String, String> record) {
-    var event = codec.decode(record);
-    try (var ignored = MDC.putCloseable("correlationId", event.correlationId())) {
-      switch (event.eventType()) {
-        case "InventoryResult" ->
-            processed.once(
-                event.eventId(),
-                () ->
-                    saga.inventory(
-                        event.aggregateId(), codec.payload(event, InventoryResult.class)));
-        case "InventoryExpiring" ->
-            processed.once(event.eventId(), () -> saga.expiring(event.aggregateId()));
-        case "PaymentResult" ->
-            processed.once(
-                event.eventId(),
-                () -> saga.payment(event.aggregateId(), codec.payload(event, PaymentResult.class)));
-        default -> throw new IllegalArgumentException("Unexpected saga event " + event.eventType());
-      }
+    public OrderConsumer(EventCodec codec, ProcessedEvents processed, SagaCoordinator saga) {
+        this.codec = codec;
+        this.processed = processed;
+        this.saga = saga;
     }
-  }
 
-  @Scheduled(fixedDelayString = "${saga.reconcile-delay:5000}")
-  public void reconcile() {
-    saga.reconcileDeadlines();
-  }
+    @KafkaListener(
+            topics = {Topics.INVENTORY, Topics.PAYMENT},
+            groupId = "order-saga-v1")
+    public void handle(ConsumerRecord<String, String> record) {
+        var event = codec.decode(record);
+        try (var ignored = MDC.putCloseable("correlationId", event.correlationId())) {
+            switch (event.eventType()) {
+                case "InventoryResult" -> processed.once(
+                        event.eventId(),
+                        () ->
+                                saga.inventory(
+                                        event.aggregateId(), codec.payload(event, InventoryResult.class)));
+                case "InventoryExpiring" -> processed.once(event.eventId(), () -> saga.expiring(event.aggregateId()));
+                case "PaymentResult" -> processed.once(
+                        event.eventId(),
+                        () -> saga.payment(event.aggregateId(), codec.payload(event, PaymentResult.class)));
+                default -> throw new IllegalArgumentException("Unexpected saga event " + event.eventType());
+            }
+        }
+    }
+
+    @Scheduled(fixedDelayString = "${saga.reconcile-delay:5000}")
+    public void reconcile() {
+        saga.reconcileDeadlines();
+    }
 }

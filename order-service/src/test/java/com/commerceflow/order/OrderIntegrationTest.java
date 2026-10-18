@@ -11,10 +11,12 @@ import com.commerceflow.contracts.CheckoutEvents.PaymentScenario;
 import com.commerceflow.order.OrderModels.*;
 import com.commerceflow.support.BusinessException;
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.*;
+
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -30,164 +32,174 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest(properties = "commerceflow.messaging.enabled=false")
 @AutoConfigureMockMvc
 class OrderIntegrationTest {
-  static final EmbeddedPostgres POSTGRES = start();
 
-  static EmbeddedPostgres start() {
-    try {
-      return EmbeddedPostgres.builder().setPort(0).start();
-    } catch (IOException e) {
-      throw new ExceptionInInitializerError(e);
+    static final EmbeddedPostgres POSTGRES = start();
+
+    static EmbeddedPostgres start() {
+        try {
+            return EmbeddedPostgres.builder().setPort(0).start();
+        } catch (IOException e) {
+            throw new ExceptionInInitializerError(e);
+        }
     }
-  }
 
-  @DynamicPropertySource
-  static void database(DynamicPropertyRegistry r) {
-    r.add("spring.datasource.url", () -> POSTGRES.getJdbcUrl("postgres", "postgres"));
-    r.add("spring.datasource.username", () -> "postgres");
-    r.add("spring.datasource.password", () -> "");
-  }
-
-  @AfterAll
-  static void stop() throws IOException {
-    POSTGRES.close();
-  }
-
-  @Autowired OrderService orders;
-  @Autowired JdbcClient jdbc;
-  @Autowired MockMvc http;
-  @Autowired JsonMapper json;
-  @MockitoBean TrustedCatalog catalog;
-  UUID product = UUID.randomUUID();
-  UUID customer = UUID.randomUUID();
-
-  @BeforeEach
-  void clear() {
-    jdbc.sql("TRUNCATE orders,order_items,order_saga_steps,outbox_events,processed_events CASCADE")
-        .update();
-    when(catalog.quote(eq(product), anyString()))
-        .thenReturn(new TrustedCatalog.Quote(product, new BigDecimal("12.50"), "USD", true));
-  }
-
-  CreateOrder request() {
-    return new CreateOrder(List.of(new Item(product, 2)), PaymentScenario.APPROVE);
-  }
-
-  @Test
-  void trustedPriceAndConcurrentIdempotencyPersistExactlyOneOrderAndEvent() throws Exception {
-    try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-      var tasks = new ArrayList<Callable<OrderView>>();
-      for (int i = 0; i < 20; i++)
-        tasks.add(() -> orders.create(customer, "concurrent-key", request(), "test"));
-      var results = executor.invokeAll(tasks);
-      var ids = new HashSet<UUID>();
-      for (var result : results) {
-        var order = result.get();
-        ids.add(order.id());
-        assertThat(order.totalAmount()).isEqualByComparingTo("25.00");
-      }
-      assertThat(ids).hasSize(1);
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry r) {
+        r.add("spring.datasource.url", () -> POSTGRES.getJdbcUrl("postgres", "postgres"));
+        r.add("spring.datasource.username", () -> "postgres");
+        r.add("spring.datasource.password", () -> "");
     }
-    verify(catalog, times(1)).quote(eq(product), anyString());
-    assertThat(jdbc.sql("SELECT count(*) FROM orders").query(Long.class).single()).isEqualTo(1);
-    assertThat(jdbc.sql("SELECT count(*) FROM outbox_events").query(Long.class).single())
-        .isEqualTo(1);
-    var changed = new CreateOrder(List.of(new Item(product, 1)), PaymentScenario.APPROVE);
-    assertThatThrownBy(() -> orders.create(customer, "concurrent-key", changed, "test"))
-        .isInstanceOf(BusinessException.class);
-  }
 
-  @Test
-  void ownershipAndAdministrativeRolesAreEnforced() throws Exception {
-    var order = orders.create(customer, "owned-order-key", request(), "test");
-    http.perform(get("/api/v1/orders/{id}", order.id())).andExpect(status().isUnauthorized());
-    http.perform(
-            get("/api/v1/orders/{id}", order.id())
-                .with(
-                    jwt()
-                        .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
-                        .jwt(j -> j.subject(UUID.randomUUID().toString()))))
-        .andExpect(status().isNotFound());
-    http.perform(
-            post("/api/v1/orders/{id}/cancel", order.id())
-                .with(
-                    jwt()
-                        .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
-                        .jwt(j -> j.subject(UUID.randomUUID().toString()))))
-        .andExpect(status().isNotFound());
-    http.perform(
-            get("/api/v1/orders/{id}", order.id())
-                .with(
-                    jwt()
-                        .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
-                        .jwt(j -> j.subject(customer.toString()))))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.totalAmount").value(25.00));
-    http.perform(
-            get("/api/v1/orders")
-                .with(
-                    jwt()
-                        .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
-                        .jwt(j -> j.subject(UUID.randomUUID().toString()))))
-        .andExpect(jsonPath("$.totalElements").value(0));
-    http.perform(get("/api/v1/admin/orders").with(jwt())).andExpect(status().isForbidden());
-    http.perform(
-            get("/api/v1/admin/orders")
-                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.totalElements").value(1));
-  }
+    @AfterAll
+    static void stop() throws IOException {
+        POSTGRES.close();
+    }
 
-  @Test
-  void catalogueFailureAndMixedCurrenciesDoNotPersistOrders() {
-    when(catalog.quote(eq(product), anyString()))
-        .thenThrow(
-            new BusinessException(
-                HttpStatus.SERVICE_UNAVAILABLE, "CATALOG_UNAVAILABLE", "Unavailable"));
-    assertThatThrownBy(() -> orders.create(customer, "unavailable-key", request(), "test"))
-        .isInstanceOf(BusinessException.class);
-    assertThat(jdbc.sql("SELECT count(*) FROM orders").query(Long.class).single()).isZero();
-    assertThat(jdbc.sql("SELECT count(*) FROM outbox_events").query(Long.class).single()).isZero();
-  }
+    @Autowired
+    OrderService orders;
 
-  @Test
-  void pendingCancellationIsIdempotentAndPreservesReleaseIntent() {
-    var order = orders.create(customer, "cancel-order-key", request(), "test");
-    assertThat(orders.cancel(customer, order.id()).status())
-        .isEqualTo(OrderState.CANCELLING_INVENTORY);
-    assertThat(orders.cancel(customer, order.id()).status())
-        .isEqualTo(OrderState.CANCELLING_INVENTORY);
-    assertThat(
-            jdbc.sql("SELECT count(*) FROM outbox_events WHERE event_type='ReleaseInventory'")
-                .query(Long.class)
-                .single())
-        .isEqualTo(1);
-  }
+    @Autowired
+    JdbcClient jdbc;
 
-  @Test
-  void rejectsDuplicatesAndInvalidHttpRequests() throws Exception {
-    var duplicate =
-        new CreateOrder(
-            List.of(new Item(product, 1), new Item(product, 1)), PaymentScenario.APPROVE);
-    http.perform(
-            post("/api/v1/orders")
-                .with(
-                    jwt()
-                        .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
-                        .jwt(j -> j.subject(customer.toString())))
-                .header("Idempotency-Key", "duplicate-key")
-                .contentType("application/json")
-                .content(json.writeValueAsString(duplicate)))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("DUPLICATE_PRODUCT"));
-    http.perform(
-            post("/api/v1/orders")
-                .with(
-                    jwt()
-                        .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
-                        .jwt(j -> j.subject(customer.toString())))
-                .header("Idempotency-Key", "invalid-key")
-                .contentType("application/json")
-                .content("{\"items\":[],\"paymentScenario\":\"APPROVE\"}"))
-        .andExpect(status().isBadRequest());
-  }
+    @Autowired
+    MockMvc http;
+
+    @Autowired
+    JsonMapper json;
+
+    @MockitoBean
+    TrustedCatalog catalog;
+    UUID product = UUID.randomUUID();
+    UUID customer = UUID.randomUUID();
+
+    @BeforeEach
+    void clear() {
+        jdbc.sql("TRUNCATE orders,order_items,order_saga_steps,outbox_events,processed_events CASCADE")
+                .update();
+        when(catalog.quote(eq(product), anyString()))
+                .thenReturn(new TrustedCatalog.Quote(product, new BigDecimal("12.50"), "USD", true));
+    }
+
+    CreateOrder request() {
+        return new CreateOrder(List.of(new Item(product, 2)), PaymentScenario.APPROVE);
+    }
+
+    @Test
+    void trustedPriceAndConcurrentIdempotencyPersistExactlyOneOrderAndEvent() throws Exception {
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var tasks = new ArrayList<Callable<OrderView>>();
+            for (int i = 0; i < 20; i++)
+                tasks.add(() -> orders.create(customer, "concurrent-key", request(), "test"));
+            var results = executor.invokeAll(tasks);
+            var ids = new HashSet<UUID>();
+            for (var result : results) {
+                var order = result.get();
+                ids.add(order.id());
+                assertThat(order.totalAmount()).isEqualByComparingTo("25.00");
+            }
+            assertThat(ids).hasSize(1);
+        }
+        verify(catalog, times(1)).quote(eq(product), anyString());
+        assertThat(jdbc.sql("SELECT count(*) FROM orders").query(Long.class).single()).isEqualTo(1);
+        assertThat(jdbc.sql("SELECT count(*) FROM outbox_events").query(Long.class).single())
+                .isEqualTo(1);
+        var changed = new CreateOrder(List.of(new Item(product, 1)), PaymentScenario.APPROVE);
+        assertThatThrownBy(() -> orders.create(customer, "concurrent-key", changed, "test"))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void ownershipAndAdministrativeRolesAreEnforced() throws Exception {
+        var order = orders.create(customer, "owned-order-key", request(), "test");
+        http.perform(get("/api/v1/orders/{id}", order.id())).andExpect(status().isUnauthorized());
+        http.perform(
+                        get("/api/v1/orders/{id}", order.id())
+                                .with(
+                                        jwt()
+                                                .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
+                                                .jwt(j -> j.subject(UUID.randomUUID().toString()))))
+                .andExpect(status().isNotFound());
+        http.perform(
+                        post("/api/v1/orders/{id}/cancel", order.id())
+                                .with(
+                                        jwt()
+                                                .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
+                                                .jwt(j -> j.subject(UUID.randomUUID().toString()))))
+                .andExpect(status().isNotFound());
+        http.perform(
+                        get("/api/v1/orders/{id}", order.id())
+                                .with(
+                                        jwt()
+                                                .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
+                                                .jwt(j -> j.subject(customer.toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalAmount").value(25.00));
+        http.perform(
+                        get("/api/v1/orders")
+                                .with(
+                                        jwt()
+                                                .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
+                                                .jwt(j -> j.subject(UUID.randomUUID().toString()))))
+                .andExpect(jsonPath("$.totalElements").value(0));
+        http.perform(get("/api/v1/admin/orders").with(jwt())).andExpect(status().isForbidden());
+        http.perform(
+                        get("/api/v1/admin/orders")
+                                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void catalogueFailureAndMixedCurrenciesDoNotPersistOrders() {
+        when(catalog.quote(eq(product), anyString()))
+                .thenThrow(
+                        new BusinessException(
+                                HttpStatus.SERVICE_UNAVAILABLE, "CATALOG_UNAVAILABLE", "Unavailable"));
+        assertThatThrownBy(() -> orders.create(customer, "unavailable-key", request(), "test"))
+                .isInstanceOf(BusinessException.class);
+        assertThat(jdbc.sql("SELECT count(*) FROM orders").query(Long.class).single()).isZero();
+        assertThat(jdbc.sql("SELECT count(*) FROM outbox_events").query(Long.class).single()).isZero();
+    }
+
+    @Test
+    void pendingCancellationIsIdempotentAndPreservesReleaseIntent() {
+        var order = orders.create(customer, "cancel-order-key", request(), "test");
+        assertThat(orders.cancel(customer, order.id()).status())
+                .isEqualTo(OrderState.CANCELLING_INVENTORY);
+        assertThat(orders.cancel(customer, order.id()).status())
+                .isEqualTo(OrderState.CANCELLING_INVENTORY);
+        assertThat(
+                jdbc.sql("SELECT count(*) FROM outbox_events WHERE event_type='ReleaseInventory'")
+                        .query(Long.class)
+                        .single())
+                .isEqualTo(1);
+    }
+
+    @Test
+    void rejectsDuplicatesAndInvalidHttpRequests() throws Exception {
+        var duplicate =
+                new CreateOrder(
+                        List.of(new Item(product, 1), new Item(product, 1)), PaymentScenario.APPROVE);
+        http.perform(
+                        post("/api/v1/orders")
+                                .with(
+                                        jwt()
+                                                .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
+                                                .jwt(j -> j.subject(customer.toString())))
+                                .header("Idempotency-Key", "duplicate-key")
+                                .contentType("application/json")
+                                .content(json.writeValueAsString(duplicate)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("DUPLICATE_PRODUCT"));
+        http.perform(
+                        post("/api/v1/orders")
+                                .with(
+                                        jwt()
+                                                .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
+                                                .jwt(j -> j.subject(customer.toString())))
+                                .header("Idempotency-Key", "invalid-key")
+                                .contentType("application/json")
+                                .content("{\"items\":[],\"paymentScenario\":\"APPROVE\"}"))
+                .andExpect(status().isBadRequest());
+    }
 }

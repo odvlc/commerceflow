@@ -10,25 +10,26 @@ import org.springframework.stereotype.Component;
 
 @Component
 @ConditionalOnProperty(
-    name = {"commerceflow.messaging.enabled", "catalog.cache.enabled"},
-    havingValue = "true",
-    matchIfMissing = true)
+        name = {"commerceflow.messaging.enabled", "catalog.cache.enabled"},
+        havingValue = "true",
+        matchIfMissing = true)
 public class CacheInvalidationConsumer {
-  private final ProductCache cache;
-  private final EventCodec codec;
 
-  public CacheInvalidationConsumer(ProductCache cache, EventCodec codec) {
-    this.cache = cache;
-    this.codec = codec;
-  }
+    private final ProductCache cache;
+    private final EventCodec codec;
 
-  @KafkaListener(topics = Topics.CATALOG, groupId = "catalog-cache-v1")
-  public void handle(ConsumerRecord<String, String> record) {
-    var event = codec.decode(record);
-    if (!event.eventType().equals("ProductChanged"))
-      throw new IllegalArgumentException("Unexpected catalog event");
-    var product = codec.payload(event, ProductChanged.class);
-    if (!cache.invalidate(product.id(), product.version()))
-      throw new IllegalStateException("Cache invalidation unavailable");
-  }
+    public CacheInvalidationConsumer(ProductCache cache, EventCodec codec) {
+        this.cache = cache;
+        this.codec = codec;
+    }
+
+    @KafkaListener(topics = Topics.CATALOG, groupId = "catalog-cache-v1")
+    public void handle(ConsumerRecord<String, String> record) {
+        var event = codec.decode(record);
+        if (!event.eventType().equals("ProductChanged"))
+            throw new IllegalArgumentException("Unexpected catalog event");
+        var product = codec.payload(event, ProductChanged.class);
+        if (!cache.invalidate(product.id(), product.version()))
+            throw new IllegalStateException("Cache invalidation unavailable");
+    }
 }

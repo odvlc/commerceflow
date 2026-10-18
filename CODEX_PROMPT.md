@@ -2,13 +2,17 @@
 
 ## ROLE AND MISSION
 
-Act as a Principal Java Backend Engineer, Distributed Systems Architect, DevOps Engineer, Security Engineer, and Senior Frontend Engineer.
+Act as a Principal Java Backend Engineer, Distributed Systems Architect, DevOps Engineer, Security Engineer, and Senior
+Frontend Engineer.
 
-Build a complete, working, production-style **Event-Driven E-Commerce Platform** named **CommerceFlow** in the current Git repository.
+Build a complete, working, production-style **Event-Driven E-Commerce Platform** named **CommerceFlow** in the current
+Git repository.
 
-**Do not deliver only scaffolding, pseudocode, or architectural diagrams. Implement, integrate, run, test, and document the working application.**
+**Do not deliver only scaffolding, pseudocode, or architectural diagrams. Implement, integrate, run, test, and document
+the working application.**
 
-The system must run locally on a MacBook Pro with at least 32 GB RAM, using Docker Compose for development and Kubernetes (kind) for orchestration.
+The system must run locally on a MacBook Pro with at least 32 GB RAM, using Docker Compose for development and
+Kubernetes (kind) for orchestration.
 
 ## 1. Engineering standards and working rules
 
@@ -16,7 +20,8 @@ The system must run locally on a MacBook Pro with at least 32 GB RAM, using Dock
 - Verify dependency and Docker image compatibility using official documentation before pinning versions.
 - Use the Spring Boot BOM to manage compatible Spring dependencies.
 - Prefer clean, readable Java with clear package separation.
-- Use Java records for DTOs, `BigDecimal` for money, UUIDs for identifiers, UTC timestamps, and Flyway for schema migrations.
+- Use Java records for DTOs, `BigDecimal` for money, UUIDs for identifiers, UTC timestamps, and Flyway for schema
+  migrations.
 - Favor explicit code over excessive abstraction or Lombok.
 - Follow REST, SOLID, transactional integrity, and secure-coding practices.
 - Use real services for runtime infrastructure, not in-memory substitutes or mocks.
@@ -31,25 +36,25 @@ The system must run locally on a MacBook Pro with at least 32 GB RAM, using Dock
 
 ## 2. Technology stack
 
-| Category | Technology |
-|---|---|
-| Language | Java 25 LTS |
-| Backend | Spring Boot 4.x, Spring MVC |
-| Persistence | Spring Data JPA, Hibernate, PostgreSQL |
-| Migrations | Flyway |
-| Messaging | Apache Kafka |
-| Distributed transactions | Saga orchestration, transactional outbox |
-| Caching | Redis |
-| Search | Elasticsearch, Spring Data Elasticsearch |
-| Security | Spring Security, OAuth2/OIDC, Keycloak |
-| Concurrency | Java virtual threads |
-| Testing | JUnit, Mockito, AssertJ, Testcontainers |
-| Containers | Docker, Docker Compose |
-| Orchestration | Kubernetes with kind, Kustomize |
-| Monitoring | Actuator, Micrometer, Prometheus, Grafana |
-| Frontend | React, TypeScript, Vite |
-| CI | GitHub Actions |
-| Load testing | k6 |
+| Category                 | Technology                                |
+|--------------------------|-------------------------------------------|
+| Language                 | Java 25 LTS                               |
+| Backend                  | Spring Boot 4.x, Spring MVC               |
+| Persistence              | Spring Data JPA, Hibernate, PostgreSQL    |
+| Migrations               | Flyway                                    |
+| Messaging                | Apache Kafka                              |
+| Distributed transactions | Saga orchestration, transactional outbox  |
+| Caching                  | Redis                                     |
+| Search                   | Elasticsearch, Spring Data Elasticsearch  |
+| Security                 | Spring Security, OAuth2/OIDC, Keycloak    |
+| Concurrency              | Java virtual threads                      |
+| Testing                  | JUnit, Mockito, AssertJ, Testcontainers   |
+| Containers               | Docker, Docker Compose                    |
+| Orchestration            | Kubernetes with kind, Kustomize           |
+| Monitoring               | Actuator, Micrometer, Prometheus, Grafana |
+| Frontend                 | React, TypeScript, Vite                   |
+| CI                       | GitHub Actions                            |
+| Load testing             | k6                                        |
 
 ## 3. Microservices architecture
 
@@ -65,9 +70,11 @@ Implement these Maven modules as independently deployable applications:
 8. `contracts`: Versioned Kafka message DTOs without shared JPA entities.
 9. `frontend`: React and TypeScript application.
 
-Use one local PostgreSQL server with independently owned service databases and credentials. Cross-service SQL joins and direct writes into another service's database are prohibited.
+Use one local PostgreSQL server with independently owned service databases and credentials. Cross-service SQL joins and
+direct writes into another service's database are prohibited.
 
-Use Kafka as the asynchronous event bus, Redis for cart/cache workloads, and Elasticsearch for derived full-text product search.
+Use Kafka as the asynchronous event bus, Redis for cart/cache workloads, and Elasticsearch for derived full-text product
+search.
 
 ## 4. Core business workflow
 
@@ -96,7 +103,8 @@ Use separate Flyway migrations for each service.
 
 **Order Service**
 
-- `orders`: id, customer_id, idempotency_key, request_hash, status, total_amount, currency, version, created_at, updated_at.
+- `orders`: id, customer_id, idempotency_key, request_hash, status, total_amount, currency, version, created_at,
+  updated_at.
 - `order_items`: id, order_id, product_id, quantity, unit_price.
 - `order_saga_steps`: id, order_id, step, status, attempts, last_error, updated_at.
 - `outbox_events`: id, aggregate_id, event_type, payload, created_at, published_at.
@@ -121,9 +129,11 @@ Use separate Flyway migrations for each service.
 - `categories`.
 - `outbox_events`.
 
-Enforce foreign keys where applicable, uniqueness constraints, quantity checks, relevant indexes, and optimistic locking where appropriate.
+Enforce foreign keys where applicable, uniqueness constraints, quantity checks, relevant indexes, and optimistic locking
+where appropriate.
 
-Prevent inventory overselling with a conditional SQL update that succeeds only when enough stock exists. Persist reservations and outgoing events in the same local transaction.
+Prevent inventory overselling with a conditional SQL update that succeeds only when enough stock exists. Persist
+reservations and outgoing events in the same local transaction.
 
 Implement idempotency for every externally retried business operation.
 
@@ -132,6 +142,7 @@ Implement idempotency for every externally retried business operation.
 Implement at least:
 
 **Catalog**
+
 - `GET /api/v1/products`
 - `GET /api/v1/products/{id}`
 - `GET /api/v1/products/search`
@@ -139,26 +150,31 @@ Implement at least:
 - `PUT /api/v1/admin/products/{id}`
 
 **Cart**
+
 - `GET /api/v1/cart`
 - `POST /api/v1/cart/items`
 - `PATCH /api/v1/cart/items/{productId}`
 - `DELETE /api/v1/cart/items/{productId}`
 
 **Order**
+
 - `POST /api/v1/orders`
 - `GET /api/v1/orders/{id}`
 - `GET /api/v1/orders`
 - `POST /api/v1/orders/{id}/cancel`
 
 **Administration**
+
 - `GET /api/v1/admin/orders`
 - `GET /api/v1/admin/inventory/{productId}`
 - `PUT /api/v1/admin/inventory/{productId}`
 - `GET /api/v1/admin/payments/{orderId}`
 
-Use typed request/response DTOs, `ProblemDetail`, input validation, pagination, consistent API error codes, correlation IDs, and generated OpenAPI documentation.
+Use typed request/response DTOs, `ProblemDetail`, input validation, pagination, consistent API error codes, correlation
+IDs, and generated OpenAPI documentation.
 
-Order creation must support an idempotency header and prevent different request contents from reusing an idempotency key.
+Order creation must support an idempotency header and prevent different request contents from reusing an idempotency
+key.
 
 ## 7. Kafka
 
@@ -176,7 +192,8 @@ Use an event envelope containing:
 
 Key order-related Kafka messages by order ID.
 
-Implement durable transactional outbox publishing, broker acknowledgments, idempotent consumers, retries with bounded backoff, poison-message handling, dead-letter queues, and recovery documentation.
+Implement durable transactional outbox publishing, broker acknowledgments, idempotent consumers, retries with bounded
+backoff, poison-message handling, dead-letter queues, and recovery documentation.
 
 Do not assume Kafka and PostgreSQL participate in one atomic transaction.
 
@@ -239,11 +256,13 @@ Roles:
 - ADMIN
 - SUPPORT
 
-Enforce customer-order ownership, authorization of administrative operations, and appropriate service-to-service security.
+Enforce customer-order ownership, authorization of administrative operations, and appropriate service-to-service
+security.
 
 Do not implement custom password hashing, JWT signing, or a custom identity provider.
 
-Keep secrets outside the repository. Configure safe local development credentials only in documented development settings.
+Keep secrets outside the repository. Configure safe local development credentials only in documented development
+settings.
 
 ## 11. React frontend
 
@@ -261,7 +280,8 @@ Build a responsive frontend with:
 - Admin stock management.
 - Admin order monitoring.
 
-Use TypeScript, typed API clients, reusable components, accessible forms, loading states, validation, and error handling.
+Use TypeScript, typed API clients, reusable components, accessible forms, loading states, validation, and error
+handling.
 
 Prevent accidental duplicate checkout submissions.
 
@@ -287,7 +307,8 @@ Services must include:
 - Grafana
 - React frontend
 
-Use multi-stage Dockerfiles, persistent volumes, healthchecks, configuration through environment variables, and reliable service discovery.
+Use multi-stage Dockerfiles, persistent volumes, healthchecks, configuration through environment variables, and reliable
+service discovery.
 
 Provide lightweight Compose profiles for day-to-day development.
 
@@ -414,7 +435,8 @@ Write:
 - Failure-recovery playbook.
 - Architecture decision records.
 
-Provide a five-minute local demonstration script showing a successful purchase, declined payment, compensating inventory release, Elasticsearch product search, Redis caching, and Grafana monitoring.
+Provide a five-minute local demonstration script showing a successful purchase, declined payment, compensating inventory
+release, Elasticsearch product search, Redis caching, and Grafana monitoring.
 
 ## 18. Implementation phases
 
@@ -460,8 +482,11 @@ Do not mark requirements complete unless they have been implemented and verified
 
 ## 20. Begin implementation now
 
-Inspect the current workspace and available tools. Create PLAN.md and a phased task checklist. Verify dependency compatibility, then implement the project from Phase 1 through Phase 13.
+Inspect the current workspace and available tools. Create PLAN.md and a phased task checklist. Verify dependency
+compatibility, then implement the project from Phase 1 through Phase 13.
 
 Work on the actual repository files. Do not respond with just a plan.
 
-Keep the implementation cohesive and testable. If runtime or tool limits prevent completing everything, finish the most valuable working vertical slice, record every incomplete requirement and precise blocker, and report verified results without exaggeration.
+Keep the implementation cohesive and testable. If runtime or tool limits prevent completing everything, finish the most
+valuable working vertical slice, record every incomplete requirement and precise blocker, and report verified results
+without exaggeration.

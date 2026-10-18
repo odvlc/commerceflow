@@ -12,51 +12,49 @@ import org.springframework.stereotype.Component;
 
 @Component
 @ConditionalOnProperty(
-    name = "commerceflow.messaging.enabled",
-    havingValue = "true",
-    matchIfMissing = true)
+        name = "commerceflow.messaging.enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class InventoryConsumer {
-  private final EventCodec codec;
-  private final ProcessedEvents processed;
-  private final InventoryService inventory;
 
-  public InventoryConsumer(
-      EventCodec codec, ProcessedEvents processed, InventoryService inventory) {
-    this.codec = codec;
-    this.processed = processed;
-    this.inventory = inventory;
-  }
+    private final EventCodec codec;
+    private final ProcessedEvents processed;
+    private final InventoryService inventory;
 
-  @KafkaListener(topics = Topics.ORDER, groupId = "inventory-v1")
-  public void handle(ConsumerRecord<String, String> record) {
-    var event = codec.decode(record);
-    try (var ignored = MDC.putCloseable("correlationId", event.correlationId())) {
-      switch (event.eventType()) {
-        case "ReserveInventory" ->
-            processed.once(
-                event.eventId(),
-                () ->
-                    inventory.reserve(
-                        event.aggregateId(),
-                        codec.payload(event, ReserveInventory.class),
-                        event.correlationId()));
-        case "CommitInventory" ->
-            processed.once(
-                event.eventId(),
-                () -> inventory.commit(event.aggregateId(), event.correlationId()));
-        case "ReleaseInventory" ->
-            processed.once(
-                event.eventId(),
-                () -> inventory.release(event.aggregateId(), event.correlationId()));
-        default -> {
-          /* Other commands on the order topic belong to other services. */
-        }
-      }
+    public InventoryConsumer(
+            EventCodec codec, ProcessedEvents processed, InventoryService inventory) {
+        this.codec = codec;
+        this.processed = processed;
+        this.inventory = inventory;
     }
-  }
 
-  @Scheduled(fixedDelayString = "${inventory.expiry-check-delay:10000}")
-  public void reconcileExpiry() {
-    inventory.signalExpired();
-  }
+    @KafkaListener(topics = Topics.ORDER, groupId = "inventory-v1")
+    public void handle(ConsumerRecord<String, String> record) {
+        var event = codec.decode(record);
+        try (var ignored = MDC.putCloseable("correlationId", event.correlationId())) {
+            switch (event.eventType()) {
+                case "ReserveInventory" -> processed.once(
+                        event.eventId(),
+                        () ->
+                                inventory.reserve(
+                                        event.aggregateId(),
+                                        codec.payload(event, ReserveInventory.class),
+                                        event.correlationId()));
+                case "CommitInventory" -> processed.once(
+                        event.eventId(),
+                        () -> inventory.commit(event.aggregateId(), event.correlationId()));
+                case "ReleaseInventory" -> processed.once(
+                        event.eventId(),
+                        () -> inventory.release(event.aggregateId(), event.correlationId()));
+                default -> {
+                    /* Other commands on the order topic belong to other services. */
+                }
+            }
+        }
+    }
+
+    @Scheduled(fixedDelayString = "${inventory.expiry-check-delay:10000}")
+    public void reconcileExpiry() {
+        inventory.signalExpired();
+    }
 }

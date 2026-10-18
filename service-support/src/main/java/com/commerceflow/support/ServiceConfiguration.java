@@ -9,4 +9,6 @@ import org.springframework.context.annotation.Import;
  */
 @Configuration(proxyBeanMethods = false)
 @Import({WebConfiguration.class, OutboxStore.class, MessagingConfiguration.class})
-public class ServiceConfiguration {}
+public class ServiceConfiguration {
+
+}
