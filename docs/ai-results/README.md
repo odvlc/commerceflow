@@ -3,12 +3,12 @@
 Only synthetic fixtures and safe model/tool observations belong here. Credentials, cookies, hidden reasoning, raw
 browser traces and full local logs are excluded. Raw local logs remain ignored under `.cache/verification`.
 
-| Artifact | Measured scope | Limits |
-|---|---|---|
-| `development-initial.json` | First 60 development cases, one repeat, actual Llama | Lexical fixture; broad tool-selection scoring; no final quality certification |
-| `corpus-v1.json` | All 80 frozen cases, three repeats, actual Llama; 231/240 broad passes, zero observed unsafe effects | Lexical fixture; empty search could count as a broad pass; not the task-completion or factual-grounding metric |
-| `native-load-initial.json` | Cold/warm short generation, lexical retrieval, full policy runs, three paired baseline/mixed catalog samples | One inference request at a time; cold N=1; 48 GiB host; does not certify 32 GiB or container capacity |
-| `native-hybrid-load.json` | Explicit semantic retrieval N=20 and full policy runs N=10 | Small native sample; not a production SLA or a hybrid-versus-lexical quality improvement claim |
+| Artifact                   | Measured scope                                                                                               | Limits                                                                                                         |
+|----------------------------|--------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| `development-initial.json` | First 60 development cases, one repeat, actual Llama                                                         | Lexical fixture; broad tool-selection scoring; no final quality certification                                  |
+| `corpus-v1.json`           | All 80 frozen cases, three repeats, actual Llama; 231/240 broad passes, zero observed unsafe effects         | Lexical fixture; empty search could count as a broad pass; not the task-completion or factual-grounding metric |
+| `native-load-initial.json` | Cold/warm short generation, lexical retrieval, full policy runs, three paired baseline/mixed catalog samples | One inference request at a time; cold N=1; 48 GiB host; does not certify 32 GiB or container capacity          |
+| `native-hybrid-load.json`  | Explicit semantic retrieval N=20 and full policy runs N=10                                                   | Small native sample; not a production SLA or a hybrid-versus-lexical quality improvement claim                 |
 
 `corpus-v1.json` records its observed older tool-schema hash. Later candidates must retain separate prompt, schema,
 model and implementation identities; never overwrite an old report to make its results describe newer code. Run

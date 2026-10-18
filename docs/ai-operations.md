@@ -2,7 +2,8 @@
 
 Use native Ollama on Apple Silicon for the normal development path. CommerceFlow uses pinned local `llama3.1:8b`
 Q4_K_M for generation/tools and separate `nomic-embed-text:latest` F16, 768-dimensional embeddings. Models and license
-hashes are in `infra/ai/models.lock.json`. There is no paid or cloud inference fallback. Keep one AI application replica,
+hashes are in `infra/ai/models.lock.json`. There is no paid or cloud inference fallback. Keep one AI application
+replica,
 one inference slot, context 4096, queue eight and the documented execution budgets.
 
 ## Compose host mode
@@ -16,7 +17,8 @@ python3 scripts/import-ai-knowledge.py
 ```
 
 The first command may download about 5.2 GB; it checks disk space, prints progress, verifies digests and performs real
-inference warmup. Its configurable timeout defaults to 1800 seconds (`--timeout` or `AI_MODEL_PREPARE_TIMEOUT`), separate
+inference warmup. Its configurable timeout defaults to 1800 seconds (`--timeout` or `AI_MODEL_PREPARE_TIMEOUT`),
+separate
 from the 300-second application readiness wait. `--check` never downloads. A changed/missing digest fails clearly.
 The host command checks `host.docker.internal:11434` from inside a temporary container, including both model digests.
 `AI_HOST_MODEL_URL` can select another port on that same Docker Desktop hostname; no LAN binding is configured.
@@ -43,9 +45,11 @@ bash scripts/compose-up.sh --ai=container
 ```
 
 Ollama 0.40.6 uses a named `ollama-data` volume and only publishes localhost:11435, leaving native Ollama's port intact.
-The application uses `http://ollama:11434` inside Compose. The startup command checks/warmups installed models and refuses
+The application uses `http://ollama:11434` inside Compose. The startup command checks/warmups installed models and
+refuses
 missing ones; it never silently downloads gigabytes during the application health wait. Runtime health (`ollama list`),
-model presence/digests, warmup and application readiness are distinct checks. CPU latency must fit the existing 45-second
+model presence/digests, warmup and application readiness are distinct checks. CPU latency must fit the existing
+45-second
 inference/120-second run budgets; this mode is not assumed equivalent to native GPU performance.
 
 ## Disable and preserve data
@@ -56,7 +60,8 @@ bash scripts/compose-up.sh --ai=off
 
 Off is the default. It withdraws AI gateway routes and stops optional AI/model workers while preserving all named
 volumes. Commerce health does not depend on AI model readiness. Model health is visible through authenticated
-`GET /api/v1/ai/capabilities`; model outages reject new inference messages/resumes with `AI_MODEL_UNAVAILABLE`, and existing
+`GET /api/v1/ai/capabilities`; model outages reject new inference messages/resumes with `AI_MODEL_UNAVAILABLE`, and
+existing
 runs have bounded retries. History and reconciliation do not require a working LLM. Never use `down -v` for upgrades.
 
 For an existing PostgreSQL volume, startup explicitly runs `python3 scripts/provision-ai-database.py`. It adds missing
@@ -75,7 +80,8 @@ acknowledgment remains visible in execution audit. Recovery stops before the Car
 
 The Copilot dashboard shows model/text-first-token/tool/retrieval/run latency, queue depth, indexing backlog, approvals
 and unknown outcomes. UI events stream committed progress/final state; backend first-token timing is not a browser
-partial-text metric. Prompt and hidden-reasoning logging are disabled. Scrapes use the service-account OAuth2 credential.
+partial-text metric. Prompt and hidden-reasoning logging are disabled. Scrapes use the service-account OAuth2
+credential.
 
 ```bash
 AI_ENABLED=true METRICS_MODE=compose python3 scripts/metrics-snapshot.py

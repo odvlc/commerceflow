@@ -7,20 +7,22 @@ is the historical baseline before model download/implementation.
 
 This is the user-requested extension to `CODEX_PROMPT.md`, alongside the original 13-phase plan in
 [PLAN.md](PLAN.md). It preserves the original service boundaries, security, consistency and testing requirements.
-Original deployment checks are updated only where their actual evidence now exists; remaining acceptance gates stay open. Check a task here only after its implementation
+Original deployment checks are updated only where their actual evidence now exists; remaining acceptance gates stay
+open. Check a task here only after its implementation
 and stated verification pass; record actual commands, reports, model identities and blockers after each phase.
 
 ## 1. Outcome and release scope
 
 Build an independently deployable Java/Spring `ai-service` that powers an authenticated CommerceFlow copilot.
-Demonstrate generation, retrieval, typed tool use, durable orchestration, evaluation, observability and local deployment.
+Demonstrate generation, retrieval, typed tool use, durable orchestration, evaluation, observability and local
+deployment.
 
 The first release has two increments:
 
-| Increment | User-visible behavior | Release gate |
-|---|---|---|
-| Read-only copilot | Answer curated demo-policy questions with citations; find/compare products; explain an owned order using current service data. A SUPPORT mode can read explicitly authorized order explanations. | A0–A6 and the read-only portion of A8; security/evaluation gates in A9; deployment evidence in A10. |
-| Confirmed cart actions | Propose an exact cart change, show its effects, obtain confirmation and execute the approved operation once within the documented retry window. | A7–A10, plus A11–A12 for complete kind/CI/final acceptance. |
+| Increment              | User-visible behavior                                                                                                                                                                            | Release gate                                                                                        |
+|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| Read-only copilot      | Answer curated demo-policy questions with citations; find/compare products; explain an owned order using current service data. A SUPPORT mode can read explicitly authorized order explanations. | A0–A6 and the read-only portion of A8; security/evaluation gates in A9; deployment evidence in A10. |
+| Confirmed cart actions | Propose an exact cart change, show its effects, obtain confirmation and execute the approved operation once within the documented retry window.                                                  | A7–A10, plus A11–A12 for complete kind/CI/final acceptance.                                         |
 
 Representative demonstrations:
 
@@ -38,16 +40,16 @@ outside this release. Multi-agent coordination, MCP exposure and hosted inferenc
 
 ## 2. Decisions and compatibility gates
 
-| Area | Planned decision | Verification before pinning/acceptance |
-|---|---|---|
-| Application | Java 25, current Boot 4.1.x baseline, new Maven `ai-service` | Build the entire reactor without independently replacing Boot-managed Spring components. |
-| AI framework | Spring AI 2.0.x; 2.0.1 is the candidate documented stable release at planning time | Resolve artifacts, inspect the effective dependency tree, test Jackson/Elasticsearch/HTTP client compatibility and real tool calls. Documentation compatibility alone is insufficient. |
-| Models | Local Ollama; one tool-capable quantized chat model plus one embedding model | Select exact runtime version, model names, immutable digests, licenses, embedding dimension and context settings in A0. Test capabilities on the actual Mac; no model size/latency guarantee is assumed. |
-| Retrieval | Existing catalog API for live products; AI-owned Elasticsearch indices for curated documents, lexical first and then hybrid | Preserve catalog index ownership; compare retrieval results against a labeled corpus before accepting semantic retrieval. |
-| Persistence | New owned PostgreSQL `ai` database/user with Flyway | Separate credentials; only AI-owned tables. No foreign-service SQL. |
-| Orchestration | One agent, explicit Java state machine, durable steps and bounded tool execution | Verify retries, timeouts, competing workers, authentication loss and restart recovery. |
-| User transport | JSON commands/status plus authenticated fetch-based SSE for progress | Exercise gateway/frontend streaming, reconnect and JWT expiry. Tokens must not appear in URLs. |
-| Local deployment | Optional AI profile; native Ollama preferred on macOS, opt-in CPU container alternative | Measure total host memory and verify model reachability from application containers. |
+| Area             | Planned decision                                                                                                            | Verification before pinning/acceptance                                                                                                                                                                   |
+|------------------|-----------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Application      | Java 25, current Boot 4.1.x baseline, new Maven `ai-service`                                                                | Build the entire reactor without independently replacing Boot-managed Spring components.                                                                                                                 |
+| AI framework     | Spring AI 2.0.x; 2.0.1 is the candidate documented stable release at planning time                                          | Resolve artifacts, inspect the effective dependency tree, test Jackson/Elasticsearch/HTTP client compatibility and real tool calls. Documentation compatibility alone is insufficient.                   |
+| Models           | Local Ollama; one tool-capable quantized chat model plus one embedding model                                                | Select exact runtime version, model names, immutable digests, licenses, embedding dimension and context settings in A0. Test capabilities on the actual Mac; no model size/latency guarantee is assumed. |
+| Retrieval        | Existing catalog API for live products; AI-owned Elasticsearch indices for curated documents, lexical first and then hybrid | Preserve catalog index ownership; compare retrieval results against a labeled corpus before accepting semantic retrieval.                                                                                |
+| Persistence      | New owned PostgreSQL `ai` database/user with Flyway                                                                         | Separate credentials; only AI-owned tables. No foreign-service SQL.                                                                                                                                      |
+| Orchestration    | One agent, explicit Java state machine, durable steps and bounded tool execution                                            | Verify retries, timeouts, competing workers, authentication loss and restart recovery.                                                                                                                   |
+| User transport   | JSON commands/status plus authenticated fetch-based SSE for progress                                                        | Exercise gateway/frontend streaming, reconnect and JWT expiry. Tokens must not appear in URLs.                                                                                                           |
+| Local deployment | Optional AI profile; native Ollama preferred on macOS, opt-in CPU container alternative                                     | Measure total host memory and verify model reachability from application containers.                                                                                                                     |
 
 Official references checked while planning:
 
@@ -104,10 +106,10 @@ provider/HTTP boundaries; do not build a general-purpose agent framework.
 
 ### Roles and modes
 
-| Conversation mode | Allowed identity | Tools available |
-|---|---|---|
-| CUSTOMER | CUSTOMER or ADMIN acting on their own resources | Knowledge/product reads, owned order explanations, own cart reads; cart proposals after A7. |
-| SUPPORT | SUPPORT or ADMIN explicitly choosing support mode | Public knowledge/product reads and the new scoped administrative order explanation read. No customer cart actions or payment/admin mutation tools. |
+| Conversation mode | Allowed identity                                  | Tools available                                                                                                                                    |
+|-------------------|---------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+| CUSTOMER          | CUSTOMER or ADMIN acting on their own resources   | Knowledge/product reads, owned order explanations, own cart reads; cart proposals after A7.                                                        |
+| SUPPORT           | SUPPORT or ADMIN explicitly choosing support mode | Public knowledge/product reads and the new scoped administrative order explanation read. No customer cart actions or payment/admin mutation tools. |
 
 The server selects the mode/tool registry from verified roles and explicit UI mode, never model text. Every
 conversation, run, event stream and proposal has an owner derived from JWT `sub`. A role granting access to an order
@@ -137,23 +139,24 @@ not bypass the explicit confirmation endpoint. Confirmation and rejection are au
 
 ### AI-owned data model
 
-| Table | Important fields / integrity |
-|---|---|
-| `ai_conversations` | UUID, owner subject, mode, title, status, version, UTC timestamps; indexed owner/updated time. |
-| `ai_messages` | Conversation FK, ordered sequence, role, bounded content, status, run FK; unique conversation/sequence. |
-| `ai_runs` | Conversation/input message, request key/hash, state, model/prompt/toolset versions, deadlines, limits, lease/fencing version, error code; unique owner/request key. |
-| `ai_run_steps` | Run FK, sequence, step kind/status, sanitized input/result, attempts, duration and usage; unique run/sequence. Persist completed tool results for recovery. |
-| `ai_run_events` | Run FK, monotonic sequence and bounded UI event payload; unique run/sequence for SSE replay. No hidden chain-of-thought or credentials. |
-| `ai_action_proposals` | Run/owner, typed operation/arguments hash, expected opaque cart revision, state, expiry, confirmation time and version. |
-| `ai_action_executions` | Unique proposal/operation ID, stable downstream request key/hash, attempts, started time, outcome/result/error, deduplication deadline. |
-| `knowledge_documents` | Stable source ID, source version/hash, audience/classification, effective dates, active/tombstone status and content; only curated local Markdown/text initially. |
-| `knowledge_chunks` | Document/version FK, deterministic chunk ID, offsets/heading/content hash, embedding model/dimension and indexing state; unique document/version/chunk ordinal. |
-| `knowledge_index_jobs` | Document version, phase/status, retry deadline/attempts, target index generation and error; unique document/version/index generation. |
-| `outbox_events`, `processed_events` | Existing local durability conventions for knowledge-change/index events. Mark projection completion only after the external index effect is acknowledged. |
+| Table                               | Important fields / integrity                                                                                                                                        |
+|-------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ai_conversations`                  | UUID, owner subject, mode, title, status, version, UTC timestamps; indexed owner/updated time.                                                                      |
+| `ai_messages`                       | Conversation FK, ordered sequence, role, bounded content, status, run FK; unique conversation/sequence.                                                             |
+| `ai_runs`                           | Conversation/input message, request key/hash, state, model/prompt/toolset versions, deadlines, limits, lease/fencing version, error code; unique owner/request key. |
+| `ai_run_steps`                      | Run FK, sequence, step kind/status, sanitized input/result, attempts, duration and usage; unique run/sequence. Persist completed tool results for recovery.         |
+| `ai_run_events`                     | Run FK, monotonic sequence and bounded UI event payload; unique run/sequence for SSE replay. No hidden chain-of-thought or credentials.                             |
+| `ai_action_proposals`               | Run/owner, typed operation/arguments hash, expected opaque cart revision, state, expiry, confirmation time and version.                                             |
+| `ai_action_executions`              | Unique proposal/operation ID, stable downstream request key/hash, attempts, started time, outcome/result/error, deduplication deadline.                             |
+| `knowledge_documents`               | Stable source ID, source version/hash, audience/classification, effective dates, active/tombstone status and content; only curated local Markdown/text initially.   |
+| `knowledge_chunks`                  | Document/version FK, deterministic chunk ID, offsets/heading/content hash, embedding model/dimension and indexing state; unique document/version/chunk ordinal.     |
+| `knowledge_index_jobs`              | Document version, phase/status, retry deadline/attempts, target index generation and error; unique document/version/index generation.                               |
+| `outbox_events`, `processed_events` | Existing local durability conventions for knowledge-change/index events. Mark projection completion only after the external index effect is acknowledged.           |
 
 Set foreign keys, check constraints, optimistic versions, bounded JSON/text fields and operational indexes. Store model
 identity, prompt hash and selected source IDs with a run so an evaluation/audit can reproduce its configuration.
-Initial retention targets: 7 days for conversation content and 30 days for sanitized run/action audit metadata; implement
+Initial retention targets: 7 days for conversation content and 30 days for sanitized run/action audit metadata;
+implement
 as configurable, documented cleanup with operator opt-in. Deletion must cancel pending work and remove associated
 derived data without deleting business orders/carts. No automatic deletion is authorized by writing this plan.
 
@@ -162,24 +165,24 @@ derived data without deleting business orders/carts. No automatic deletion is au
 All write commands use canonical request hashes/idempotency where applicable, typed records, Bean Validation,
 ProblemDetail, UTC timestamps and correlation IDs. All user endpoints require JWTs and ownership checks.
 
-| Endpoint | Contract |
-|---|---|
-| `GET /api/v1/ai/capabilities` | Authenticated; available modes/features/model readiness and configured limits, without exposing internal addresses/secrets. |
-| `POST /api/v1/ai/conversations` | `{mode}` + request key; returns owned conversation. |
-| `GET /api/v1/ai/conversations` | Owned paginated list. |
-| `GET /api/v1/ai/conversations/{id}/messages` | Owned paginated history; bounded message DTOs and citations. |
-| `POST /api/v1/ai/conversations/{id}/messages` | `{content}` + request key; atomically records user message and queued run; returns 202 with run location. |
-| `GET /api/v1/ai/runs/{id}` | Current state, public progress, results, proposals and structured errors. |
-| `GET /api/v1/ai/runs/{id}/events` | Fetch-based SSE, bearer header and `Last-Event-ID`; ordered replay with per-owner authorization. |
-| `POST /api/v1/ai/runs/{id}/resume` | Fresh caller authorization + request key; resumes eligible paused work. Does not itself approve a proposal. |
-| `POST /api/v1/ai/runs/{id}/cancel` | Idempotently stops future work; an already-issued downstream operation may still complete and must be reconciled. |
-| `POST /api/v1/ai/proposals/{id}/confirm` | `{version, argumentsHash}` + request key; single-use confirmation and durable execution intent. |
-| `POST /api/v1/ai/proposals/{id}/reject` | Idempotent rejection; invalidates further execution. |
-| `POST /api/v1/admin/ai/knowledge/imports` | ADMIN only, bounded curated text/document metadata with source/version/hash; no arbitrary URL fetching. |
-| `GET /api/v1/admin/ai/knowledge/jobs/{id}` | ADMIN, ingestion/indexing progress and sanitized failure. |
-| `POST /api/v1/admin/ai/knowledge/rebuilds` | ADMIN, request key; asynchronous versioned rebuild/alias swap. |
-| `GET /api/v1/orders/{id}/explanation` | New owned Order Service API returning public state/reason/history; CUSTOMER/ADMIN, other owner -> 404. |
-| `GET /api/v1/admin/orders/{id}/explanation` | New Order Service read for ADMIN/SUPPORT; explicitly authorized, sanitized DTO. |
+| Endpoint                                      | Contract                                                                                                                    |
+|-----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| `GET /api/v1/ai/capabilities`                 | Authenticated; available modes/features/model readiness and configured limits, without exposing internal addresses/secrets. |
+| `POST /api/v1/ai/conversations`               | `{mode}` + request key; returns owned conversation.                                                                         |
+| `GET /api/v1/ai/conversations`                | Owned paginated list.                                                                                                       |
+| `GET /api/v1/ai/conversations/{id}/messages`  | Owned paginated history; bounded message DTOs and citations.                                                                |
+| `POST /api/v1/ai/conversations/{id}/messages` | `{content}` + request key; atomically records user message and queued run; returns 202 with run location.                   |
+| `GET /api/v1/ai/runs/{id}`                    | Current state, public progress, results, proposals and structured errors.                                                   |
+| `GET /api/v1/ai/runs/{id}/events`             | Fetch-based SSE, bearer header and `Last-Event-ID`; ordered replay with per-owner authorization.                            |
+| `POST /api/v1/ai/runs/{id}/resume`            | Fresh caller authorization + request key; resumes eligible paused work. Does not itself approve a proposal.                 |
+| `POST /api/v1/ai/runs/{id}/cancel`            | Idempotently stops future work; an already-issued downstream operation may still complete and must be reconciled.           |
+| `POST /api/v1/ai/proposals/{id}/confirm`      | `{version, argumentsHash}` + request key; single-use confirmation and durable execution intent.                             |
+| `POST /api/v1/ai/proposals/{id}/reject`       | Idempotent rejection; invalidates further execution.                                                                        |
+| `POST /api/v1/admin/ai/knowledge/imports`     | ADMIN only, bounded curated text/document metadata with source/version/hash; no arbitrary URL fetching.                     |
+| `GET /api/v1/admin/ai/knowledge/jobs/{id}`    | ADMIN, ingestion/indexing progress and sanitized failure.                                                                   |
+| `POST /api/v1/admin/ai/knowledge/rebuilds`    | ADMIN, request key; asynchronous versioned rebuild/alias swap.                                                              |
+| `GET /api/v1/orders/{id}/explanation`         | New owned Order Service API returning public state/reason/history; CUSTOMER/ADMIN, other owner -> 404.                      |
+| `GET /api/v1/admin/orders/{id}/explanation`   | New Order Service read for ADMIN/SUPPORT; explicitly authorized, sanitized DTO.                                             |
 
 Recommended errors include `AI_DISABLED`, `AI_MODEL_UNAVAILABLE`, `AI_CAPACITY_EXCEEDED`, `AI_RUN_LIMIT_REACHED`,
 `AI_AUTHENTICATION_REQUIRED`, `AI_PROPOSAL_EXPIRED`, `AI_APPROVAL_STALE`, `AI_ACTION_OUTCOME_UNKNOWN` and standard
@@ -218,7 +221,8 @@ bounded progress events. A reconnect may receive a replacement preview after a c
 
 Proposed initial limits, to tune using actual measurements: one concurrent model request, at most 8 queued runs,
 4 model rounds and 8 tool calls per run, 120 seconds active execution time, 45 seconds per model call, 5 seconds per
-ordinary tool call, at most 2 transient retries, 4,000 user characters and 6 retrieved chunks. Pause time does not consume
+ordinary tool call, at most 2 transient retries, 4,000 user characters and 6 retrieved chunks. Pause time does not
+consume
 active execution time. Proposals expire after 5 minutes; authentication pauses expire after 15 minutes. Token/context
 budgets must fit the selected model; truncate by dropping whole older messages/evidence, never authorization context.
 
@@ -497,7 +501,8 @@ the original Compose startup/image verification checks from PLAN.md on a Docker-
   slot and bounded context; reduce profiles/model/context if measured pressure requires it.
 
 Verification: shell syntax/parser tests, profile/Compose configuration checks for all modes, actual image builds,
-native-model reachability from container, CPU model startup/warmup, full browser demo, AI-disabled startup, model outage,
+native-model reachability from container, CPU model startup/warmup, full browser demo, AI-disabled startup, model
+outage,
 additive provisioning on an existing volume and application/infrastructure restart persistence.
 
 Acceptance: both documented local inference modes run as described or a specific mode remains unchecked with its
@@ -549,16 +554,16 @@ commands and a complete evidence matrix with any deployment/resource blockers le
 
 ## 7. Planned file changes
 
-| Area | Existing files likely changed | New artifacts |
-|---|---|---|
-| Maven/application | `pom.xml`, `workflow-tests/pom.xml`, shared security/outbox configuration as needed | `ai-service/` production code, migrations and tests; AI framework BOM/candidate pins after A0. |
-| Order explanations | `order-service` repository/service/saga/controller/security route rules | Public reason/history migration, explanation DTOs and ownership/workflow tests. |
-| Cart preconditions | `cart-service` Lua/service/controller and DTO/ETag handling | Incarnation-aware revision and conditional mutation tests, backward compatibility fixtures. |
-| Gateway/frontend | `GatewayRoutes.java`, `frontend/src/api.ts`, `App.tsx`, auth/SSE/config integration | Copilot components, typed clients, unit/browser tests. |
-| Knowledge/events | `contracts`, topic/outbox routing, document import/indexing infrastructure | `knowledge/`, AI-owned knowledge event contracts/migrations and rebuild worker. |
-| Local deployment | `infra/compose.yaml`, `.env.example`, Postgres init/additive provisioning, `infra/Dockerfile`, `scripts/compose-up.sh` | Explicit AI runtime/model preparation and demo scripts. |
-| Kubernetes | Existing kind/image-loading/monitoring helpers | Optional AI Kustomize overlay, CPU model PVC/Job and recovery checks. |
-| Verification/docs | `.github/workflows/verify.yaml`, PLAN/README/dependency and relevant existing docs | Evaluation fixtures/harness/results, Copilot dashboard, AI ADR/docs/load scenarios. |
+| Area               | Existing files likely changed                                                                                          | New artifacts                                                                                  |
+|--------------------|------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
+| Maven/application  | `pom.xml`, `workflow-tests/pom.xml`, shared security/outbox configuration as needed                                    | `ai-service/` production code, migrations and tests; AI framework BOM/candidate pins after A0. |
+| Order explanations | `order-service` repository/service/saga/controller/security route rules                                                | Public reason/history migration, explanation DTOs and ownership/workflow tests.                |
+| Cart preconditions | `cart-service` Lua/service/controller and DTO/ETag handling                                                            | Incarnation-aware revision and conditional mutation tests, backward compatibility fixtures.    |
+| Gateway/frontend   | `GatewayRoutes.java`, `frontend/src/api.ts`, `App.tsx`, auth/SSE/config integration                                    | Copilot components, typed clients, unit/browser tests.                                         |
+| Knowledge/events   | `contracts`, topic/outbox routing, document import/indexing infrastructure                                             | `knowledge/`, AI-owned knowledge event contracts/migrations and rebuild worker.                |
+| Local deployment   | `infra/compose.yaml`, `.env.example`, Postgres init/additive provisioning, `infra/Dockerfile`, `scripts/compose-up.sh` | Explicit AI runtime/model preparation and demo scripts.                                        |
+| Kubernetes         | Existing kind/image-loading/monitoring helpers                                                                         | Optional AI Kustomize overlay, CPU model PVC/Job and recovery checks.                          |
+| Verification/docs  | `.github/workflows/verify.yaml`, PLAN/README/dependency and relevant existing docs                                     | Evaluation fixtures/harness/results, Copilot dashboard, AI ADR/docs/load scenarios.            |
 
 Keep project edits additive and reviewable. Preserve unrelated user formatting/work. Existing service tests must pass
 after every affected phase; changed test counts are evidence only after execution.
@@ -590,21 +595,21 @@ results. No application tests were rerun for this documentation-only change.
 
 ## 9. Final AI acceptance matrix
 
-| Requirement | Required evidence | Status |
-|---|---|---|
-| Generative AI | Real pinned local model produces useful grounded responses through the application. | [x] |
-| Retrieval | Labeled corpus meets recall/grounding targets; valid citations, audience filters, update/deactivation and rebuild verified. | [ ] |
-| Tools | Real authorized API calls, typed validation and zero cross-owner/admin authority escalation. | [x] |
-| Orchestration | Bounded multi-step runs, persisted checkpoints, leases, replay/resume and token-expiry handling verified. | [x] |
-| Confirmed actions | Exact proposals, conditional cart revision, stable request key, lost-response/restart/concurrent-confirmation tests pass. | [x] |
-| Frontend | Real PKCE browser demo, sources/progress/approval controls, mobile/accessibility and account isolation pass. | [x] |
-| Evaluation/security | Frozen holdout results, declared denominators/targets and deterministic critical tests pass. | [ ] |
-| Observability/performance | Live Copilot dashboard/alerts and actual model/retrieval/tool/load/memory measurements retained. | [x] |
-| Compose deployment | Existing stack plus optional AI host/container modes built, started and restarted over preserved data. | [ ] |
-| Kubernetes deployment | Optional AI overlay deployed; pod/model/PVC recovery demonstrated with exact persistence/auth semantics. | [ ] |
-| CI/reproducibility | Defined jobs/commands actually executed; model identity/configuration and sanitized reports retained. | [ ] |
-| Business regression | Existing checkout, compensation, inventory, security/search/cart tests remain passing. | [x] |
-| Documentation/demo | Setup, API, architecture, model selection, evaluation, recovery and five-minute demonstration reviewed/executed. | [x] |
+| Requirement               | Required evidence                                                                                                           | Status |
+|---------------------------|-----------------------------------------------------------------------------------------------------------------------------|--------|
+| Generative AI             | Real pinned local model produces useful grounded responses through the application.                                         | [x]    |
+| Retrieval                 | Labeled corpus meets recall/grounding targets; valid citations, audience filters, update/deactivation and rebuild verified. | [ ]    |
+| Tools                     | Real authorized API calls, typed validation and zero cross-owner/admin authority escalation.                                | [x]    |
+| Orchestration             | Bounded multi-step runs, persisted checkpoints, leases, replay/resume and token-expiry handling verified.                   | [x]    |
+| Confirmed actions         | Exact proposals, conditional cart revision, stable request key, lost-response/restart/concurrent-confirmation tests pass.   | [x]    |
+| Frontend                  | Real PKCE browser demo, sources/progress/approval controls, mobile/accessibility and account isolation pass.                | [x]    |
+| Evaluation/security       | Frozen holdout results, declared denominators/targets and deterministic critical tests pass.                                | [ ]    |
+| Observability/performance | Live Copilot dashboard/alerts and actual model/retrieval/tool/load/memory measurements retained.                            | [x]    |
+| Compose deployment        | Existing stack plus optional AI host/container modes built, started and restarted over preserved data.                      | [ ]    |
+| Kubernetes deployment     | Optional AI overlay deployed; pod/model/PVC recovery demonstrated with exact persistence/auth semantics.                    | [ ]    |
+| CI/reproducibility        | Defined jobs/commands actually executed; model identity/configuration and sanitized reports retained.                       | [ ]    |
+| Business regression       | Existing checkout, compensation, inventory, security/search/cart tests remain passing.                                      | [x]    |
+| Documentation/demo        | Setup, API, architecture, model selection, evaluation, recovery and five-minute demonstration reviewed/executed.            | [x]    |
 
 ## 10. Current blockers and next action
 
@@ -612,7 +617,8 @@ Implementation and local native-model deployment are executed through A12. Both 
 standalone CPU Docker generation/embeddings and model-volume restart also pass. Full native-model Compose and kind
 browser/recovery demonstrations pass. The final regression is 82 Java tests, 5 frontend tests plus lint/build; the
 retained v3 frozen corpus passed 240 procedural checks with zero observed unsafe effects. This is not a 95% factual
-assertion measurement. Independent source/wording review stays open, with concerns in `docs/ai-results/source-review-v3.md`.
+assertion measurement. Independent source/wording review stays open, with concerns in
+`docs/ai-results/source-review-v3.md`.
 
 The full CPU kind attempt produced an actual `FailedScheduling: Insufficient memory` event for its 6 GiB model request
 on the current 7.75 GiB node. Its pending workload/check Job was stopped after retaining evidence; model PVC and all
@@ -645,7 +651,8 @@ attempts follow; source validity is never substituted for an unexecuted deployme
   limits roll back rejected messages; cross-owner/mode access, cancel/retry and HTTP/OpenAPI behavior pass.
 - Added owned schema/configuration, JSON command/status/history APIs, in-memory-only credential attachment, optional
   gateway routing, new-volume AI database configuration and a non-destructive existing-volume provisioning command.
-  Full gateway AI routing and existing-volume provisioning await runtime verification; corresponding phase tasks stay open.
+  Full gateway AI routing and existing-volume provisioning await runtime verification; corresponding phase tasks stay
+  open.
 - Full reactor `./mvnw -B verify`: PASS, 48 tests (43 existing + 5 AI foundation), zero failures/errors/skips.
 
 ### A2 verified
@@ -819,8 +826,10 @@ attempts follow; source validity is never substituted for an unexecuted deployme
   pinned models with progress, verified digests and passed real generation/768-dimensional embedding warmup. A
   stop/start over the same named model volume then passed `--check --warmup` again. No volume/model data erased.
 - Actual CPU generation: 64 tokens, one request 14.66 seconds; `/api/ps` reports 5,584,527,031 bytes model residency,
-  zero GPU bytes. Retained `docs/ai-results/cpu-runtime.json`. This is not a percentile benchmark. Measured commerce-only
-  containers totaled 4,685.5 MiB before AI; combined resident demand exceeds the 7.75 GiB VM. Full CPU Compose co-location
+  zero GPU bytes. Retained `docs/ai-results/cpu-runtime.json`. This is not a percentile benchmark. Measured
+  commerce-only
+  containers totaled 4,685.5 MiB before AI; combined resident demand exceeds the 7.75 GiB VM. Full CPU Compose
+  co-location
   remains unchecked with that exact memory blocker; no Docker Desktop resource setting changed. Host RAM is 48 GiB,
   so the separate 32 GiB hardware acceptance remains open too.
 - `bash scripts/compose-up.sh --ai=off` executes after enabled use, reaches healthy commerce startup, withdraws the
@@ -865,7 +874,8 @@ attempts follow; source validity is never substituted for an unexecuted deployme
   during a RUNNING index rebuild. SQL confirmed its former session lock was released while job state remained RUNNING;
   the same job/generation recovered successfully. Rebuild reclaim now relies on the shared session advisory lock rather
   than waiting ten minutes; its real PG/ES serialization/replay test passes. Initial sampling/Keycloak stale-pool/
-  cleanup races were corrected before the complete rerun. Rehearsal sources remain inactive/audited; user sources intact.
+  cleanup races were corrected before the complete rerun. Rehearsal sources remain inactive/audited; user sources
+  intact.
 - Full CPU kind attempt: actual Pod Pending / `FailedScheduling: Insufficient memory` for model memory request 6 GiB on
   this 7.75 GiB node. Recorded `docs/ai-results/kind-cpu-capacity.json`; after recording the blocker, the unscheduled
   workload/check attempt was stopped rather than forcing an overcommit. Its 12 GiB PVC is retained. CPU Job/model/PVC

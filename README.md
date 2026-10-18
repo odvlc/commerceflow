@@ -12,7 +12,8 @@ The full Compose host-model stack and native-model kind deployment run with real
 checks and real process/pod recovery have execution evidence. The complete CPU model co-location profile exceeds the
 current 7.75 GiB Docker VM; standalone CPU generation/embeddings and model-volume restart pass. The host has 48 GiB,
 so the original 32 GiB hardware target remains unverified. GitHub Actions definitions are validated but have not run
-remotely. [PLAN.md](PLAN.md), [AI_PLAN.md](AI_PLAN.md) and [verification](docs/verification.md) retain exact scope/results.
+remotely. [PLAN.md](PLAN.md), [AI_PLAN.md](AI_PLAN.md) and [verification](docs/verification.md) retain exact
+scope/results.
 No commits, remote deployment or volume deletion were performed.
 
 ## Prerequisites
@@ -134,7 +135,8 @@ Use `--ai=off` to withdraw AI routes and stop optional workers while retaining a
 For native-model kind, use `bash scripts/kind-up.sh --ai=host`; `--skip-build` reuses already-built local images.
 The host runtime stays on localhost. A fixed inference-only proxy on the private kind Docker network handles Docker
 Desktop routing, publishes no host port and is allowed by an exact endpoint policy. CPU mode uses explicit model
-preparation and a retained volume/PVC; read [AI operations](docs/ai-operations.md) for capacity/status and recovery commands.
+preparation and a retained volume/PVC; read [AI operations](docs/ai-operations.md) for capacity/status and recovery
+commands.
 
 ## Five-minute demonstration
 

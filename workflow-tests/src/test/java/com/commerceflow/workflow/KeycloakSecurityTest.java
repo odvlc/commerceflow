@@ -1,7 +1,5 @@
 package com.commerceflow.workflow;
 
-import static org.assertj.core.api.Assertions.*;
-
 import com.commerceflow.catalog.CatalogApplication;
 import com.commerceflow.catalog.api.ProductView;
 import com.commerceflow.gateway.GatewayApplication;
@@ -9,20 +7,34 @@ import com.commerceflow.inventory.InventoryApplication;
 import com.commerceflow.order.OrderApplication;
 import com.commerceflow.order.OrderModels.OrderView;
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
-
-import java.math.BigDecimal;
-import java.net.*;
-import java.net.http.*;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.util.*;
-import java.util.regex.Pattern;
-
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.server.context.WebServerApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.math.BigDecimal;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.regex.Pattern;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class KeycloakSecurityTest {
 

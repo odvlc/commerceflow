@@ -1,9 +1,9 @@
 package com.commerceflow.order;
 
-import static org.assertj.core.api.Assertions.*;
-
 import com.commerceflow.support.BusinessException;
 import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class OrderStateTest {
 

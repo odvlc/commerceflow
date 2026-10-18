@@ -3,10 +3,11 @@
 import json
 import os
 import time
-from local_client import login
 from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
+
+from local_client import login
 
 root = Path(__file__).resolve().parent.parent
 base = os.environ.get("BASE_URL", "http://localhost:8080").rstrip("/")
@@ -20,7 +21,8 @@ def call(path, body=None, key=None):
     if key:
         headers["Idempotency-Key"] = key
     data = None if body is None else json.dumps(body).encode()
-    with urlopen(Request(base + "/api/v1/admin/ai/knowledge" + path, data=data, headers=headers), timeout=15) as response:
+    with urlopen(Request(base + "/api/v1/admin/ai/knowledge" + path, data=data, headers=headers),
+                 timeout=15) as response:
         return json.load(response)
 
 

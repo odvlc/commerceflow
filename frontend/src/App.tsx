@@ -28,8 +28,12 @@ function Mark() {
 }
 
 export default function App({initialError = ""}: { initialError?: string }) {
-    const [,setSessionVersion]=useState(0);
-    useEffect(()=>{const changed=()=>setSessionVersion(v=>v+1);window.addEventListener("commerceflow-session",changed);return()=>window.removeEventListener("commerceflow-session",changed);},[]);
+    const [, setSessionVersion] = useState(0);
+    useEffect(() => {
+        const changed = () => setSessionVersion(v => v + 1);
+        window.addEventListener("commerceflow-session", changed);
+        return () => window.removeEventListener("commerceflow-session", changed);
+    }, []);
     const [tab, setTab] = useState("shop");
     const [cart, setCart] = useState<Cart>(emptyCart);
     const [products, setProducts] = useState<Record<string, ProductSummary>>({});
@@ -62,7 +66,12 @@ export default function App({initialError = ""}: { initialError?: string }) {
             request<Cart>("/cart")
                 .then(setCart)
                 .catch((e) => setError(errorMessage(e)));
-        if(!authenticated){setCart(emptyCart);setProducts({});setError("");setMessage("");}
+        if (!authenticated) {
+            setCart(emptyCart);
+            setProducts({});
+            setError("");
+            setMessage("");
+        }
     }, [authenticated, canPurchase]);
 
     function remember(items: ProductSummary[]) {
@@ -182,7 +191,11 @@ export default function App({initialError = ""}: { initialError?: string }) {
                     )}
                 </div>
             </header>
-            {authenticated&&<Copilot key={`${identity.subject}:${roles().filter(r=>["ADMIN","CUSTOMER","SUPPORT"].includes(r)).sort().join(",")}`} onCartChanged={async()=>{if(canPurchase)setCart(await request<Cart>("/cart"));}}/>}
+            {authenticated && <Copilot
+                key={`${identity.subject}:${roles().filter(r => ["ADMIN", "CUSTOMER", "SUPPORT"].includes(r)).sort().join(",")}`}
+                onCartChanged={async () => {
+                    if (canPurchase) setCart(await request<Cart>("/cart"));
+                }}/>}
             <main>
                 {error && (
                     <div role="alert" className="banner error">

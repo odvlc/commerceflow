@@ -6,19 +6,24 @@ import com.commerceflow.catalog.api.ProductInput;
 import com.commerceflow.catalog.application.CatalogService;
 import com.commerceflow.contracts.Topics;
 import com.commerceflow.gateway.GatewayApplication;
-import com.commerceflow.inventory.*;
+import com.commerceflow.inventory.InventoryApplication;
+import com.commerceflow.inventory.InventoryService;
 import com.commerceflow.notification.NotificationApplication;
 import com.commerceflow.order.OrderApplication;
 import com.commerceflow.payment.PaymentApplication;
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
-
-import java.math.BigDecimal;
-import java.util.*;
-
-
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.kafka.test.EmbeddedKafkaKraftBroker;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Ephemeral browser-test infrastructure. All runtime infrastructure is real; use Compose for
@@ -62,23 +67,24 @@ public class BrowserTestStack {
                         Topics.NOTIFICATION,
                         Topics.DEAD_LETTER, Topics.AI_KNOWLEDGE);
         broker.afterPropertiesSet();
-        var stopping=new java.util.concurrent.atomic.AtomicBoolean();
-        Runnable cleanup=() -> {if(!stopping.compareAndSet(false,true))return;
-                                    var reversed = new ArrayList<>(APPS);
-                                    Collections.reverse(reversed);
-                                    reversed.forEach(ConfigurableApplicationContext::close);
-                                    broker.destroy();
-                                    try {
-                                        keycloak.close();
-                                        search.close();
-                                        redis.close();
-                                        postgres.close();
-                                    } catch (Exception error) {
-                                        error.printStackTrace();
-                                    }
-                                };
+        var stopping = new java.util.concurrent.atomic.AtomicBoolean();
+        Runnable cleanup = () -> {
+            if (!stopping.compareAndSet(false, true)) return;
+            var reversed = new ArrayList<>(APPS);
+            Collections.reverse(reversed);
+            reversed.forEach(ConfigurableApplicationContext::close);
+            broker.destroy();
+            try {
+                keycloak.close();
+                search.close();
+                redis.close();
+                postgres.close();
+            } catch (Exception error) {
+                error.printStackTrace();
+            }
+        };
         Runtime.getRuntime().addShutdownHook(new Thread(cleanup));
-        var stopFile=java.nio.file.Path.of(System.getenv().getOrDefault("BROWSER_STOP_FILE",".cache/verification/browser-stop"));
+        var stopFile = java.nio.file.Path.of(System.getenv().getOrDefault("BROWSER_STOP_FILE", ".cache/verification/browser-stop"));
         java.nio.file.Files.deleteIfExists(stopFile);
         var definitions = new LinkedHashMap<String, Class<?>>();
         definitions.put("catalog", CatalogApplication.class);
@@ -87,7 +93,8 @@ public class BrowserTestStack {
         definitions.put("payment", PaymentApplication.class);
         definitions.put("cart", CartApplication.class);
         definitions.put("notification", NotificationApplication.class);
-        if(Boolean.parseBoolean(System.getenv().getOrDefault("AI_ENABLED","false")))definitions.put("ai",com.commerceflow.ai.AiApplication.class);
+        if (Boolean.parseBoolean(System.getenv().getOrDefault("AI_ENABLED", "false")))
+            definitions.put("ai", com.commerceflow.ai.AiApplication.class);
         definitions.put("gateway", GatewayApplication.class);
         var ports =
                 Map.of(
@@ -103,7 +110,7 @@ public class BrowserTestStack {
                         8085,
                         "notification",
                         8086,
-                        "gateway", 8080, "ai",8087);
+                        "gateway", 8080, "ai", 8087);
         CatalogService catalog = null;
         InventoryService inventory = null;
         for (var entry : definitions.entrySet()) {
@@ -133,9 +140,12 @@ public class BrowserTestStack {
                                     "--spring.data.redis.connect-timeout=500ms",
                                     "--spring.elasticsearch.uris=" + search.url(),
                                     "--logging.level.root=WARN"));
-            if(Boolean.parseBoolean(System.getenv().getOrDefault("AI_ENABLED","false")))parameters.add("--AI_ENABLED=true");
-            if(service.equals("ai"))for(String metric:List.of("model","tool","retrieval","run","step"))parameters.add("--management.metrics.distribution.percentiles-histogram.commerceflow.ai."+metric+"=true");
-            if(service.equals("ai"))parameters.addAll(List.of("--ai.search-url="+search.url(),"--ai.index-delay=1000","--ai.embeddings-enabled=true"));
+            if (Boolean.parseBoolean(System.getenv().getOrDefault("AI_ENABLED", "false")))
+                parameters.add("--AI_ENABLED=true");
+            if (service.equals("ai")) for (String metric : List.of("model", "tool", "retrieval", "run", "step"))
+                parameters.add("--management.metrics.distribution.percentiles-histogram.commerceflow.ai." + metric + "=true");
+            if (service.equals("ai"))
+                parameters.addAll(List.of("--ai.search-url=" + search.url(), "--ai.index-delay=1000", "--ai.embeddings-enabled=true"));
             if (!service.equals("gateway")) parameters.add("--spring.config.name=browser-test");
             if (!Set.of("cart", "gateway").contains(service))
                 parameters.addAll(
@@ -206,18 +216,20 @@ public class BrowserTestStack {
             var product = catalog.create("browser-seed-" + (++number), item, "browser-seed");
             inventory.setStock(product.id(), 25, null);
         }
-        var ai=APPS.stream().filter(app->app.getBeansOfType(com.commerceflow.ai.retrieval.KnowledgeStore.class).size()==1).findFirst();
-        if(ai.isPresent()){
-            var mapper=ai.get().getBean(tools.jackson.databind.json.JsonMapper.class);var sources=ai.get().getBean(com.commerceflow.ai.retrieval.KnowledgeStore.class);var root=java.nio.file.Path.of(System.getProperty("commerceflow.root"));
-            for(var source:mapper.readTree(java.nio.file.Files.readString(root.resolve("knowledge/manifest.json")))){
-                var input=new com.commerceflow.ai.retrieval.KnowledgeModels.ImportDocument(source.path("sourceId").asText(),1,source.path("title").asText(),source.path("audience").asText(),java.nio.file.Files.readString(root.resolve("knowledge").resolve(source.path("file").asText())),true);
-                sources.ingest(UUID.randomUUID(),"browser-knowledge-"+input.sourceId(),input,"browser-seed");
+        var ai = APPS.stream().filter(app -> app.getBeansOfType(com.commerceflow.ai.retrieval.KnowledgeStore.class).size() == 1).findFirst();
+        if (ai.isPresent()) {
+            var mapper = ai.get().getBean(tools.jackson.databind.json.JsonMapper.class);
+            var sources = ai.get().getBean(com.commerceflow.ai.retrieval.KnowledgeStore.class);
+            var root = java.nio.file.Path.of(System.getProperty("commerceflow.root"));
+            for (var source : mapper.readTree(java.nio.file.Files.readString(root.resolve("knowledge/manifest.json")))) {
+                var input = new com.commerceflow.ai.retrieval.KnowledgeModels.ImportDocument(source.path("sourceId").asText(), 1, source.path("title").asText(), source.path("audience").asText(), java.nio.file.Files.readString(root.resolve("knowledge").resolve(source.path("file").asText())), true);
+                sources.ingest(UUID.randomUUID(), "browser-knowledge-" + input.sourceId(), input, "browser-seed");
             }
-            org.awaitility.Awaitility.await().atMost(java.time.Duration.ofSeconds(90)).until(()->ai.get().getBean(org.springframework.jdbc.core.simple.JdbcClient.class).sql("SELECT count(*) FROM knowledge_index_jobs WHERE state<>'SUCCEEDED'").query(Long.class).single()==0);
+            org.awaitility.Awaitility.await().atMost(java.time.Duration.ofSeconds(90)).until(() -> ai.get().getBean(org.springframework.jdbc.core.simple.JdbcClient.class).sql("SELECT count(*) FROM knowledge_index_jobs WHERE state<>'SUCCEEDED'").query(Long.class).single() == 0);
         }
         System.out.println(
                 "BROWSER_STACK_READY gateway=http://localhost:8080 keycloak=http://localhost:8180");
-        while(!java.nio.file.Files.exists(stopFile))Thread.sleep(500);
+        while (!java.nio.file.Files.exists(stopFile)) Thread.sleep(500);
         cleanup.run();
     }
 }

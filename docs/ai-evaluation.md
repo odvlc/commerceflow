@@ -36,7 +36,8 @@ never relabel a citation-ID pass as “95% supported facts” or claim a human r
 
 Release targets remain recall@5 >=90%, supported factual assertions >=95%, answerable task completion >=90% and zero
 unauthorized/unconfirmed business effects. Deterministic ownership, idempotency, limits and failure tests are mandatory.
-A passing Java evaluation test alone does not close deployment, full process/pod recovery, human review or capacity gates.
+A passing Java evaluation test alone does not close deployment, full process/pod recovery, human review or capacity
+gates.
 
 Local load scenarios are explicit and separate from functional evaluation:
 
@@ -50,11 +51,16 @@ python3 scripts/ai-load.py investigation --iterations=10
 python3 scripts/ai-load.py mixed
 ```
 
-Run against a ready native/Compose demo, one inference request at a time, and prepare models beforehand. The cold command
+Run against a ready native/Compose demo, one inference request at a time, and prepare models beforehand. The cold
+command
 explicitly unloads Llama and should run without other AI work. `mixed` compares one catalog VU with one generation VU;
-it does not model a high-volume production workload. k6 summaries report p50/p95/p99 and completion; collect Ollama process
-residency, host/Docker memory and model/context settings alongside them. Establish a regression budget only after repeatable
-measurements. Backend first-token latency is measured from inference dispatch to the first generated text chunk; first structured tool requests have a separate timer. The UI streams committed progress/final events, so this is not a browser first-token measurement.
+it does not model a high-volume production workload. k6 summaries report p50/p95/p99 and completion; collect Ollama
+process
+residency, host/Docker memory and model/context settings alongside them. Establish a regression budget only after
+repeatable
+measurements. Backend first-token latency is measured from inference dispatch to the first generated text chunk; first
+structured tool requests have a separate timer. The UI streams committed progress/final events, so this is not a browser
+first-token measurement.
 
 Initial development evidence (2026-10-18): `docs/ai-results/development-initial.json` retains the first completed
 60-case run: 56/60 broad scenario passes, 15/15 retrieval recall@5, 12/15 successful expected investigation tools,
@@ -77,7 +83,8 @@ Use `python3 scripts/summarize-ai-evaluation.py REPORT --require-complete` to ch
 split numerators/denominators. Grounding review remains a separate requirement.
 
 Measured native load is retained in `docs/ai-results/native-load-initial.json` and `native-hybrid-load.json`. The latter
-actually used embeddings for 20/20 retrieval requests: median 26.15 ms, p95 47.40 ms, p99 188.00 ms. Ten full cited-policy
+actually used embeddings for 20/20 retrieval requests: median 26.15 ms, p95 47.40 ms, p99 188.00 ms. Ten full
+cited-policy
 investigations completed: median 2.08 seconds, p95 2.95 seconds, p99 3.51 seconds. These small samples are observations,
 not a production SLA or a high-concurrency capacity result. The host has 48 GiB RAM; no 32 GiB certification is claimed.
 
@@ -89,7 +96,9 @@ Keep cold/warm generation, lexical/hybrid retrieval and complete-agent times sep
 estimate a cold-start percentile distribution. Queue admission/fencing limits are tested deterministically; the load
 measurements use one inference request at a time.
 
-The `tool` scenario measures the authenticated Cart read API used by `getMyCart`, without generation. It measures the downstream tool target through the gateway; registry validation/dispatch overhead is reported by the application tool timer during full investigations.
+The `tool` scenario measures the authenticated Cart read API used by `getMyCart`, without generation. It measures the
+downstream tool target through the gateway; registry validation/dispatch overhead is reported by the application tool
+timer during full investigations.
 
 The final repeated candidate is `docs/ai-results/corpus-hybrid-v3.json`: 240/240 procedural scenario checks, semantic
 retrieval/expected citations 60/60, positive procedural task checks 120/120, zero observed unsafe effects across all
@@ -98,6 +107,8 @@ Twenty-four malformed tool calls were rejected; three adversarial cases were den
 scenario can pass while the system fails closed, so terminal failure counts are separate from model refusal.
 
 [Source review](ai-results/source-review-v3.md) records the corrected timestamp/duration issue and remaining wording
-concerns. It is an agent review, with no independent-human or >=95% factual assertion claim. The later API admission, integral-overflow rejection
-and session-lock rebuild recovery changes do not change valid the v3 model prompt/tool/worker behavior; they have separate
+concerns. It is an agent review, with no independent-human or >=95% factual assertion claim. The later API admission,
+integral-overflow rejection
+and session-lock rebuild recovery changes do not change valid the v3 model prompt/tool/worker behavior; they have
+separate
 real-infrastructure/model regression and process/pod recovery evidence. Preserve candidate-specific hashes and results.

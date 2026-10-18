@@ -1,24 +1,21 @@
 package com.commerceflow.catalog.search;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch._types.*;
+import co.elastic.clients.elasticsearch._types.ElasticsearchException;
+import co.elastic.clients.elasticsearch._types.VersionType;
 import com.commerceflow.catalog.api.ProductView;
 import com.commerceflow.catalog.persistence.ProductRepository;
 import com.commerceflow.contracts.CheckoutEvents.ProductChanged;
 import com.commerceflow.support.BusinessException;
-import io.micrometer.core.instrument.*;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.persistence.EntityManager;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.*;
-
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.query.StringQuery;
 import org.springframework.http.HttpStatus;
@@ -26,6 +23,15 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 
 @Service
 @ConditionalOnProperty(name = "catalog.search.enabled", havingValue = "true", matchIfMissing = true)

@@ -1,21 +1,28 @@
 package com.commerceflow.payment;
 
-import static org.assertj.core.api.Assertions.*;
-
-import com.commerceflow.contracts.CheckoutEvents.*;
+import com.commerceflow.contracts.CheckoutEvents.AuthorizePayment;
+import com.commerceflow.contracts.CheckoutEvents.PaymentScenario;
 import com.commerceflow.support.BusinessException;
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.*;
-import java.util.concurrent.*;
-
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.test.context.*;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest(properties = "commerceflow.messaging.enabled=false")
 class PaymentIntegrationTest {

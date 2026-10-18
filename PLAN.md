@@ -4,7 +4,8 @@ The scope and phase order come from `CODEX_PROMPT.md`. A checked box means imple
 includes partial work. Each phase depends on the preceding phase; additional dependencies appear below. Runtime blockers
 do not count as successful validation.
 
-**Original native baseline (2026-10-17, superseded by the update below):** all seven applications and the frontend run against real native infrastructure. The
+**Original native baseline (2026-10-17, superseded by the update below):** all seven applications and the frontend run
+against real native infrastructure. The
 final reactor passes 43 tests with no failures or skips; frontend lint/build, 2 unit tests and 4 Chrome cases pass.
 Phases 2–10 have native execution evidence. Phases 1, 11–13 retain deployment/remote-CI acceptance checks because
 Docker, kind and kubectl are absent. [Executed verification](docs/verification.md) distinguishes these limits from
@@ -23,7 +24,8 @@ cart changes, and a React Copilot. No cloud model or automatic checkout/payment 
   real lost-acknowledgment replay, fresh-auth process/pod recovery and model-independent Cart reconciliation.
 - [x] A8: 5 frontend unit tests, lint/build and 8 actual Chrome/Keycloak cases pass on Compose and built kind Ingress.
 - [ ] A9 release quality: frozen hybrid corpus passes 240 procedural checks; recall/citations 60/60, positive procedural
-  checks 120/120, zero observed unsafe effects. Independent factual-assertion/wording review remains open; see source review.
+  checks 120/120, zero observed unsafe effects. Independent factual-assertion/wording review remains open; see source
+  review.
 - [ ] A10 full acceptance: host/off and standalone CPU/retained-model-volume checks pass; full CPU co-location and the
   specified 32 GiB hardware target remain unverified on the 48 GiB host / 7.75 GiB VM.
 - [ ] A11 full acceptance: native-model kind, twelve enforced Calico allow/deny probes, eight browser cases, actual pod
@@ -143,8 +145,10 @@ acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](do
   and compile/run the Java readiness helper.
 - [x] Validate profiles, environment references, dependency declarations, volumes and resource budgets with standalone
   Compose; check shell/Python syntax.
-- [x] Execute image builds and verify container probes, dependencies, resource behavior and service discovery (2026-10-18).
-- [x] Build/start full stack and run success/decline/search/cache/monitoring demonstration (Compose on 48 GiB host; 32 GiB capacity unverified).
+- [x] Execute image builds and verify container probes, dependencies, resource behavior and service discovery
+  (2026-10-18).
+- [x] Build/start full stack and run success/decline/search/cache/monitoring demonstration (Compose on 48 GiB host; 32
+  GiB capacity unverified).
 - Acceptance: documented reproducible Compose startup on a 32 GB Mac.
 
 ## Phase 12 — Complete Kubernetes deployment
@@ -166,12 +170,14 @@ acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](do
 - [x] Execute critical scenario 9: Kubernetes service restarts preserve durable data.
 - [x] Add CI Java/frontend/integration checks and eight-image Docker build matrix; validate workflow with actionlint and
   shell syntax checks.
-- [ ] Execute GitHub Actions remotely; all nine image builds were verified locally, but no remote workflow was dispatched.
+- [ ] Execute GitHub Actions remotely; all nine image builds were verified locally, but no remote workflow was
+  dispatched.
 - [x] Complete/review README, Mermaid architecture, data/API/event/security/observability docs, ADR, recovery guide and
   measured load results.
 - [x] Add and execute native five-minute successful/declined purchase, exact stock compensation, search/cache and
   provisioned Grafana demo.
-- [x] Execute the demonstration on the full Compose/kind deployment (native local models; CPU co-location remains separate).
+- [x] Execute the demonstration on the full Compose/kind deployment (native local models; CPU co-location remains
+  separate).
 - [x] Audit every final acceptance criterion and retain an explicit evidence/remaining-work matrix below.
 - Acceptance: reproducible setup, passing required checks and documented recovery; remaining limitations explicit.
 
@@ -370,23 +376,23 @@ Compose/kind demonstrations. No routine repair deletes data or changes Docker De
   selectors) were corrected and affected/full suites rerun; no failing tests are excluded. Native server fixtures are
   real services and synthetic data; no H2/runtime mocks or paid external resources were used.
 
-| Specification final acceptance criterion    | Evidence / remaining check                                                                                                          |
-|---------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| Reproducible Docker Compose startup         | Nine images built; full Compose host/off startup and browser/monitoring/recovery pass. CPU/32 GiB gates remain open.                                                     |
-| Authenticated React interface               | Real Chrome PKCE/session/purchase/admin/support flows pass.                                                                         |
-| Elasticsearch product search                | Native search/index/update/deactivation/rebuild/outage tests and browser search pass.                                               |
-| Redis cart/catalog cache                    | Atomic concurrency, TTL, invalidation, isolation and outage tests pass; browser and live hit/miss samples observed.                 |
-| Kafka-powered checkout                      | Real broker, HTTP services and separately owned databases pass success/failure/replay/restart checks.                               |
-| PostgreSQL integrity                        | Real migrations/constraints/rollback/idempotency/ownership tests pass.                                                              |
-| Durable saga/compensation                   | Timeout, late authorization, decline and order-application restart tests pass.                                                      |
-| Reliable outbox/replay-safe consumers       | Broker outage/lifecycle restart, retained logs, deduplication and poison-message DLT tests pass.                                    |
-| Successful/declined simulated payments      | Integration, Chrome demo and authenticated k6 checkout checks pass with exact stock verification.                                   |
-| Concurrency-safe inventory                  | 100 requests / stock 10 gives exactly 10 reservations; mixed-product reserve/release conservation passes.                           |
-| Meaningful Grafana metrics                  | Seven targets up, both dashboards provisioned, datasource health/query pass on native monitoring.                                   |
+| Specification final acceptance criterion    | Evidence / remaining check                                                                                                              |
+|---------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| Reproducible Docker Compose startup         | Nine images built; full Compose host/off startup and browser/monitoring/recovery pass. CPU/32 GiB gates remain open.                    |
+| Authenticated React interface               | Real Chrome PKCE/session/purchase/admin/support flows pass.                                                                             |
+| Elasticsearch product search                | Native search/index/update/deactivation/rebuild/outage tests and browser search pass.                                                   |
+| Redis cart/catalog cache                    | Atomic concurrency, TTL, invalidation, isolation and outage tests pass; browser and live hit/miss samples observed.                     |
+| Kafka-powered checkout                      | Real broker, HTTP services and separately owned databases pass success/failure/replay/restart checks.                                   |
+| PostgreSQL integrity                        | Real migrations/constraints/rollback/idempotency/ownership tests pass.                                                                  |
+| Durable saga/compensation                   | Timeout, late authorization, decline and order-application restart tests pass.                                                          |
+| Reliable outbox/replay-safe consumers       | Broker outage/lifecycle restart, retained logs, deduplication and poison-message DLT tests pass.                                        |
+| Successful/declined simulated payments      | Integration, Chrome demo and authenticated k6 checkout checks pass with exact stock verification.                                       |
+| Concurrency-safe inventory                  | 100 requests / stock 10 gives exactly 10 reservations; mixed-product reserve/release conservation passes.                               |
+| Meaningful Grafana metrics                  | Seven targets up, both dashboards provisioned, datasource health/query pass on native monitoring.                                       |
 | Runnable automated tests                    | 82 Java + 5 frontend unit + 8 Chrome cases; frozen 240-case AI evaluation retained. Remote CI/Docker fallback suites remain unverified. |
-| Local Kubernetes/restart recovery           | Native-model kind deployed; enforced policies, browser workflows and Order/PG/Redis/AI rebuild recovery pass; CPU memory-blocked.                          |
-| Security/authorization                      | Real Keycloak PKCE/service scope tests, issuer/audience/UUID subjects, roles and cross-customer ownership tests pass.               |
-| Architecture/setup/API/troubleshooting docs | Written/reviewed and linked from README; blocked deployment instructions explicitly identified as unexecuted.                       |
+| Local Kubernetes/restart recovery           | Native-model kind deployed; enforced policies, browser workflows and Order/PG/Redis/AI rebuild recovery pass; CPU memory-blocked.       |
+| Security/authorization                      | Real Keycloak PKCE/service scope tests, issuer/audience/UUID subjects, roles and cross-customer ownership tests pass.                   |
+| Architecture/setup/API/troubleshooting docs | Written/reviewed and linked from README; blocked deployment instructions explicitly identified as unexecuted.                           |
 
 The repository intentionally remains partially accepted until the unchecked deployment/runtime items above execute
 successfully. No remote deployment, Git initialization/commit or persisted user-data deletion was performed.

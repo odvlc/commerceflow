@@ -1,14 +1,13 @@
 package com.commerceflow.support;
 
 import com.commerceflow.contracts.EventEnvelope;
-
-import java.sql.Timestamp;
-import java.util.UUID;
-
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.sql.Timestamp;
+import java.util.UUID;
 
 public class OutboxStore {
 

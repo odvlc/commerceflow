@@ -12,7 +12,7 @@ if local.exists():
         if line.startswith("AI_DB_PASSWORD="):
             password = line.split("=", 1)[1].strip().strip("\"'")
 password = os.environ.get("AI_DB_PASSWORD", password)
-if not password or any(ord(char)<32 or ord(char)==127 for char in password):
+if not password or any(ord(char) < 32 or ord(char) == 127 for char in password):
     raise ValueError("AI_DB_PASSWORD must be a nonempty single-line value")
 literal = password.replace("'", "''")
 sql = rf"""

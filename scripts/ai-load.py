@@ -3,20 +3,24 @@
 import argparse
 import json
 import os
-from pathlib import Path
 import subprocess
+from pathlib import Path
 from urllib.request import Request, urlopen
+
 from local_client import local_url, login
 
 root = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser()
 parser.add_argument("scenario", choices=["commerce", "retrieval", "generation", "tool", "investigation", "mixed"])
 parser.add_argument("--iterations", type=int, default=10)
-parser.add_argument("--label",default="",help="Optional lowercase run label to retain repeated measurements")
-parser.add_argument("--cold", action="store_true", help="Explicitly unload Llama before a single generation measurement")
+parser.add_argument("--label", default="", help="Optional lowercase run label to retain repeated measurements")
+parser.add_argument("--cold", action="store_true",
+                    help="Explicitly unload Llama before a single generation measurement")
 args = parser.parse_args()
 import re
-if args.label and not re.fullmatch(r"[a-z0-9-]{1,30}",args.label): parser.error("label must be lowercase letters/digits/hyphens")
+
+if args.label and not re.fullmatch(r"[a-z0-9-]{1,30}", args.label): parser.error(
+    "label must be lowercase letters/digits/hyphens")
 if not 1 <= args.iterations <= 100:
     parser.error("iterations must be 1..100")
 if args.cold and (args.scenario != "generation" or args.iterations != 1):
@@ -28,10 +32,13 @@ if args.scenario in ("retrieval", "tool", "investigation"):
 if args.cold:
     model_url = local_url(settings.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434"))
     data = json.dumps(dict(model="llama3.1:8b", keep_alive=0)).encode()
-    with urlopen(Request(model_url + "/api/generate", data=data, headers={"Content-Type": "application/json"}), timeout=30) as response:
+    with urlopen(Request(model_url + "/api/generate", data=data, headers={"Content-Type": "application/json"}),
+                 timeout=30) as response:
         response.read()
-output = root / ".cache/verification" / ("ai-load-" + args.scenario + ("-cold" if args.cold else "-warm") + ("-"+args.label if args.label else "") + ".json")
+output = root / ".cache/verification" / ("ai-load-" + args.scenario + ("-cold" if args.cold else "-warm") + (
+    "-" + args.label if args.label else "") + ".json")
 output.parent.mkdir(parents=True, exist_ok=True)
 k6 = settings.get("K6", str(root / ".cache/tools/k6-v2.3.0-macos-arm64/k6"))
-subprocess.run([k6, "run", "--summary-export", str(output), str(root / "performance/ai/load.js")], env=settings, check=True)
+subprocess.run([k6, "run", "--summary-export", str(output), str(root / "performance/ai/load.js")], env=settings,
+               check=True)
 print("Sanitized local load summary:", output)

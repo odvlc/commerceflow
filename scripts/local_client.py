@@ -30,8 +30,8 @@ def login(user="alice", password=None):
     challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
     redirect = "http://localhost:5173/"
     query = urlencode(dict(client_id="commerceflow-web", redirect_uri=redirect, response_type="code",
-                          scope="openid", state=state, nonce=secrets.token_urlsafe(24),
-                          code_challenge=challenge, code_challenge_method="S256"))
+                           scope="openid", state=state, nonce=secrets.token_urlsafe(24),
+                           code_challenge=challenge, code_challenge_method="S256"))
     with browser.open(issuer + "/protocol/openid-connect/auth?" + query, timeout=15) as response:
         page = response.read().decode()
         cookies = "; ".join(value.split(";", 1)[0] for value in response.headers.get_all("Set-Cookie", []))
@@ -39,9 +39,10 @@ def login(user="alice", password=None):
     if not match:
         raise RuntimeError("Expected the local Keycloak login form")
     action = local_url(html.unescape(match.group(1)))
-    credentials = urlencode(dict(username=user, password=password or "local-" + user + "-only", credentialId="")).encode()
+    credentials = urlencode(
+        dict(username=user, password=password or "local-" + user + "-only", credentialId="")).encode()
     try:
-        browser.open(Request(action, data=credentials,headers={"Cookie":cookies}), timeout=15)
+        browser.open(Request(action, data=credentials, headers={"Cookie": cookies}), timeout=15)
         raise RuntimeError("Expected Keycloak authorization redirect")
     except HTTPError as response:
         if response.code != 302:

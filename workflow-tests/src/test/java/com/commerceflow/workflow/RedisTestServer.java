@@ -1,14 +1,17 @@
 package com.commerceflow.workflow;
 
-import static org.awaitility.Awaitility.await;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.utility.DockerImageName;
 
-import java.net.*;
-import java.nio.file.*;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.utility.DockerImageName;
+import static org.awaitility.Awaitility.await;
 
 /**
  * Real native Redis where supplied, otherwise an explicit Testcontainers runtime requirement.
@@ -46,7 +49,7 @@ final class RedisTestServer implements AutoCloseable {
                             directory.toString())
                             .redirectErrorStream(true)
                             .redirectOutput(directory.resolve("redis.log").toFile());
-            redis.process=redis.launch.start();
+            redis.process = redis.launch.start();
             await()
                     .atMost(Duration.ofSeconds(10))
                     .until(
@@ -78,12 +81,23 @@ final class RedisTestServer implements AutoCloseable {
     }
 
     void pause() throws Exception {
-        if(process==null)throw new IllegalStateException("Fault evaluation requires the documented native Redis fixture");
-        process.destroy();if(!process.waitFor(5,TimeUnit.SECONDS))process.destroyForcibly().waitFor();
+        if (process == null)
+            throw new IllegalStateException("Fault evaluation requires the documented native Redis fixture");
+        process.destroy();
+        if (!process.waitFor(5, TimeUnit.SECONDS)) process.destroyForcibly().waitFor();
     }
+
     void resume() throws Exception {
-        if(launch==null)throw new IllegalStateException("Native Redis launch configuration is absent");
-        process=launch.start();await().atMost(Duration.ofSeconds(10)).until(()->{try(var client=new Socket()){client.connect(new InetSocketAddress(host,port),100);return true;}catch(java.io.IOException e){return false;}});
+        if (launch == null) throw new IllegalStateException("Native Redis launch configuration is absent");
+        process = launch.start();
+        await().atMost(Duration.ofSeconds(10)).until(() -> {
+            try (var client = new Socket()) {
+                client.connect(new InetSocketAddress(host, port), 100);
+                return true;
+            } catch (java.io.IOException e) {
+                return false;
+            }
+        });
     }
 
     @Override

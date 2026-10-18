@@ -3,13 +3,13 @@ package com.commerceflow.notification;
 import com.commerceflow.contracts.CheckoutEvents.NotificationCreated;
 import com.commerceflow.contracts.CheckoutEvents.OrderStatus;
 import com.commerceflow.support.OutboxStore;
-
-import java.time.Instant;
-import java.util.*;
-
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class NotificationService {

@@ -34,13 +34,17 @@ Spring AI BOM 2.0.1 with Ollama and Elasticsearch vector-store starters resolved
 ignored isolated probe. Selected versions included Elasticsearch client 9.4.5, Spring Core 7.0.9 and Jackson 3.1.5;
 API classloading and basic Jackson serialization passed. This is preliminary dependency verification, not actual
 inference/tool/vector-query validation or a production dependency pin. See the
-[prerequisite assessment](ai-prerequisites.md) and [official compatibility guidance](https://docs.spring.io/spring-ai/reference/getting-started.html).
+[prerequisite assessment](ai-prerequisites.md)
+and [official compatibility guidance](https://docs.spring.io/spring-ai/reference/getting-started.html).
 
 ## Implemented AI module and selected local models (2026-10-18)
 
-`ai-service` uses Spring AI 2.0.1 with the Boot 4.1.1 BOM. Llama `llama3.1:8b` Q4_K_M is the user-selected chat/tool model;
-its actual digest is `46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e`. Nomic `nomic-embed-text:latest` F16
-is the separate 768-dimensional embedding model, digest `0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f`.
+`ai-service` uses Spring AI 2.0.1 with the Boot 4.1.1 BOM. Llama `llama3.1:8b` Q4_K_M is the user-selected chat/tool
+model;
+its actual digest is `46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e`. Nomic `nomic-embed-text:latest`
+F16
+is the separate 768-dimensional embedding model, digest
+`0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f`.
 Both were downloaded and executed with Ollama 0.40.6; exact details/license hashes are in `infra/ai/models.lock.json`.
 Llama uses its Community License; do not assume Apache licensing.
 [Official Llama model](https://ollama.com/library/llama3.1:8b), [embedding model](https://ollama.com/library/nomic-embed-text).
@@ -50,14 +54,17 @@ are separate later acceptance checks, not implied by artifact availability.
 
 AI deployment prerequisite verification (2026-10-18): official `ollama/ollama:0.40.6` manifest resolves for Linux amd64
 and arm64. A temporary `curlimages/curl:8.16.0` container actually fetched native Ollama `/api/tags` through
-`host.docker.internal:11434`, returning both pinned model names/digests. The existing localhost host binding was retained;
-no host-network setting or LAN listener was enabled. This verifies this Docker Desktop host, not every Linux installation.
+`host.docker.internal:11434`, returning both pinned model names/digests. The existing localhost host binding was
+retained;
+no host-network setting or LAN listener was enabled. This verifies this Docker Desktop host, not every Linux
+installation.
 Sources: [Ollama Docker guide](https://github.com/ollama/ollama/blob/main/docs/docker.mdx) and
 [Docker Desktop host connectivity](https://docs.docker.com/desktop/features/networking/networking-how-tos/).
 The standalone runtime image existing does not verify a full Compose/kind model deployment; those gates remain separate.
 
 AI deployment additions (2026-10-18): CPU Ollama remains pinned at 0.40.6; the explicit provisioning Job uses the
-Docker Official `python:3.15.0-alpine` image (manifest inspected successfully). [Official Python image](https://hub.docker.com/_/python).
+Docker Official `python:3.15.0-alpine` image (manifest inspected
+successfully). [Official Python image](https://hub.docker.com/_/python).
 Calico 3.33.0 is pinned for enforcing local kind policy; its official kind guide requires disabling kind's default CNI
 and documents the manifest installation. Kubernetes 1.37 uses the current API group path. NetworkPolicy enforcement
 is still a runtime test, distinct from installation/schema validity.
@@ -70,4 +77,5 @@ Calico outgoing NAT excludes destinations inside any configured IP pool. The off
 Docker Desktop's 192.168.65.254 host gateway in this environment; node access succeeded while pod access timed out.
 A fixed private `nginx:1.30-alpine` inference-only proxy on the kind Docker network resolved the measured routing issue
 without changing native Ollama's loopback binding or bypassing NetworkPolicy. Exact endpoint rules then passed twelve
-actual allow/deny probes. [Calico IP pool NAT semantics](https://docs.tigera.io/calico/latest/reference/resources/ippool).
+actual allow/deny
+probes. [Calico IP pool NAT semantics](https://docs.tigera.io/calico/latest/reference/resources/ippool).

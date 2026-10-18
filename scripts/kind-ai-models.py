@@ -2,9 +2,9 @@
 """Explicit digest-checked CPU model provisioning/warmup in kind; --check never downloads."""
 import argparse
 import json
-from pathlib import Path
 import subprocess
 import time
+from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser(description=__doc__)
@@ -26,7 +26,8 @@ job['metadata']['name'] = name
 if args.check:
     job['spec']['template']['metadata']['labels']['app'] = 'ai-model-check'
     job['spec']['template']['spec']['containers'][0]['command'].append('--check')
-existing = subprocess.run(command + ['get', 'job', name, '--ignore-not-found', '-o', 'json'], capture_output=True, text=True, check=True)
+existing = subprocess.run(command + ['get', 'job', name, '--ignore-not-found', '-o', 'json'], capture_output=True,
+                          text=True, check=True)
 if existing.stdout and json.loads(existing.stdout).get('status', {}).get('active', 0):
     raise RuntimeError('Model job is already running; inspect its progress rather than interrupt it')
 run('delete', 'job', name, '--ignore-not-found')

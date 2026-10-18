@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Prove allowed and denied connections in the local Calico kind deployment, using actual workload identities."""
 import json
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 prefix = ['kubectl', '--context', 'kind-commerceflow', '-n', 'commerceflow']
 checks = []
@@ -10,7 +10,7 @@ checks = []
 
 def probe(source, target, allowed):
     result = subprocess.run(prefix + ['exec', 'deployment/' + source, '--', 'java', '-cp', '/opt/health',
-                                     'HealthCheck', target], capture_output=True, text=True, timeout=20)
+                                      'HealthCheck', target], capture_output=True, text=True, timeout=20)
     if allowed:
         assert result.returncode == 0, source + ' could not reach its allowed dependency: ' + target
     else:
@@ -31,5 +31,6 @@ for name in ('payment-service', 'inventory-service', 'notification-service'):
 probe('api-gateway', 'http://ai-service:8080/actuator/health/readiness', True)
 probe('catalog-service', 'http://ai-service:8080/actuator/health/readiness', False)
 root = Path(__file__).resolve().parent.parent
-(root / '.cache/verification/ai-kind-network.json').write_text(json.dumps({'cni': 'Calico 3.33.0', 'checks': checks}, indent=2) + '\n')
+(root / '.cache/verification/ai-kind-network.json').write_text(
+    json.dumps({'cni': 'Calico 3.33.0', 'checks': checks}, indent=2) + '\n')
 print('Verified', len(checks), 'actual allowed/denied workload connections')

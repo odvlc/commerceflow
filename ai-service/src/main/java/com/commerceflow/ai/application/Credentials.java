@@ -1,34 +1,38 @@
 package com.commerceflow.ai.application;
 
 import com.commerceflow.ai.domain.Actor;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
 @Component
 public class Credentials {
-  private final Map<UUID, Actor> values = new ConcurrentHashMap<>();
 
-  public void attach(UUID run, Actor actor) {
-    if (actor.valid()) values.put(run, actor);
-  }
+    private final Map<UUID, Actor> values = new ConcurrentHashMap<>();
 
-  public Optional<Actor> get(UUID run) {
-    var actor = values.get(run);
-    if (actor == null || !actor.valid()) {
-      values.remove(run);
-      return Optional.empty();
+    public void attach(UUID run, Actor actor) {
+        if (actor.valid()) values.put(run, actor);
     }
-    return Optional.of(actor);
-  }
 
-  public void remove(UUID run) {
-    values.remove(run);
-  }
+    public Optional<Actor> get(UUID run) {
+        var actor = values.get(run);
+        if (actor == null || !actor.valid()) {
+            values.remove(run);
+            return Optional.empty();
+        }
+        return Optional.of(actor);
+    }
 
-  @Scheduled(fixedDelay = 30000)
-  void expire() {
-    values.entrySet().removeIf(e -> !e.getValue().valid());
-  }
+    public void remove(UUID run) {
+        values.remove(run);
+    }
+
+    @Scheduled(fixedDelay = 30000)
+    void expire() {
+        values.entrySet().removeIf(e -> !e.getValue().valid());
+    }
 }

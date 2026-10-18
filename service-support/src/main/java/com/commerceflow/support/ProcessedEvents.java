@@ -1,9 +1,9 @@
 package com.commerceflow.support;
 
-import java.util.UUID;
-
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 public class ProcessedEvents {
 

@@ -8,7 +8,7 @@ spec:
   activeDeadlineSeconds: 3600
   template:
     metadata:
-      labels: {app: ai-model-prepare}
+      labels: { app: ai-model-prepare }
     spec:
       restartPolicy: Never
       enableServiceLinks: false
@@ -16,26 +16,26 @@ spec:
       containers:
         - name: prepare
           image: python:3.15.0-alpine
-          command: [python3, /workspace/scripts/prepare-ai-models.py, --cluster-local, --storage-path=/models, --warmup]
+          command: [ python3, /workspace/scripts/prepare-ai-models.py, --cluster-local, --storage-path=/models, --warmup ]
           env:
-            - {name: OLLAMA_BASE_URL, value: "http://ollama:11434"}
-            - {name: AI_MODEL_PREPARE_TIMEOUT, value: "1800"}
-            - {name: PYTHONDONTWRITEBYTECODE, value: "1"}
+            - { name: OLLAMA_BASE_URL, value: "http://ollama:11434" }
+            - { name: AI_MODEL_PREPARE_TIMEOUT, value: "1800" }
+            - { name: PYTHONDONTWRITEBYTECODE, value: "1" }
           resources:
-            requests: {cpu: 50m, memory: 32Mi}
-            limits: {cpu: 250m, memory: 128Mi}
+            requests: { cpu: 50m, memory: 32Mi }
+            limits: { cpu: 250m, memory: 128Mi }
           securityContext:
             runAsNonRoot: true
             runAsUser: 10001
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
-            capabilities: {drop: [ALL]}
+            capabilities: { drop: [ ALL ] }
           volumeMounts:
-            - {name: preparation, mountPath: /workspace/scripts/prepare-ai-models.py, subPath: prepare-ai-models.py, readOnly: true}
-            - {name: preparation, mountPath: /workspace/infra/ai/models.lock.json, subPath: models.lock.json, readOnly: true}
-            - {name: models, mountPath: /models, readOnly: true}
+            - { name: preparation, mountPath: /workspace/scripts/prepare-ai-models.py, subPath: prepare-ai-models.py, readOnly: true }
+            - { name: preparation, mountPath: /workspace/infra/ai/models.lock.json, subPath: models.lock.json, readOnly: true }
+            - { name: models, mountPath: /models, readOnly: true }
       volumes:
         - name: preparation
-          configMap: {name: ai-model-preparation}
+          configMap: { name: ai-model-preparation }
         - name: models
-          persistentVolumeClaim: {claimName: models-ollama-0}
+          persistentVolumeClaim: { claimName: models-ollama-0 }

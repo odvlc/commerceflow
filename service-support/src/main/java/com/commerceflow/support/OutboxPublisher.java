@@ -2,15 +2,14 @@ package com.commerceflow.support;
 
 import com.commerceflow.contracts.Topics;
 import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.transaction.annotation.Transactional;
 
 public class OutboxPublisher {
 

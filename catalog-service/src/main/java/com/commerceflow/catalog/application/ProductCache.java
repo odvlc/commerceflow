@@ -2,16 +2,17 @@ package com.commerceflow.catalog.application;
 
 import com.commerceflow.catalog.api.ProductView;
 import io.micrometer.core.instrument.MeterRegistry;
-
-import java.time.Duration;
-import java.util.*;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @ConditionalOnProperty(name = "catalog.cache.enabled", havingValue = "true", matchIfMissing = true)

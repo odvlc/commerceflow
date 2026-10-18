@@ -58,5 +58,6 @@ production deployment role.
 Pinned local Llama 3.1 handles generation/tool requests; separate Nomic embeddings augment filtered BM25 retrieval.
 The application validates fixed caller-authorized tools and orchestrates bounded leased/fenced runs. An LLM has no
 SQL, shell, generic HTTP, checkout/payment or inventory authority. Cart preparation is separate from explicit user
-confirmation and stable-key conditional execution. See [AI architecture](ai-architecture.md), [ADR 0002](adr/0002-ai-copilot.md)
+confirmation and stable-key conditional execution.
+See [AI architecture](ai-architecture.md), [ADR 0002](adr/0002-ai-copilot.md)
 and [AI operations](ai-operations.md). Existing checkout remains independent of inference readiness.

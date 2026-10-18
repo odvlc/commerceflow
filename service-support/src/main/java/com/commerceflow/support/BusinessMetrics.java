@@ -1,6 +1,7 @@
 package com.commerceflow.support;
 
-import org.springframework.transaction.support.*;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 public final class BusinessMetrics {
 

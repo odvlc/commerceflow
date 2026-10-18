@@ -133,7 +133,9 @@
                         <configuration>
                             <systemPropertyVariables>
                                 <commerceflow.root>${maven.multiModuleProjectDirectory}</commerceflow.root>
-                                <elasticsearch.home.path>${maven.multiModuleProjectDirectory}/.cache/tools/elasticsearch-9.4.5</elasticsearch.home.path>
+                                <elasticsearch.home.path>
+                                    ${maven.multiModuleProjectDirectory}/.cache/tools/elasticsearch-9.4.5
+                                </elasticsearch.home.path>
                             </systemPropertyVariables>
                         </configuration>
                     </plugin>

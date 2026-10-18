@@ -2,7 +2,11 @@ package com.commerceflow.order;
 
 import com.commerceflow.contracts.CheckoutEvents.PaymentScenario;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -44,7 +48,13 @@ public final class OrderModels {
     public record OrderPage(List<OrderView> items, int page, int size, long totalElements) {
 
     }
-    public record StatusHistory(long version,OrderState status,String reason,Instant recordedAt) {}
-    public record OrderExplanation(UUID id,OrderState status,long version,String reason,boolean reasonKnown,
-                                   Instant observedAt,List<StatusHistory> history) {}
+
+    public record StatusHistory(long version, OrderState status, String reason, Instant recordedAt) {
+
+    }
+
+    public record OrderExplanation(UUID id, OrderState status, long version, String reason, boolean reasonKnown,
+                                   Instant observedAt, List<StatusHistory> history) {
+
+    }
 }

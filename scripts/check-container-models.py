@@ -3,9 +3,9 @@
 import argparse
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 from urllib.parse import urlparse
 
 root = Path(__file__).resolve().parent.parent
@@ -27,9 +27,9 @@ if args.endpoint_only:
     print(endpoint)
     sys.exit(0)
 response = subprocess.run(['docker', 'run', '--rm',
-    'curlimages/curl:8.16.0@sha256:463eaf6072688fe96ac64fa623fe73e1dbe25d8ad6c34404a669ad3ce1f104b6',
-    '-fsS', '--connect-timeout', '3', '--max-time', '10', endpoint + '/api/tags'],
-    check=True, capture_output=True, text=True)
+                           'curlimages/curl:8.16.0@sha256:463eaf6072688fe96ac64fa623fe73e1dbe25d8ad6c34404a669ad3ce1f104b6',
+                           '-fsS', '--connect-timeout', '3', '--max-time', '10', endpoint + '/api/tags'],
+                          check=True, capture_output=True, text=True)
 installed = {model['name']: model['digest'] for model in json.loads(response.stdout)['models']}
 lock = json.loads((Path(__file__).resolve().parent.parent / 'infra/ai/models.lock.json').read_text())
 for model in lock['models']:

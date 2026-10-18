@@ -3,21 +3,23 @@
 import argparse
 import json
 import os
-from pathlib import Path
 import subprocess
 import threading
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
 from local_client import local_url, login
 
 root = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--target', choices=['compose', 'kind'], default='compose')
 args = parser.parse_args()
-base = local_url(os.environ.get('BASE_URL', 'http://localhost:3000' if args.target == 'kind' else 'http://localhost:8080'))
+base = local_url(
+    os.environ.get('BASE_URL', 'http://localhost:3000' if args.target == 'kind' else 'http://localhost:8080'))
 token = login('alice')
 report = {'target': 'local ' + args.target, 'realProcessKill': False, 'complete': False, 'checks': []}
 
@@ -63,7 +65,8 @@ def setup_kind_fault_proxy():
                     '--mount', 'type=bind,source=' + str(configuration) + ',target=/etc/nginx/nginx.conf,readonly',
                     '--entrypoint', 'nginx', 'nginx:1.30-alpine', '-g', 'daemon off;'], check=True, capture_output=True)
     address = subprocess.run(['docker', 'inspect', 'commerceflow-kind-cart-recovery-proxy', '--format',
-                              '{{.NetworkSettings.Networks.kind.IPAddress}}'], check=True, capture_output=True, text=True).stdout.strip()
+                              '{{.NetworkSettings.Networks.kind.IPAddress}}'], check=True, capture_output=True,
+                             text=True).stdout.strip()
     import ipaddress
     address = str(ipaddress.IPv4Address(address))
     objects = [
@@ -75,7 +78,8 @@ def setup_kind_fault_proxy():
          'endpoints': [{'addresses': [address], 'conditions': {'ready': True}}]},
         {'apiVersion': 'networking.k8s.io/v1', 'kind': 'NetworkPolicy', 'metadata': {'name': 'ai-cart-recovery-proxy'},
          'spec': {'podSelector': {'matchLabels': {'app': 'ai-service'}}, 'policyTypes': ['Egress'],
-                  'egress': [{'to': [{'ipBlock': {'cidr': address + '/32'}}], 'ports': [{'protocol': 'TCP', 'port': 18885}]}]}},
+                  'egress': [{'to': [{'ipBlock': {'cidr': address + '/32'}}],
+                              'ports': [{'protocol': 'TCP', 'port': 18885}]}]}},
     ]
     for item in objects:
         kube('apply', '-f', '-', input=json.dumps(item))
@@ -90,10 +94,15 @@ def cleanup_kind_fault_proxy():
 def compose(*arguments, **overrides):
     if args.target == 'kind':
         if arguments[0] == 'kill':
-            pod = json.loads(kube('get', 'pods', '-l', 'app=ai-service', '-o', 'json', capture_output=True).stdout)['items'][0]
+            pod = \
+                json.loads(kube('get', 'pods', '-l', 'app=ai-service', '-o', 'json', capture_output=True).stdout)[
+                    'items'][
+                    0]
             report['lastKilledPodUid'] = pod['metadata']['uid']
             container_id = pod['status']['containerStatuses'][0]['containerID'].split('://', 1)[1]
-            subprocess.run(['docker', 'exec', 'commerceflow-control-plane', 'crictl', 'stop', '--timeout=0', container_id], check=True)
+            subprocess.run(
+                ['docker', 'exec', 'commerceflow-control-plane', 'crictl', 'stop', '--timeout=0', container_id],
+                check=True)
             kube('delete', 'pod', pod['metadata']['name'], '--grace-period=0', '--force', '--wait=true')
         elif '--force-recreate' in arguments:
             cart_url = 'http://cart-recovery-proxy:18885' if 'AI_CART_URL' in overrides else 'http://cart-service:8080'
@@ -102,14 +111,18 @@ def compose(*arguments, **overrides):
             kube('rollout', 'restart', 'deployment/ai-service')
             kube('rollout', 'status', 'deployment/ai-service', '--timeout=150s')
         else:
-            wait_for(lambda: json.loads(kube('get', 'pods', '-l', 'app=ai-service', '-o', 'json', capture_output=True).stdout)['items'],
+            wait_for(lambda:
+                     json.loads(kube('get', 'pods', '-l', 'app=ai-service', '-o', 'json', capture_output=True).stdout)[
+                         'items'],
                      lambda pods: any(pod['metadata']['uid'] != report.get('lastKilledPodUid') and
-                                      any(condition['type'] == 'Ready' and condition['status'] == 'True' for condition in pod.get('status', {}).get('conditions', [])) for pod in pods))
+                                      any(condition['type'] == 'Ready' and condition['status'] == 'True' for condition
+                                          in pod.get('status', {}).get('conditions', [])) for pod in pods))
         return
     environment = dict(os.environ, AI_ENABLED='true', **overrides)
     with (root / '.cache/verification/ai-recovery-compose.log').open('a') as output:
-        subprocess.run(['docker', 'compose', '-f', 'infra/compose.yaml', '--profile', 'full', '--profile', 'ai', *arguments],
-                       cwd=root, env=environment, check=True, stdout=output, stderr=subprocess.STDOUT)
+        subprocess.run(
+            ['docker', 'compose', '-f', 'infra/compose.yaml', '--profile', 'full', '--profile', 'ai', *arguments],
+            cwd=root, env=environment, check=True, stdout=output, stderr=subprocess.STDOUT)
 
 
 def restart(**overrides):
@@ -219,18 +232,23 @@ try:
     assert wait_for(lambda: view(run), lambda value: value['state'] in ('SUCCEEDED', 'FAILED'))['state'] == 'SUCCEEDED'
     assert quantity(product) == before + 1
     assert confirm(saved)['id'] == first_execution['id']
-    record_check('Waiting proposal survived process replacement; fresh confirmation and duplicate confirmation had one effect')
+    record_check(
+        'Waiting proposal survived process replacement; fresh confirmation and duplicate confirmation had one effect')
 
     read_run = start('Search the demo shipping policy and explain the delivery estimate with a citation.')
-    wait_for(lambda: view(read_run), lambda value: any(step['kind'] == 'MODEL' and step['state'] == 'PENDING' for step in value['steps']), 30)
+    wait_for(lambda: view(read_run),
+             lambda value: any(step['kind'] == 'MODEL' and step['state'] == 'PENDING' for step in value['steps']), 30)
     compose('kill', '--signal', 'SIGKILL', 'ai-service')
     report['realProcessKill'] = True
     compose('up', '-d', '--no-deps', '--wait', '--wait-timeout', '150', 'ai-service')
     token = login('alice')
-    paused = wait_for(lambda: view(read_run), lambda value: value['state'] in ('AUTHENTICATION_REQUIRED', 'SUCCEEDED', 'FAILED'))
-    assert paused['state'] == 'AUTHENTICATION_REQUIRED', 'Kill must interrupt actual model work, not count an already completed run'
+    paused = wait_for(lambda: view(read_run),
+                      lambda value: value['state'] in ('AUTHENTICATION_REQUIRED', 'SUCCEEDED', 'FAILED'))
+    assert paused[
+               'state'] == 'AUTHENTICATION_REQUIRED', 'Kill must interrupt actual model work, not count an already completed run'
     call('/ai/runs/' + read_run['id'] + '/resume', {})
-    assert wait_for(lambda: view(read_run), lambda value: value['state'] in ('SUCCEEDED', 'FAILED'))['state'] == 'SUCCEEDED'
+    assert wait_for(lambda: view(read_run), lambda value: value['state'] in ('SUCCEEDED', 'FAILED'))[
+               'state'] == 'SUCCEEDED'
     record_check('SIGKILL during model step required fresh same-owner resume and completed from durable state')
 
     server = ThreadingHTTPServer(('127.0.0.1', 18885), CartResponseDelay)
@@ -251,14 +269,16 @@ try:
     token = login('alice')
     assert not call('/ai/capabilities')['modelReady']
     token = login('alice')
-    paused = wait_for(lambda: view(run), lambda value: value['state'] in ('AUTHENTICATION_REQUIRED', 'SUCCEEDED', 'FAILED'))
+    paused = wait_for(lambda: view(run),
+                      lambda value: value['state'] in ('AUTHENTICATION_REQUIRED', 'SUCCEEDED', 'FAILED'))
     assert paused['state'] == 'AUTHENTICATION_REQUIRED'
     call('/ai/runs/' + run['id'] + '/resume', {})
     assert wait_for(lambda: view(run), lambda value: value['state'] in ('SUCCEEDED', 'FAILED'))['state'] == 'SUCCEEDED'
     recovered = call('/ai/proposals/' + proposal['id'] + '/execution')
     assert recovered['requestKey'] == execution['requestKey'] and recovered['id'] == execution['id']
     assert recovered['state'] == 'SUCCEEDED' and quantity(product) == before + 1
-    record_check('SIGKILL after real Cart acknowledgment before AI recorded response: same execution/key replay, one added unit while inference unavailable')
+    record_check(
+        'SIGKILL after real Cart acknowledgment before AI recorded response: same execution/key replay, one added unit while inference unavailable')
 
     restart(AI_OLLAMA_URL='http://host.docker.internal:11439')
     token = login('alice')

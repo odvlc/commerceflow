@@ -34,4 +34,5 @@ JWTs/refresh tokens are never stored. Index projection remains derived, version-
 Cart Lua mutations now use an incarnation-aware revision/ETag. Empty-cart reads atomically issue a stable incarnation;
 expiry/recreation issues a new one. A matching memo/hash is checked before the original `If-Match`, so recovery can
 retrieve an acknowledged result without issuing a duplicate effect. The recovery horizon is shorter than memo/cart
-retention. Redis is still not authoritative for orders, payments or inventory. [AI API](ai-api.md) describes the contract.
+retention. Redis is still not authoritative for orders, payments or inventory. [AI API](ai-api.md) describes the
+contract.

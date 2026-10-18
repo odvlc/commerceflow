@@ -69,4 +69,5 @@ feeding the full timestamped timeline to generation. The full authorized Order A
 Rebuild recovery uses the already-held PostgreSQL session advisory lock as the serialization authority: once a crashed
 session releases it, RUNNING work may replay immediately, including an alias swap committed before its final checkpoint.
 The diagnostic lease is not an extra ten-minute restart delay. Owned proposal/execution resume bypasses model admission
-because Cart reconciliation has no generation dependency; ordinary inference resume still requires pinned model readiness.
+because Cart reconciliation has no generation dependency; ordinary inference resume still requires pinned model
+readiness.

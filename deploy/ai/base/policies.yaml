@@ -4,31 +4,31 @@ metadata:
   name: ai-service-dependencies
 spec:
   podSelector:
-    matchLabels: {app: ai-service}
-  policyTypes: [Ingress, Egress]
+    matchLabels: { app: ai-service }
+  policyTypes: [ Ingress, Egress ]
   ingress:
     - from:
-        - podSelector: {matchLabels: {app: api-gateway}}
-        - podSelector: {matchLabels: {app: prometheus}}
-      ports: [{protocol: TCP, port: 8080}]
+        - podSelector: { matchLabels: { app: api-gateway } }
+        - podSelector: { matchLabels: { app: prometheus } }
+      ports: [ { protocol: TCP, port: 8080 } ]
   egress:
     - to:
-        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
-      ports: [{protocol: UDP, port: 53}, {protocol: TCP, port: 53}]
-    - to: [{podSelector: {matchLabels: {app: postgres}}}]
-      ports: [{protocol: TCP, port: 5432}]
-    - to: [{podSelector: {matchLabels: {app: kafka}}}]
-      ports: [{protocol: TCP, port: 29092}]
-    - to: [{podSelector: {matchLabels: {app: elasticsearch}}}]
-      ports: [{protocol: TCP, port: 9200}]
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+      ports: [ { protocol: UDP, port: 53 }, { protocol: TCP, port: 53 } ]
+    - to: [ { podSelector: { matchLabels: { app: postgres } } } ]
+      ports: [ { protocol: TCP, port: 5432 } ]
+    - to: [ { podSelector: { matchLabels: { app: kafka } } } ]
+      ports: [ { protocol: TCP, port: 29092 } ]
+    - to: [ { podSelector: { matchLabels: { app: elasticsearch } } } ]
+      ports: [ { protocol: TCP, port: 9200 } ]
     - to:
-        - podSelector: {matchLabels: {app: keycloak}}
-        - podSelector: {matchLabels: {app: catalog-service}}
-        - podSelector: {matchLabels: {app: cart-service}}
-        - podSelector: {matchLabels: {app: order-service}}
-      ports: [{protocol: TCP, port: 8080}]
-    - to: [{podSelector: {matchLabels: {app: ollama}}}]
-      ports: [{protocol: TCP, port: 11434}]
+        - podSelector: { matchLabels: { app: keycloak } }
+        - podSelector: { matchLabels: { app: catalog-service } }
+        - podSelector: { matchLabels: { app: cart-service } }
+        - podSelector: { matchLabels: { app: order-service } }
+      ports: [ { protocol: TCP, port: 8080 } ]
+    - to: [ { podSelector: { matchLabels: { app: ollama } } } ]
+      ports: [ { protocol: TCP, port: 11434 } ]
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -36,12 +36,12 @@ metadata:
   name: ai-db-provision-dependencies
 spec:
   podSelector:
-    matchLabels: {app: ai-db-provision}
-  policyTypes: [Ingress, Egress]
-  ingress: []
+    matchLabels: { app: ai-db-provision }
+  policyTypes: [ Ingress, Egress ]
+  ingress: [ ]
   egress:
     - to:
-        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
-      ports: [{protocol: UDP, port: 53}, {protocol: TCP, port: 53}]
-    - to: [{podSelector: {matchLabels: {app: postgres}}}]
-      ports: [{protocol: TCP, port: 5432}]
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+      ports: [ { protocol: UDP, port: 53 }, { protocol: TCP, port: 53 } ]
+    - to: [ { podSelector: { matchLabels: { app: postgres } } } ]
+      ports: [ { protocol: TCP, port: 5432 } ]

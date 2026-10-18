@@ -118,7 +118,7 @@ jobs:
 
   real-model:
     if: github.event_name == 'workflow_dispatch' && inputs.real_model
-    runs-on: [self-hosted, commerceflow-ai]
+    runs-on: [ self-hosted, commerceflow-ai ]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7.0.1

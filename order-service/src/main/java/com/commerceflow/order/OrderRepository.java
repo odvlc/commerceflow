@@ -1,18 +1,24 @@
 package com.commerceflow.order;
 
 import com.commerceflow.contracts.CheckoutEvents.PaymentScenario;
-import com.commerceflow.order.OrderModels.*;
+import com.commerceflow.order.OrderModels.CreateOrder;
+import com.commerceflow.order.OrderModels.Line;
+import com.commerceflow.order.OrderModels.OrderExplanation;
+import com.commerceflow.order.OrderModels.OrderPage;
+import com.commerceflow.order.OrderModels.OrderView;
+import com.commerceflow.order.OrderModels.StatusHistory;
 import com.commerceflow.support.BusinessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.stereotype.Repository;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.*;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.stereotype.Repository;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public class OrderRepository {
@@ -191,14 +197,16 @@ public class OrderRepository {
                 .param("error", error)
                 .update();
     }
-    public void recordReason(UUID id,String reason) {
+
+    public void recordReason(UUID id, String reason) {
         jdbc.sql("UPDATE orders SET public_reason_code=:reason WHERE id=:id AND public_reason_code IS NULL")
-            .param("id",id).param("reason",reason).update();
+                .param("id", id).param("reason", reason).update();
     }
+
     public OrderExplanation explanation(Row order) {
-        String reason=jdbc.sql("SELECT public_reason_code FROM orders WHERE id=:id").param("id",order.id()).query(String.class).optional().orElse(null);
-        var history=jdbc.sql("SELECT * FROM order_status_history WHERE order_id=:id ORDER BY version LIMIT 100")
-            .param("id",order.id()).query((rs,n)->new StatusHistory(rs.getLong("version"),OrderState.valueOf(rs.getString("status")),rs.getString("public_reason_code"),rs.getTimestamp("recorded_at").toInstant())).list();
-        return new OrderExplanation(order.id(),order.status(),order.version(),reason,reason!=null,Instant.now(),history);
+        String reason = jdbc.sql("SELECT public_reason_code FROM orders WHERE id=:id").param("id", order.id()).query(String.class).optional().orElse(null);
+        var history = jdbc.sql("SELECT * FROM order_status_history WHERE order_id=:id ORDER BY version LIMIT 100")
+                .param("id", order.id()).query((rs, n) -> new StatusHistory(rs.getLong("version"), OrderState.valueOf(rs.getString("status")), rs.getString("public_reason_code"), rs.getTimestamp("recorded_at").toInstant())).list();
+        return new OrderExplanation(order.id(), order.status(), order.version(), reason, reason != null, Instant.now(), history);
     }
 }

@@ -1,18 +1,25 @@
 package com.commerceflow.inventory;
 
-import com.commerceflow.contracts.CheckoutEvents.*;
-import com.commerceflow.support.*;
-
-import java.sql.Timestamp;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
-
+import com.commerceflow.contracts.CheckoutEvents.Command;
+import com.commerceflow.contracts.CheckoutEvents.InventoryResult;
+import com.commerceflow.contracts.CheckoutEvents.ReserveInventory;
+import com.commerceflow.contracts.CheckoutEvents.StockItem;
+import com.commerceflow.support.BusinessException;
+import com.commerceflow.support.BusinessMetrics;
+import com.commerceflow.support.OutboxStore;
+import com.commerceflow.support.RequestHash;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class InventoryService {

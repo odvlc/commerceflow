@@ -1,40 +1,38 @@
 package com.commerceflow.workflow;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.awaitility.Awaitility.await;
-
 import com.commerceflow.cart.CartApplication;
 import com.commerceflow.cart.CartService;
 import com.commerceflow.catalog.CatalogApplication;
 import com.commerceflow.catalog.api.ProductView;
 import com.commerceflow.catalog.application.ProductCache;
 import com.commerceflow.catalog.search.ProductSearch;
-import com.commerceflow.contracts.*;
 import com.commerceflow.contracts.CheckoutEvents.PaymentResult;
+import com.commerceflow.contracts.EventEnvelope;
+import com.commerceflow.contracts.Topics;
 import com.commerceflow.inventory.InventoryApplication;
 import com.commerceflow.inventory.InventoryService.Stock;
 import com.commerceflow.notification.NotificationApplication;
 import com.commerceflow.notification.NotificationService;
-import com.commerceflow.order.*;
+import com.commerceflow.order.OrderApplication;
 import com.commerceflow.order.OrderModels.OrderView;
-import com.commerceflow.payment.*;
+import com.commerceflow.order.OrderState;
+import com.commerceflow.payment.PaymentApplication;
+import com.commerceflow.payment.PaymentService;
 import com.commerceflow.payment.PaymentService.PaymentView;
-import com.nimbusds.jose.*;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
-import com.nimbusds.jwt.*;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.sun.net.httpserver.HttpServer;
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
-
-import java.math.BigDecimal;
-import java.net.*;
-import java.net.http.*;
-import java.nio.charset.StandardCharsets;
-import java.time.*;
-import java.util.*;
-
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.server.context.WebServerApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -42,6 +40,29 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.EmbeddedKafkaKraftBroker;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.math.BigDecimal;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 /**
  * Four real HTTP applications, four separately owned databases, real Kafka, and signed JWT
@@ -889,64 +910,112 @@ class CheckoutWorkflowTest {
                 .isEqualTo(401);
     }
 
-    @Test @org.junit.jupiter.api.Order(9)
+    @Test
+    @org.junit.jupiter.api.Order(9)
     void aiReadToolsUseActualScopedHttpAndNeverElevateCallerAuthority() throws Exception {
-        var product=product(4);var declined=create(product,1,"DECLINE",UUID.randomUUID().toString());terminal(declined.id(),OrderState.CANCELLED);
-        try(var ai=startApp(com.commerceflow.ai.AiApplication.class,"ai","--ai.worker-enabled=false","--ai.indexing-enabled=false","--ai.catalog-url="+base(catalog),"--ai.order-url="+base(order),"--ai.cart-url="+base(cart),"--ai.search-url="+elasticsearch.url())) {
-            var tools=ai.getBean(com.commerceflow.ai.tools.ToolRegistry.class);
-            var actor=new com.commerceflow.ai.domain.Actor(CUSTOMER,token(CUSTOMER,"CUSTOMER"),Set.of("CUSTOMER"),Instant.now().plusSeconds(300));
-            var run=UUID.randomUUID();
-            var detail=tools.invoke(run,actor,"CUSTOMER","getProduct",JSON.valueToTree(Map.of("productId",product.id())));
-            assertThat(detail.data().path("price").asText()).isEqualTo("19.95");assertThat(detail.evidence()).hasSize(1);
-            var reason=tools.invoke(run,actor,"CUSTOMER","getMyOrderExplanation",JSON.valueToTree(Map.of("orderId",declined.id())));
+        var product = product(4);
+        var declined = create(product, 1, "DECLINE", UUID.randomUUID().toString());
+        terminal(declined.id(), OrderState.CANCELLED);
+        try (var ai = startApp(com.commerceflow.ai.AiApplication.class, "ai", "--ai.worker-enabled=false", "--ai.indexing-enabled=false", "--ai.catalog-url=" + base(catalog), "--ai.order-url=" + base(order), "--ai.cart-url=" + base(cart), "--ai.search-url=" + elasticsearch.url())) {
+            var tools = ai.getBean(com.commerceflow.ai.tools.ToolRegistry.class);
+            var actor = new com.commerceflow.ai.domain.Actor(CUSTOMER, token(CUSTOMER, "CUSTOMER"), Set.of("CUSTOMER"), Instant.now().plusSeconds(300));
+            var run = UUID.randomUUID();
+            var detail = tools.invoke(run, actor, "CUSTOMER", "getProduct", JSON.valueToTree(Map.of("productId", product.id())));
+            assertThat(detail.data().path("price").asText()).isEqualTo("19.95");
+            assertThat(detail.evidence()).hasSize(1);
+            var reason = tools.invoke(run, actor, "CUSTOMER", "getMyOrderExplanation", JSON.valueToTree(Map.of("orderId", declined.id())));
             assertThat(reason.data().has("history")).isFalse();
             assertThat(reason.evidence().getFirst().content()).doesNotContain("recordedAt", "duration");
             assertThat(reason.data().path("reason").asText()).isEqualTo("PAYMENT_DECLINED");
-            await().atMost(Duration.ofSeconds(20)).untilAsserted(()->assertThat(tools.invoke(run,actor,"CUSTOMER","searchProducts",JSON.valueToTree(Map.of("query","keyboard","maxPrice","20.00"))).evidence()).isNotEmpty());
-            assertThat(tools.invoke(run,actor,"CUSTOMER","getMyCart",JSON.valueToTree(Map.of())).data().has("items")).isTrue();
-            UUID other=UUID.randomUUID();var another=new com.commerceflow.ai.domain.Actor(other,token(other,"CUSTOMER"),Set.of("CUSTOMER"),actor.expiresAt());
-            assertThatThrownBy(()->tools.invoke(run,another,"CUSTOMER","getMyOrderExplanation",JSON.valueToTree(Map.of("orderId",declined.id())))).hasMessage("Resource not found");
-            var support=new com.commerceflow.ai.domain.Actor(other,token(other,"SUPPORT"),Set.of("SUPPORT"),actor.expiresAt());
-            assertThat(tools.invoke(run,support,"SUPPORT","getSupportOrderExplanation",JSON.valueToTree(Map.of("orderId",declined.id()))).data().path("reason").asText()).isEqualTo("PAYMENT_DECLINED");
-            assertThatThrownBy(()->tools.invoke(run,support,"SUPPORT","getMyCart",JSON.valueToTree(Map.of()))).hasMessageContaining("not available");
-            var forged=new com.commerceflow.ai.domain.Actor(other,token(other,"CUSTOMER"),Set.of("ADMIN"),actor.expiresAt());
-            assertThatThrownBy(()->tools.invoke(run,forged,"SUPPORT","getSupportOrderExplanation",JSON.valueToTree(Map.of("orderId",declined.id())))).hasMessageContaining("cannot perform");
-            verifyAiActions(ai,product.id());
+            await().atMost(Duration.ofSeconds(20)).untilAsserted(() -> assertThat(tools.invoke(run, actor, "CUSTOMER", "searchProducts", JSON.valueToTree(Map.of("query", "keyboard", "maxPrice", "20.00"))).evidence()).isNotEmpty());
+            assertThat(tools.invoke(run, actor, "CUSTOMER", "getMyCart", JSON.valueToTree(Map.of())).data().has("items")).isTrue();
+            UUID other = UUID.randomUUID();
+            var another = new com.commerceflow.ai.domain.Actor(other, token(other, "CUSTOMER"), Set.of("CUSTOMER"), actor.expiresAt());
+            assertThatThrownBy(() -> tools.invoke(run, another, "CUSTOMER", "getMyOrderExplanation", JSON.valueToTree(Map.of("orderId", declined.id())))).hasMessage("Resource not found");
+            var support = new com.commerceflow.ai.domain.Actor(other, token(other, "SUPPORT"), Set.of("SUPPORT"), actor.expiresAt());
+            assertThat(tools.invoke(run, support, "SUPPORT", "getSupportOrderExplanation", JSON.valueToTree(Map.of("orderId", declined.id()))).data().path("reason").asText()).isEqualTo("PAYMENT_DECLINED");
+            assertThatThrownBy(() -> tools.invoke(run, support, "SUPPORT", "getMyCart", JSON.valueToTree(Map.of()))).hasMessageContaining("not available");
+            var forged = new com.commerceflow.ai.domain.Actor(other, token(other, "CUSTOMER"), Set.of("ADMIN"), actor.expiresAt());
+            assertThatThrownBy(() -> tools.invoke(run, forged, "SUPPORT", "getSupportOrderExplanation", JSON.valueToTree(Map.of("orderId", declined.id())))).hasMessageContaining("cannot perform");
+            verifyAiActions(ai, product.id());
         }
     }
 
-    void verifyAiActions(ConfigurableApplicationContext ai,UUID product) throws Exception {
-        var views=ai.getBean(com.commerceflow.ai.persistence.AiStore.class);var runs=ai.getBean(com.commerceflow.ai.persistence.RunStore.class);var actions=ai.getBean(com.commerceflow.ai.application.CartActions.class);var audit=ai.getBean(com.commerceflow.ai.persistence.ActionStore.class);
-        var actor=new com.commerceflow.ai.domain.Actor(UUID.randomUUID(),token(UUID.randomUUID(),"CUSTOMER"),Set.of("CUSTOMER"),Instant.now().plusSeconds(300));
-        actor=new com.commerceflow.ai.domain.Actor(actor.subject(),token(actor.subject(),"CUSTOMER"),actor.roles(),actor.expiresAt());final var customer=actor;
-        var carts=cart.getBean(CartService.class);var before=carts.get(customer.subject());
-        try(var pool=java.util.concurrent.Executors.newFixedThreadPool(10)){
-            var reads=new ArrayList<java.util.concurrent.Callable<String>>();for(int i=0;i<20;i++)reads.add(()->carts.get(customer.subject()).revision());
-            for(var f:pool.invokeAll(reads))assertThat(f.get()).isEqualTo(before.revision());
+    void verifyAiActions(ConfigurableApplicationContext ai, UUID product) throws Exception {
+        var views = ai.getBean(com.commerceflow.ai.persistence.AiStore.class);
+        var runs = ai.getBean(com.commerceflow.ai.persistence.RunStore.class);
+        var actions = ai.getBean(com.commerceflow.ai.application.CartActions.class);
+        var audit = ai.getBean(com.commerceflow.ai.persistence.ActionStore.class);
+        var actor = new com.commerceflow.ai.domain.Actor(UUID.randomUUID(), token(UUID.randomUUID(), "CUSTOMER"), Set.of("CUSTOMER"), Instant.now().plusSeconds(300));
+        actor = new com.commerceflow.ai.domain.Actor(actor.subject(), token(actor.subject(), "CUSTOMER"), actor.roles(), actor.expiresAt());
+        final var customer = actor;
+        var carts = cart.getBean(CartService.class);
+        var before = carts.get(customer.subject());
+        try (var pool = java.util.concurrent.Executors.newFixedThreadPool(10)) {
+            var reads = new ArrayList<java.util.concurrent.Callable<String>>();
+            for (int i = 0; i < 20; i++) reads.add(() -> carts.get(customer.subject()).revision());
+            for (var f : pool.invokeAll(reads)) assertThat(f.get()).isEqualTo(before.revision());
         }
-        var conv=views.create(customer,"action-conversation","CUSTOMER");var run=views.send(conv.id(),customer,"action-message","Add two exact units");var claim=runs.claim().orElseThrow();
-        var proposal=actions.prepare(run.id(),claim.fence(),customer,"ADD",product,2);runs.stop(claim,"WAITING_CONFIRMATION",null,0);
-        assertThat(carts.get(customer.subject()).items()).isEmpty();assertThat(proposal.preview().path("afterQuantity").asInt()).isEqualTo(2);
-        assertThat(call(ai,"POST","/api/v1/ai/proposals/"+proposal.id()+"/confirm",token(UUID.randomUUID(),"CUSTOMER"),Map.of("version",0,"argumentsHash",proposal.argumentsHash()),Map.of()).statusCode()).isEqualTo(404);
-        assertThat(call(ai,"POST","/api/v1/ai/proposals/"+proposal.id()+"/confirm",customer.token(),Map.of("version",0,"argumentsHash","0".repeat(64)),Map.of()).statusCode()).isEqualTo(409);
-        try(var pool=java.util.concurrent.Executors.newFixedThreadPool(20)){
-            var calls=new ArrayList<java.util.concurrent.Callable<UUID>>();for(int i=0;i<100;i++)calls.add(()->expect(call(ai,"POST","/api/v1/ai/proposals/"+proposal.id()+"/confirm",customer.token(),Map.of("version",0,"argumentsHash",proposal.argumentsHash()),Map.of()),202,com.commerceflow.ai.domain.AiModels.Execution.class).id());
-            var ids=new HashSet<UUID>();for(var f:pool.invokeAll(calls))ids.add(f.get());assertThat(ids).hasSize(1);
+        var conv = views.create(customer, "action-conversation", "CUSTOMER");
+        var run = views.send(conv.id(), customer, "action-message", "Add two exact units");
+        var claim = runs.claim().orElseThrow();
+        var proposal = actions.prepare(run.id(), claim.fence(), customer, "ADD", product, 2);
+        runs.stop(claim, "WAITING_CONFIRMATION", null, 0);
+        assertThat(carts.get(customer.subject()).items()).isEmpty();
+        assertThat(proposal.preview().path("afterQuantity").asInt()).isEqualTo(2);
+        assertThat(call(ai, "POST", "/api/v1/ai/proposals/" + proposal.id() + "/confirm", token(UUID.randomUUID(), "CUSTOMER"), Map.of("version", 0, "argumentsHash", proposal.argumentsHash()), Map.of()).statusCode()).isEqualTo(404);
+        assertThat(call(ai, "POST", "/api/v1/ai/proposals/" + proposal.id() + "/confirm", customer.token(), Map.of("version", 0, "argumentsHash", "0".repeat(64)), Map.of()).statusCode()).isEqualTo(409);
+        try (var pool = java.util.concurrent.Executors.newFixedThreadPool(20)) {
+            var calls = new ArrayList<java.util.concurrent.Callable<UUID>>();
+            for (int i = 0; i < 100; i++)
+                calls.add(() -> expect(call(ai, "POST", "/api/v1/ai/proposals/" + proposal.id() + "/confirm", customer.token(), Map.of("version", 0, "argumentsHash", proposal.argumentsHash()), Map.of()), 202, com.commerceflow.ai.domain.AiModels.Execution.class).id());
+            var ids = new HashSet<UUID>();
+            for (var f : pool.invokeAll(calls)) ids.add(f.get());
+            assertThat(ids).hasSize(1);
         }
-        assertThat(actions.continueAction(runs.claim().orElseThrow(),customer)).isTrue();assertThat(carts.get(customer.subject()).items().getFirst().quantity()).isEqualTo(2);assertThat(audit.execution(proposal.id()).orElseThrow().state()).isEqualTo("SUCCEEDED");
+        assertThat(actions.continueAction(runs.claim().orElseThrow(), customer)).isTrue();
+        assertThat(carts.get(customer.subject()).items().getFirst().quantity()).isEqualTo(2);
+        assertThat(audit.execution(proposal.id()).orElseThrow().state()).isEqualTo("SUCCEEDED");
         // Crash after Cart acknowledgment but before recording its result: same key returns its memo first.
-        var next=views.send(conv.id(),customer,"action-crash-message","Add three exact units");var nextClaim=runs.claim().orElseThrow();var pending=actions.prepare(next.id(),nextClaim.fence(),customer,"ADD",product,3);runs.stop(nextClaim,"WAITING_CONFIRMATION",null,0);
-        var execution=actions.confirm(pending.id(),customer,new com.commerceflow.ai.domain.AiModels.Confirmation(0,pending.argumentsHash()));var issued=runs.claim().orElseThrow();audit.start(issued,pending.id());
-        ai.getBean(com.commerceflow.ai.tools.CommerceClient.class).mutateCart("ADD",product,3,pending.cartRevision(),execution.requestKey(),customer,"test-crash");assertThat(carts.get(customer.subject()).items().getFirst().quantity()).isEqualTo(5);
-        runs.stop(issued,"AUTHENTICATION_REQUIRED","AI_WORKER_INTERRUPTED",0);views.resume(next.id(),customer);actions.continueAction(runs.claim().orElseThrow(),customer);
-        assertThat(carts.get(customer.subject()).items().getFirst().quantity()).isEqualTo(5);assertThat(audit.execution(pending.id()).orElseThrow().attempts()).isEqualTo(2);
-        var staleRun=views.send(conv.id(),customer,"stale-action-message","Add one unit");var staleClaim=runs.claim().orElseThrow();var stale=actions.prepare(staleRun.id(),staleClaim.fence(),customer,"ADD",product,1);runs.stop(staleClaim,"WAITING_CONFIRMATION",null,0);
-        carts.mutate(customer.subject(),"ADD",product,1,"outside-ai-update");actions.confirm(stale.id(),customer,new com.commerceflow.ai.domain.AiModels.Confirmation(0,stale.argumentsHash()));actions.continueAction(runs.claim().orElseThrow(),customer);
-        assertThat(views.run(staleRun.id(),customer).state()).isEqualTo("FAILED");assertThat(carts.get(customer.subject()).items().getFirst().quantity()).isEqualTo(6);
-        var unknownRun=views.send(conv.id(),customer,"unknown-action-message","Add one unit");var unknownClaim=runs.claim().orElseThrow();var unknown=actions.prepare(unknownRun.id(),unknownClaim.fence(),customer,"ADD",product,1);runs.stop(unknownClaim,"WAITING_CONFIRMATION",null,0);actions.confirm(unknown.id(),customer,new com.commerceflow.ai.domain.AiModels.Confirmation(0,unknown.argumentsHash()));
-        ai.getBean(org.springframework.jdbc.core.simple.JdbcClient.class).sql("UPDATE ai_action_executions SET recovery_until=now()-interval '1 second' WHERE proposal_id=:id").param("id",unknown.id()).update();actions.continueAction(runs.claim().orElseThrow(),customer);
-        assertThat(audit.execution(unknown.id()).orElseThrow().state()).isEqualTo("OUTCOME_UNKNOWN");assertThat(carts.get(customer.subject()).items().getFirst().quantity()).isEqualTo(6);
-        UUID expired=UUID.randomUUID();var first=carts.get(expired);cart.getBean(org.springframework.data.redis.core.StringRedisTemplate.class).expire("cf:cart:{"+expired+"}:items",Duration.ofMillis(100));Thread.sleep(150);var recreated=carts.get(expired);
-        assertThat(recreated.version()).isEqualTo(first.version());assertThat(recreated.revision()).isNotEqualTo(first.revision());assertThatThrownBy(()->carts.mutate(expired,"ADD",product,1,"old-incarnation-key",first.revision())).hasMessageContaining("conflicts");
+        var next = views.send(conv.id(), customer, "action-crash-message", "Add three exact units");
+        var nextClaim = runs.claim().orElseThrow();
+        var pending = actions.prepare(next.id(), nextClaim.fence(), customer, "ADD", product, 3);
+        runs.stop(nextClaim, "WAITING_CONFIRMATION", null, 0);
+        var execution = actions.confirm(pending.id(), customer, new com.commerceflow.ai.domain.AiModels.Confirmation(0, pending.argumentsHash()));
+        var issued = runs.claim().orElseThrow();
+        audit.start(issued, pending.id());
+        ai.getBean(com.commerceflow.ai.tools.CommerceClient.class).mutateCart("ADD", product, 3, pending.cartRevision(), execution.requestKey(), customer, "test-crash");
+        assertThat(carts.get(customer.subject()).items().getFirst().quantity()).isEqualTo(5);
+        runs.stop(issued, "AUTHENTICATION_REQUIRED", "AI_WORKER_INTERRUPTED", 0);
+        views.resume(next.id(), customer);
+        actions.continueAction(runs.claim().orElseThrow(), customer);
+        assertThat(carts.get(customer.subject()).items().getFirst().quantity()).isEqualTo(5);
+        assertThat(audit.execution(pending.id()).orElseThrow().attempts()).isEqualTo(2);
+        var staleRun = views.send(conv.id(), customer, "stale-action-message", "Add one unit");
+        var staleClaim = runs.claim().orElseThrow();
+        var stale = actions.prepare(staleRun.id(), staleClaim.fence(), customer, "ADD", product, 1);
+        runs.stop(staleClaim, "WAITING_CONFIRMATION", null, 0);
+        carts.mutate(customer.subject(), "ADD", product, 1, "outside-ai-update");
+        actions.confirm(stale.id(), customer, new com.commerceflow.ai.domain.AiModels.Confirmation(0, stale.argumentsHash()));
+        actions.continueAction(runs.claim().orElseThrow(), customer);
+        assertThat(views.run(staleRun.id(), customer).state()).isEqualTo("FAILED");
+        assertThat(carts.get(customer.subject()).items().getFirst().quantity()).isEqualTo(6);
+        var unknownRun = views.send(conv.id(), customer, "unknown-action-message", "Add one unit");
+        var unknownClaim = runs.claim().orElseThrow();
+        var unknown = actions.prepare(unknownRun.id(), unknownClaim.fence(), customer, "ADD", product, 1);
+        runs.stop(unknownClaim, "WAITING_CONFIRMATION", null, 0);
+        actions.confirm(unknown.id(), customer, new com.commerceflow.ai.domain.AiModels.Confirmation(0, unknown.argumentsHash()));
+        ai.getBean(org.springframework.jdbc.core.simple.JdbcClient.class).sql("UPDATE ai_action_executions SET recovery_until=now()-interval '1 second' WHERE proposal_id=:id").param("id", unknown.id()).update();
+        actions.continueAction(runs.claim().orElseThrow(), customer);
+        assertThat(audit.execution(unknown.id()).orElseThrow().state()).isEqualTo("OUTCOME_UNKNOWN");
+        assertThat(carts.get(customer.subject()).items().getFirst().quantity()).isEqualTo(6);
+        UUID expired = UUID.randomUUID();
+        var first = carts.get(expired);
+        cart.getBean(org.springframework.data.redis.core.StringRedisTemplate.class).expire("cf:cart:{" + expired + "}:items", Duration.ofMillis(100));
+        Thread.sleep(150);
+        var recreated = carts.get(expired);
+        assertThat(recreated.version()).isEqualTo(first.version());
+        assertThat(recreated.revision()).isNotEqualTo(first.revision());
+        assertThatThrownBy(() -> carts.mutate(expired, "ADD", product, 1, "old-incarnation-key", first.revision())).hasMessageContaining("conflicts");
     }
 }

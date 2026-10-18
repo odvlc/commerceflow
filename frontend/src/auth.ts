@@ -29,4 +29,7 @@ const notifySession = () => window.dispatchEvent(new Event("commerceflow-session
 identity.onAuthSuccess = notifySession;
 identity.onAuthRefreshSuccess = notifySession;
 identity.onAuthLogout = notifySession;
-identity.onAuthRefreshError = () => { identity.clearToken(); notifySession(); };
+identity.onAuthRefreshError = () => {
+    identity.clearToken();
+    notifySession();
+};

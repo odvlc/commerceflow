@@ -2,12 +2,13 @@
 """Verify real local order/database/cart PVC durability and interrupted AI index rebuilding. Synthetic data only."""
 import json
 import os
-from pathlib import Path
 import subprocess
 import time
 import uuid
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
 from local_client import local_url, login
 
 root = Path(__file__).resolve().parent.parent
@@ -75,12 +76,14 @@ try:
     checked('Terminal order/customer/money/items survived an Order pod rollout')
 
     conversations = call('/ai/conversations?size=100')['items']
-    conversation = next(value for value in conversations if call('/ai/conversations/' + value['id'] + '/messages')['items'])
+    conversation = next(
+        value for value in conversations if call('/ai/conversations/' + value['id'] + '/messages')['items'])
     saved = call('/ai/conversations/' + conversation['id'] + '/messages?size=100')
     cart = call('/cart')
     kube('delete', 'pod', 'postgres-0')
     kube('rollout', 'status', 'statefulset/postgres', '--timeout=180s')
-    restored = wait(lambda: call('/ai/conversations/' + conversation['id'] + '/messages?size=100'), lambda value: value == saved)
+    restored = wait(lambda: call('/ai/conversations/' + conversation['id'] + '/messages?size=100'),
+                    lambda value: value == saved)
     assert restored == saved and call('/orders/' + order['id']) == after
     checked('PostgreSQL PVC retained exact order and owned AI messages/citations after database pod replacement')
     kube('delete', 'pod', 'redis-0')
@@ -93,26 +96,34 @@ try:
     document = {'sourceId': source, 'version': 1, 'title': 'Operational recovery rehearsal fixture',
                 'audience': 'SUPPORT', 'content': content, 'active': True}
     imported = call('/admin/ai/knowledge/imports', admin, document, source)
-    wait(lambda: call('/admin/ai/knowledge/jobs/' + imported['jobId'], admin), lambda value: value['state'] == 'SUCCEEDED')
+    wait(lambda: call('/admin/ai/knowledge/jobs/' + imported['jobId'], admin),
+         lambda value: value['state'] == 'SUCCEEDED')
     rebuilt = call('/admin/ai/knowledge/rebuilds', admin, {}, str(uuid.uuid4()))
-    wait(lambda: call('/admin/ai/knowledge/jobs/' + rebuilt['id'], admin), lambda value: value['state'] == 'RUNNING', 30)
+    wait(lambda: call('/admin/ai/knowledge/jobs/' + rebuilt['id'], admin), lambda value: value['state'] == 'RUNNING',
+         30)
     pod = json.loads(kube('get', 'pods', '-l', 'app=ai-service', '-o', 'json', capture_output=True).stdout)['items'][0]
     container_id = pod['status']['containerStatuses'][0]['containerID'].split('://', 1)[1]
-    subprocess.run(['docker', 'exec', 'commerceflow-control-plane', 'crictl', 'stop', '--timeout=0', container_id], check=True)
+    subprocess.run(['docker', 'exec', 'commerceflow-control-plane', 'crictl', 'stop', '--timeout=0', container_id],
+                   check=True)
     kube('delete', 'pod', pod['metadata']['name'], '--grace-period=0', '--force', '--wait=true')
     job_id = str(uuid.UUID(rebuilt['id']))
     sql = ("SELECT pg_try_advisory_lock(hashtextextended('commerceflow-ai-knowledge-index',0));"
            "SELECT state FROM knowledge_rebuilds WHERE id='" + job_id + "';")
-    state = wait(lambda: kube('exec', 'postgres-0', '--', 'psql', '-U', 'postgres', '-d', 'ai', '-Atc', sql, capture_output=True).stdout.strip().splitlines(), lambda value: value and value[0] == 't', 20)
+    state = wait(lambda: kube('exec', 'postgres-0', '--', 'psql', '-U', 'postgres', '-d', 'ai', '-Atc', sql,
+                              capture_output=True).stdout.strip().splitlines(), lambda value: value and value[0] == 't',
+                 20)
     assert state == ['t', 'RUNNING'], 'Required an interrupted rebuild with its old session lock released'
     report['rebuildStateAfterKill'] = 'RUNNING'
     report['exclusiveIndexLockAvailableAfterKill'] = True
-    completed = wait(lambda: call('/admin/ai/knowledge/jobs/' + job_id, admin), lambda value: value['state'] in ('SUCCEEDED', 'FAILED'))
+    completed = wait(lambda: call('/admin/ai/knowledge/jobs/' + job_id, admin),
+                     lambda value: value['state'] in ('SUCCEEDED', 'FAILED'))
     assert completed['state'] == 'SUCCEEDED'
     customer = login_ready('alice')
-    evidence = wait(lambda: call('/ai/knowledge/search?query=return%20window', customer), lambda value: bool(value['items']))
+    evidence = wait(lambda: call('/ai/knowledge/search?query=return%20window', customer),
+                    lambda value: bool(value['items']))
     assert any(value['sourceId'] == 'returns' for value in evidence['items'])
-    checked('SIGKILL during RUNNING rebuild recovered the same generation/job and restored cited knowledge without waiting ten minutes')
+    checked(
+        'SIGKILL during RUNNING rebuild recovered the same generation/job and restored cited knowledge without waiting ten minutes')
     report['complete'] = True
 finally:
     # Retain an auditable inactive test version; never delete/overwrite a user's source or a PVC.
@@ -121,8 +132,10 @@ finally:
             admin = login_ready('admin')
             inactive = {'sourceId': source, 'version': 2, 'title': 'Operational recovery rehearsal fixture',
                         'audience': 'SUPPORT', 'content': content, 'active': False}
-            deactivated = wait(lambda: call('/admin/ai/knowledge/imports', admin, inactive, source + '-deactivated'), lambda value: bool(value.get('jobId')))
-            wait(lambda: call('/admin/ai/knowledge/jobs/' + deactivated['jobId'], admin), lambda value: value['state'] == 'SUCCEEDED')
+            deactivated = wait(lambda: call('/admin/ai/knowledge/imports', admin, inactive, source + '-deactivated'),
+                               lambda value: bool(value.get('jobId')))
+            wait(lambda: call('/admin/ai/knowledge/jobs/' + deactivated['jobId'], admin),
+                 lambda value: value['state'] == 'SUCCEEDED')
     finally:
         (root / '.cache/verification/ai-kind-durability.json').write_text(json.dumps(report, indent=2) + '\n')
 print('Verified', len(report['checks']), 'real kind durable recovery boundaries')

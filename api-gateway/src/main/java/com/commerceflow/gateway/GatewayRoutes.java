@@ -1,22 +1,26 @@
 package com.commerceflow.gateway;
 
-import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFunctions.uri;
-import static org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions.route;
-import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions.http;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.function.RequestPredicate;
+import org.springframework.web.servlet.function.RequestPredicates;
+import org.springframework.web.servlet.function.RouterFunction;
+import org.springframework.web.servlet.function.ServerResponse;
 
 import java.util.Arrays;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.*;
-import org.springframework.web.servlet.function.*;
+import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFunctions.uri;
+import static org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions.route;
+import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions.http;
 
 @Configuration(proxyBeanMethods = false)
 public class GatewayRoutes {
 
     @Bean
-    @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name="AI_ENABLED",havingValue="true")
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "AI_ENABLED", havingValue = "true")
     RouterFunction<ServerResponse> aiRoutes(@Value("${AI_URL:http://localhost:8087}") String target) {
-        return proxy("ai",target,"/api/v1/ai/**","/api/v1/admin/ai/**");
+        return proxy("ai", target, "/api/v1/ai/**", "/api/v1/admin/ai/**");
     }
 
     @Bean

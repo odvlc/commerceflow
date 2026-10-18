@@ -2,7 +2,7 @@ package com.commerceflow.catalog.search;
 
 import com.commerceflow.contracts.CheckoutEvents.ProductChanged;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.elasticsearch.annotations.*;
+import org.springframework.data.elasticsearch.annotations.Document;
 
 @Document(indexName = ProductSearch.READ_ALIAS, createIndex = false)
 public record ProductDocument(

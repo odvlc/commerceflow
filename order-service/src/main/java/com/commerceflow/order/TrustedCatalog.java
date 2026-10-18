@@ -2,18 +2,17 @@ package com.commerceflow.order;
 
 import com.commerceflow.support.BusinessException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
-import java.math.BigDecimal;
-import java.net.http.HttpClient;
-import java.time.Duration;
-import java.util.UUID;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+
+import java.math.BigDecimal;
+import java.net.http.HttpClient;
+import java.time.Duration;
+import java.util.UUID;
 
 @Component
 public class TrustedCatalog {

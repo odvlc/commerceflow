@@ -1,16 +1,20 @@
 package com.commerceflow.workflow;
 
-import static org.awaitility.Awaitility.await;
-
-import java.net.*;
-import java.net.http.*;
-import java.nio.file.*;
-import java.time.Duration;
-import java.util.concurrent.TimeUnit;
-
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
+
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+
+import static org.awaitility.Awaitility.await;
 
 final class ElasticsearchTestServer implements AutoCloseable {
 

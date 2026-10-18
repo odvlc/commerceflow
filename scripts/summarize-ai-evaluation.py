@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Summarize retained synthetic local-model evidence; this is not a factual-grounding judge."""
 import argparse
-from collections import Counter
 import json
+from collections import Counter
 from pathlib import Path
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -14,7 +14,8 @@ cases = report['cases']
 keys = [(case['repeat'], case['id']) for case in cases]
 if len(keys) != len(set(keys)):
     raise ValueError('Duplicate evaluation scenario/repeat')
-corpus = json.loads((Path(__file__).resolve().parent.parent / 'ai-service/src/test/resources/evaluation-cases.json').read_text())
+corpus = json.loads(
+    (Path(__file__).resolve().parent.parent / 'ai-service/src/test/resources/evaluation-cases.json').read_text())
 expected = {(repeat, case['id']) for repeat in range(1, 4) for case in corpus}
 if args.require_complete and set(keys) != expected:
     raise ValueError(f'Incomplete evaluation: {len(expected - set(keys))} missing scenarios')

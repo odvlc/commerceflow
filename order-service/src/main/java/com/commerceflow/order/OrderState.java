@@ -1,10 +1,9 @@
 package com.commerceflow.order;
 
 import com.commerceflow.support.BusinessException;
+import org.springframework.http.HttpStatus;
 
 import java.util.Set;
-
-import org.springframework.http.HttpStatus;
 
 public enum OrderState {
     PENDING_INVENTORY,

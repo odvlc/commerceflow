@@ -2,6 +2,7 @@
 """Render public model preparation inputs from their authoritative sources; no credentials included."""
 import json
 from pathlib import Path
+
 root = Path(__file__).resolve().parent.parent
 config = {'apiVersion': 'v1', 'kind': 'ConfigMap', 'metadata': {'name': 'ai-model-preparation'},
           'data': {'prepare-ai-models.py': (root / 'scripts/prepare-ai-models.py').read_text(),

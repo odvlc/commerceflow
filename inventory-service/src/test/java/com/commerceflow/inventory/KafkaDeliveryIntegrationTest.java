@@ -1,35 +1,52 @@
 package com.commerceflow.inventory;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.awaitility.Awaitility.await;
-
-import com.commerceflow.contracts.*;
-import com.commerceflow.contracts.CheckoutEvents.*;
-import com.commerceflow.support.*;
+import com.commerceflow.contracts.CheckoutEvents.Command;
+import com.commerceflow.contracts.CheckoutEvents.PaymentResult;
+import com.commerceflow.contracts.CheckoutEvents.ReserveInventory;
+import com.commerceflow.contracts.CheckoutEvents.StockItem;
+import com.commerceflow.contracts.EventEnvelope;
+import com.commerceflow.contracts.Topics;
+import com.commerceflow.support.OutboxPublisher;
+import com.commerceflow.support.OutboxStore;
+import com.commerceflow.support.ProcessedEvents;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
-
-import java.io.IOException;
-import java.time.Duration;
-import java.util.*;
-
-import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.kafka.core.*;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.EmbeddedKafkaKraftBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.*;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.io.IOException;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 @SpringBootTest(
         properties = {
