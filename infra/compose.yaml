@@ -9,6 +9,7 @@ services:
       INVENTORY_DB_PASSWORD: ${INVENTORY_DB_PASSWORD:-local-inventory-only}
       PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:-local-payment-only}
       NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-local-notification-only}
+      AI_DB_PASSWORD: ${AI_DB_PASSWORD:-local-ai-only}
       KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-local-keycloak-only}
     ports: [ "127.0.0.1:5432:5432" ]
     volumes:
@@ -245,6 +246,8 @@ services:
       INVENTORY_URL: http://inventory-service:8080
       PAYMENT_URL: http://payment-service:8080
       NOTIFICATION_URL: http://notification-service:8080
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AI_URL: http://ai-service:8080
     depends_on:
       keycloak: { condition: service_healthy }
       catalog-service: { condition: service_healthy }
@@ -300,6 +303,57 @@ services:
       retries: 20
     mem_limit: 512m
 
+  ai-service:
+    image: commerceflow/ai-service:local
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: { APP_MODULE: ai-service }
+    profiles: [ ai ]
+    environment:
+      SECURITY_ISSUER: http://localhost:8180/realms/commerceflow
+      SECURITY_JWK_SET_URI: http://keycloak:8080/realms/commerceflow/protocol/openid-connect/certs
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      DB_URL: jdbc:postgresql://postgres:5432/ai
+      DB_USERNAME: ai
+      DB_PASSWORD: ${AI_DB_PASSWORD:-local-ai-only}
+      DB_POOL_SIZE: 8
+      OLLAMA_BASE_URL: ${AI_OLLAMA_URL:-http://host.docker.internal:11434}
+      CATALOG_URL: http://catalog-service:8080
+      CART_URL: ${AI_CART_URL:-http://cart-service:8080}
+      ORDER_URL: http://order-service:8080
+      AI_EMBEDDINGS_ENABLED: "true"
+      AI_QUEUE_LIMIT: 8
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+      elasticsearch: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+      catalog-service: { condition: service_healthy }
+      cart-service: { condition: service_healthy }
+      order-service: { condition: service_healthy }
+    mem_limit: 768m
+  ollama:
+    image: ollama/ollama:0.40.6
+    profiles: [ ai-model ]
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_NUM_PARALLEL: 1
+      OLLAMA_MAX_LOADED_MODELS: 1
+      OLLAMA_CONTEXT_LENGTH: 4096
+      OLLAMA_MAX_QUEUE: 8
+      OLLAMA_NO_CLOUD: "1"
+    ports: [ "127.0.0.1:11435:11434" ]
+    volumes: [ "ollama-data:/root/.ollama" ]
+    healthcheck:
+      test: [ CMD, ollama, list ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
+    mem_limit: 6g
+
 volumes:
   postgres-data:
   kafka-data:
@@ -307,3 +361,4 @@ volumes:
   search-data:
   prometheus-data:
   grafana-data:
+  ollama-data:

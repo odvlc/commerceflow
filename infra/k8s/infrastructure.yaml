@@ -187,7 +187,8 @@
         ],
         "securityContext": {
           "fsGroup": 999
-        }
+        },
+        "enableServiceLinks": false
       }
     },
     "serviceName": "postgres-headless",
@@ -256,7 +257,8 @@
         "targetPort": 29093
       }
     ],
-    "clusterIP": "None"
+    "clusterIP": "None",
+    "publishNotReadyAddresses": true
   }
 }
 ---
@@ -317,7 +319,7 @@
               },
               {
                 "name": "KAFKA_CONTROLLER_QUORUM_VOTERS",
-                "value": "1@kafka:29093"
+                "value": "1@kafka-0.kafka-headless:29093"
               },
               {
                 "name": "KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS",
@@ -391,10 +393,11 @@
             }
           }
         ],
-        "volumes": [ ],
+        "volumes": [],
         "securityContext": {
           "fsGroup": 1000
-        }
+        },
+        "enableServiceLinks": false
       }
     },
     "serviceName": "kafka-headless",
@@ -506,7 +509,7 @@
                 "memory": "384Mi"
               }
             },
-            "env": [ ],
+            "env": [],
             "volumeMounts": [
               {
                 "name": "data",
@@ -551,10 +554,11 @@
             }
           }
         ],
-        "volumes": [ ],
+        "volumes": [],
         "securityContext": {
           "fsGroup": 1000
-        }
+        },
+        "enableServiceLinks": false
       }
     },
     "serviceName": "redis-headless",
@@ -710,10 +714,11 @@
             }
           }
         ],
-        "volumes": [ ],
+        "volumes": [],
         "securityContext": {
           "fsGroup": 1000
-        }
+        },
+        "enableServiceLinks": false
       }
     },
     "serviceName": "elasticsearch-headless",
@@ -898,7 +903,8 @@
               "name": "keycloak-realm"
             }
           }
-        ]
+        ],
+        "enableServiceLinks": false
       }
     }
   }
@@ -989,7 +995,7 @@
                 "memory": "384Mi"
               }
             },
-            "env": [ ],
+            "env": [],
             "volumeMounts": [
               {
                 "name": "data",
@@ -1047,7 +1053,8 @@
         ],
         "securityContext": {
           "fsGroup": 1000
-        }
+        },
+        "enableServiceLinks": false
       }
     },
     "serviceName": "prometheus-headless",
@@ -1247,7 +1254,8 @@
         ],
         "securityContext": {
           "fsGroup": 472
-        }
+        },
+        "enableServiceLinks": false
       }
     },
     "serviceName": "grafana-headless",

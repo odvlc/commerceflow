@@ -8,6 +8,7 @@
     </parent>
     <artifactId>workflow-tests</artifactId>
     <dependencies>
+        <dependency><groupId>com.commerceflow</groupId><artifactId>ai-service</artifactId><version>${project.version}</version><scope>test</scope></dependency>
         <dependency>
             <groupId>com.commerceflow</groupId>
             <artifactId>notification-service</artifactId>
@@ -72,4 +73,12 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    <profiles><profile><id>ai-evaluation</id><build><plugins><plugin>
+      <groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId>
+      <configuration><includes><include>**/AiEvaluationIT.java</include></includes><systemPropertyVariables>
+        <commerceflow.root>${maven.multiModuleProjectDirectory}</commerceflow.root>
+        <redis.server.path>${maven.multiModuleProjectDirectory}/.cache/tools/redis-8.10.2/src/redis-server</redis.server.path>
+        <elasticsearch.home.path>${maven.multiModuleProjectDirectory}/.cache/tools/elasticsearch-9.4.5</elasticsearch.home.path>
+      </systemPropertyVariables></configuration>
+    </plugin></plugins></build></profile></profiles>
 </project>

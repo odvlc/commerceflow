@@ -21,3 +21,30 @@ groups:
         for: 5m
         labels: { severity: warning }
         annotations: { summary: "Kafka consumer lag exceeds 100 records" }
+  - name: commerceflow-copilot
+    rules:
+      - alert: CopilotQueueSaturated
+        expr: sum(commerceflow_ai_runs{state=~"QUEUED|RUNNING|RETRY_WAIT"}) >= 8
+        for: 2m
+        labels: { severity: warning }
+        annotations: { summary: "Copilot admission is full; inspect local inference capacity" }
+      - alert: CopilotInferenceFailures
+        expr: sum(increase(commerceflow_ai_model_failures_total[5m])) > 3
+        for: 1m
+        labels: { severity: warning }
+        annotations: { summary: "Check Ollama reachability and pinned model readiness" }
+      - alert: CopilotIndexBacklog
+        expr: commerceflow_ai_index_pending > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "Knowledge projection is delayed; inspect Kafka and Elasticsearch" }
+      - alert: CopilotStuckWorker
+        expr: commerceflow_ai_runs{state="RUNNING"} > 0
+        for: 3m
+        labels: { severity: warning }
+        annotations: { summary: "A run exceeds its active deadline; inspect worker lease and database availability" }
+      - alert: CopilotUnknownCartOutcome
+        expr: commerceflow_ai_outcomes_unknown > 0
+        for: 1m
+        labels: { severity: warning }
+        annotations: { summary: "Review uncertain cart executions; never retry with a new request key" }

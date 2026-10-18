@@ -23,3 +23,15 @@ compensation operation.
 Kafka messages and database timestamps use UTC `Instant`; PostgreSQL `timestamptz` stores instants independent of
 display timezone. Currency and money stay explicit. Search stores integer minor units and PostgreSQL source versions; it
 keeps inactive documents as version tombstones.
+
+## AI-owned state and conditional carts
+
+The separate `ai` database owns conversations/messages, runs/steps/replay events, exact action proposals/executions,
+curated knowledge documents/versioned chunks, import/rebuild jobs, outbox and consumer markers. UUID ownership and
+request/hash constraints, one-active-run bounds, leases/fences and versioned approval hashes protect transitions.
+JWTs/refresh tokens are never stored. Index projection remains derived, version-protected and audience-rechecked.
+
+Cart Lua mutations now use an incarnation-aware revision/ETag. Empty-cart reads atomically issue a stable incarnation;
+expiry/recreation issues a new one. A matching memo/hash is checked before the original `If-Match`, so recovery can
+retrieve an acknowledged result without issuing a duplicate effect. The recovery horizon is shorter than memo/cart
+retention. Redis is still not authoritative for orders, payments or inventory. [AI API](ai-api.md) describes the contract.

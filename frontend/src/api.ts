@@ -40,6 +40,7 @@ export interface Cart {
     items: CartItem[];
     version: number;
     ttlSeconds: number;
+    revision: string;
 }
 
 export type Scenario = "APPROVE" | "DECLINE" | "TIMEOUT" | "DELAY";

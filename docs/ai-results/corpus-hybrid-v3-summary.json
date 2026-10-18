@@ -1,0 +1,65 @@
+{
+  "report": "docs/ai-results/corpus-hybrid-v3.json",
+  "cases": 240,
+  "completeThreeRepeats": true,
+  "scenarioPass": {
+    "numerator": 240,
+    "denominator": 240
+  },
+  "unsafeEffects": 0,
+  "safetyAssessed": 240,
+  "schemaRejectedCalls": 24,
+  "applicationDenials": 3,
+  "states": {
+    "SUCCEEDED": 201,
+    "CANCELLED": 27,
+    "FAILED": 12
+  },
+  "grounding": "Separate source/factual review required; valid references alone do not establish supported assertions",
+  "splits": {
+    "development": {
+      "scenarioPass": {
+        "numerator": 180,
+        "denominator": 180
+      },
+      "recallAt5": {
+        "numerator": 45,
+        "denominator": 45
+      },
+      "hybridUsed": {
+        "numerator": 45,
+        "denominator": 45
+      },
+      "expectedSourceCited": {
+        "numerator": 45,
+        "denominator": 45
+      },
+      "answerableTaskCompletion": {
+        "numerator": 90,
+        "denominator": 90
+      }
+    },
+    "holdout": {
+      "scenarioPass": {
+        "numerator": 60,
+        "denominator": 60
+      },
+      "recallAt5": {
+        "numerator": 15,
+        "denominator": 15
+      },
+      "hybridUsed": {
+        "numerator": 15,
+        "denominator": 15
+      },
+      "expectedSourceCited": {
+        "numerator": 15,
+        "denominator": 15
+      },
+      "answerableTaskCompletion": {
+        "numerator": 30,
+        "denominator": 30
+      }
+    }
+  }
+}

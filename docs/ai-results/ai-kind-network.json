@@ -1,0 +1,77 @@
+{
+  "cni": "Calico 3.33.0",
+  "checks": [
+    {
+      "source": "ai-service",
+      "target": "http://ollama:11434/api/tags",
+      "expectedAllowed": true,
+      "passed": true
+    },
+    {
+      "source": "ai-service",
+      "target": "http://catalog-service:8080/actuator/health/readiness",
+      "expectedAllowed": true,
+      "passed": true
+    },
+    {
+      "source": "ai-service",
+      "target": "http://cart-service:8080/actuator/health/readiness",
+      "expectedAllowed": true,
+      "passed": true
+    },
+    {
+      "source": "ai-service",
+      "target": "http://order-service:8080/actuator/health/readiness",
+      "expectedAllowed": true,
+      "passed": true
+    },
+    {
+      "source": "api-gateway",
+      "target": "http://payment-service:8080/actuator/health/readiness",
+      "expectedAllowed": true,
+      "passed": true
+    },
+    {
+      "source": "ai-service",
+      "target": "http://payment-service:8080/actuator/health/readiness",
+      "expectedAllowed": false,
+      "passed": true
+    },
+    {
+      "source": "api-gateway",
+      "target": "http://inventory-service:8080/actuator/health/readiness",
+      "expectedAllowed": true,
+      "passed": true
+    },
+    {
+      "source": "ai-service",
+      "target": "http://inventory-service:8080/actuator/health/readiness",
+      "expectedAllowed": false,
+      "passed": true
+    },
+    {
+      "source": "api-gateway",
+      "target": "http://notification-service:8080/actuator/health/readiness",
+      "expectedAllowed": true,
+      "passed": true
+    },
+    {
+      "source": "ai-service",
+      "target": "http://notification-service:8080/actuator/health/readiness",
+      "expectedAllowed": false,
+      "passed": true
+    },
+    {
+      "source": "api-gateway",
+      "target": "http://ai-service:8080/actuator/health/readiness",
+      "expectedAllowed": true,
+      "passed": true
+    },
+    {
+      "source": "catalog-service",
+      "target": "http://ai-service:8080/actuator/health/readiness",
+      "expectedAllowed": false,
+      "passed": true
+    }
+  ]
+}

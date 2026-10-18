@@ -52,6 +52,13 @@ public class OrderController {
         return orders.cancel(customer(jwt), id);
     }
 
+    @GetMapping("/orders/{id}/explanation")
+    public OrderExplanation explanation(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID id) {
+        return orders.explanation(customer(jwt),id);
+    }
+    @GetMapping("/admin/orders/{id}/explanation")
+    public OrderExplanation supportExplanation(@PathVariable UUID id) { return orders.adminExplanation(id); }
+
     @GetMapping("/admin/orders")
     public OrderPage admin(
             @RequestParam(defaultValue = "0") @Min(0) int page,

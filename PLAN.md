@@ -4,11 +4,43 @@ The scope and phase order come from `CODEX_PROMPT.md`. A checked box means imple
 includes partial work. Each phase depends on the preceding phase; additional dependencies appear below. Runtime blockers
 do not count as successful validation.
 
-**Current state (2026-10-17):** all seven applications and the frontend run against real native infrastructure. The
+**Original native baseline (2026-10-17, superseded by the update below):** all seven applications and the frontend run against real native infrastructure. The
 final reactor passes 43 tests with no failures or skips; frontend lint/build, 2 unit tests and 4 Chrome cases pass.
 Phases 2–10 have native execution evidence. Phases 1, 11–13 retain deployment/remote-CI acceptance checks because
 Docker, kind and kubectl are absent. [Executed verification](docs/verification.md) distinguishes these limits from
 source/schema validation.
+
+**AI extension (2026-10-18):** [AI_PLAN.md](AI_PLAN.md) tracks the ordered A0–A12 implementation. A0–A8
+have executed source/native verification; A9 quality gates remain open.
+The independent AI service uses local pinned `llama3.1:8b` and 768-dimensional Nomic embeddings. It implements owned
+PostgreSQL state, replay-safe knowledge indexing, authorized API tools, bounded durable runs/SSE, conditional confirmed
+cart changes, and a React Copilot. No cloud model or automatic checkout/payment action is enabled.
+
+- [x] A0: actual pinned generation/tool/embedding calls, frozen 80-case corpus, model/license hashes and ADR.
+- [x] A1: service/security/state APIs and additive owned Compose database provisioning pass.
+- [x] A2–A4: owned order explanations, durable lexical/hybrid knowledge pipeline and actual-model generation verified.
+- [x] A5–A7: typed tools, leased/fenced runs and exact Cart proposals pass, including 100 concurrent confirmations,
+  real lost-acknowledgment replay, fresh-auth process/pod recovery and model-independent Cart reconciliation.
+- [x] A8: 5 frontend unit tests, lint/build and 8 actual Chrome/Keycloak cases pass on Compose and built kind Ingress.
+- [ ] A9 release quality: frozen hybrid corpus passes 240 procedural checks; recall/citations 60/60, positive procedural
+  checks 120/120, zero observed unsafe effects. Independent factual-assertion/wording review remains open; see source review.
+- [ ] A10 full acceptance: host/off and standalone CPU/retained-model-volume checks pass; full CPU co-location and the
+  specified 32 GiB hardware target remain unverified on the 48 GiB host / 7.75 GiB VM.
+- [ ] A11 full acceptance: native-model kind, twelve enforced Calico allow/deny probes, eight browser cases, actual pod
+  loss/lost Cart acknowledgment and PostgreSQL/Redis/index recovery pass. CPU model pod/PVC inference is memory-blocked.
+- [ ] A12 final release: CI/image/manifest/artifact sources and demo execute/validate locally; remote GitHub Actions,
+  final factual review and hardware gates remain open. All implementation/docs/evidence are reviewable in AI_PLAN.md.
+
+Latest regression: **82 Java tests, no failures/errors/skips**; 5 frontend tests plus lint/build. Four ready-stack AI
+browser demo cases additionally verify two distinct product sources and fresh post-restart metrics. Compose and kind
+volumes remain intact. Native-model kind is restored and running at http://localhost:3000.
+
+**Prerequisites:** Docker 29.8.2 / Compose 5.6.0, kind 0.33.0, kubectl 1.36.1 and Ollama 0.40.6 now respond. Historical
+missing-tool blockers below are superseded; their runtime acceptance checks remain open. Host RAM is 48 GiB and Docker's
+VM has about 7.75 GiB, so this run cannot certify the specified 32 GiB target. Both actual models are downloaded and
+verified. A temporary container successfully reached the native localhost-bound Ollama through `host.docker.internal`.
+No Docker Desktop resource settings were changed. Source and native runtime evidence are distinct from Docker/kind
+acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](docs/ai-results/).
 
 ## Phase 1 — Maven repository and local infrastructure
 
@@ -20,7 +52,7 @@ source/schema validation.
   Elasticsearch, and Keycloak; persistent volumes, health checks, localhost ports, lightweight profiles, local-only
   credentials (Compose configuration validated).
 - [x] Compile/test the Maven reactor and validate the full Compose configuration.
-- [ ] Start container infrastructure and verify its health (Docker runtime absent).
+- [x] Start container infrastructure and verify its health (2026-10-18 full Compose health checks passed).
 - Acceptance: reproducible Maven build and healthy local infrastructure; no shared service database credentials.
 
 ## Phase 2 — Catalog Service and PostgreSQL
@@ -111,8 +143,8 @@ source/schema validation.
   and compile/run the Java readiness helper.
 - [x] Validate profiles, environment references, dependency declarations, volumes and resource budgets with standalone
   Compose; check shell/Python syntax.
-- [ ] Execute image builds and verify container probes, dependencies, resource behavior and service discovery.
-- [ ] Build/start full stack and run success/decline/search/cache/monitoring demonstration.
+- [x] Execute image builds and verify container probes, dependencies, resource behavior and service discovery (2026-10-18).
+- [x] Build/start full stack and run success/decline/search/cache/monitoring demonstration (Compose on 48 GiB host; 32 GiB capacity unverified).
 - Acceptance: documented reproducible Compose startup on a 32 GB Mac.
 
 ## Phase 12 — Complete Kubernetes deployment
@@ -123,23 +155,23 @@ source/schema validation.
   NetworkPolicies.
 - [x] Add syntax-checked local image loading/startup/teardown/diagnostics/recovery scripts and Kubernetes DNS; document
   single-node availability limits.
-- [ ] Deploy and verify ingress, probes, rollouts, HPAs and CNI policy enforcement.
-- [ ] Execute restart/PVC durability and recovery demonstrations on kind.
+- [x] Deploy and verify ingress, probes, rollouts, HPAs and CNI policy enforcement (actual Calico/native-model kind).
+- [x] Execute restart/PVC durability and recovery demonstrations on kind (Order, PostgreSQL, Redis and AI/index state).
 - Acceptance: working local kind deployment with persisted data after restarts.
 
 ## Phase 13 — Failure tests, CI, documentation and polish
 
 - [x] Execute critical failure scenarios 1–8 and the full native E2E suite; additionally restart the real Kafka broker
   over retained logs and recover a pending outbox command.
-- [ ] Execute critical scenario 9: Kubernetes service restarts preserve durable data.
+- [x] Execute critical scenario 9: Kubernetes service restarts preserve durable data.
 - [x] Add CI Java/frontend/integration checks and eight-image Docker build matrix; validate workflow with actionlint and
   shell syntax checks.
-- [ ] Execute GitHub Actions and its Docker builds (no Git repository/remote or Docker runtime configured here).
+- [ ] Execute GitHub Actions remotely; all nine image builds were verified locally, but no remote workflow was dispatched.
 - [x] Complete/review README, Mermaid architecture, data/API/event/security/observability docs, ADR, recovery guide and
   measured load results.
 - [x] Add and execute native five-minute successful/declined purchase, exact stock compensation, search/cache and
   provisioned Grafana demo.
-- [ ] Execute the demonstration on the full Compose/kind deployment.
+- [x] Execute the demonstration on the full Compose/kind deployment (native local models; CPU co-location remains separate).
 - [x] Audit every final acceptance criterion and retain an explicit evidence/remaining-work matrix below.
 - Acceptance: reproducible setup, passing required checks and documented recovery; remaining limitations explicit.
 
@@ -156,13 +188,10 @@ source/schema validation.
 
 ## Next action
 
-On a Docker-enabled Mac, execute `bash scripts/compose-up.sh`, repeat the documented demonstration and verify persisted
-volumes after restart. Then run `bash scripts/kind-up.sh`, diagnostics and recovery checks, including critical scenario
-
-9. Verify image tags/pulls and runtime resource budgets during these runs. Initialize/connect Git only when desired,
-   then execute the supplied CI. Longer performance trials are separate from the recorded smoke baselines. No
-   outstanding
-   runtime deployment task is marked complete.
+Independently review the retained v3 factual assertions/wording before closing AI release quality; run the explicit
+CPU Compose/kind profiles on a VM with sufficient measured memory and verify the 32 GiB hardware target; dispatch the
+configured CI when remote execution is authorized. These open gates do not invalidate the completed native-model
+Compose/kind demonstrations. No routine repair deletes data or changes Docker Desktop allocation.
 
 ### Phase 1 verification
 
@@ -343,7 +372,7 @@ volumes after restart. Then run `bash scripts/kind-up.sh`, diagnostics and recov
 
 | Specification final acceptance criterion    | Evidence / remaining check                                                                                                          |
 |---------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| Reproducible Docker Compose startup         | Configuration valid; image build/startup **unverified**, Docker runtime absent.                                                     |
+| Reproducible Docker Compose startup         | Nine images built; full Compose host/off startup and browser/monitoring/recovery pass. CPU/32 GiB gates remain open.                                                     |
 | Authenticated React interface               | Real Chrome PKCE/session/purchase/admin/support flows pass.                                                                         |
 | Elasticsearch product search                | Native search/index/update/deactivation/rebuild/outage tests and browser search pass.                                               |
 | Redis cart/catalog cache                    | Atomic concurrency, TTL, invalidation, isolation and outage tests pass; browser and live hit/miss samples observed.                 |
@@ -354,8 +383,8 @@ volumes after restart. Then run `bash scripts/kind-up.sh`, diagnostics and recov
 | Successful/declined simulated payments      | Integration, Chrome demo and authenticated k6 checkout checks pass with exact stock verification.                                   |
 | Concurrency-safe inventory                  | 100 requests / stock 10 gives exactly 10 reservations; mixed-product reserve/release conservation passes.                           |
 | Meaningful Grafana metrics                  | Seven targets up, both dashboards provisioned, datasource health/query pass on native monitoring.                                   |
-| Runnable automated tests                    | 43 Java + 2 frontend unit + 4 Chrome tests; documented scripts/commands. Remote CI and Docker fallback execution remain unverified. |
-| Local Kubernetes/restart recovery           | 61 resources schema-valid; deployment and restart/PVC recovery **unverified**, Docker/kind/kubectl absent.                          |
+| Runnable automated tests                    | 82 Java + 5 frontend unit + 8 Chrome cases; frozen 240-case AI evaluation retained. Remote CI/Docker fallback suites remain unverified. |
+| Local Kubernetes/restart recovery           | Native-model kind deployed; enforced policies, browser workflows and Order/PG/Redis/AI rebuild recovery pass; CPU memory-blocked.                          |
 | Security/authorization                      | Real Keycloak PKCE/service scope tests, issuer/audience/UUID subjects, roles and cross-customer ownership tests pass.               |
 | Architecture/setup/API/troubleshooting docs | Written/reviewed and linked from README; blocked deployment instructions explicitly identified as unexecuted.                       |
 
@@ -370,3 +399,18 @@ successfully. No remote deployment, Git initialization/commit or persisted user-
   Parse/validate the module XML and catalog POM; verify the exclusion and POM write access.
 - [ ] Confirm the original operation in IntelliJ after reloading the project. Live dialog dismissal/retry was not
   exercised by the command-line validation.
+
+### Docker prerequisite reopened and verified (2026-10-18)
+
+- All eight commerce images built and were inspected for nonroot runtime users. All 15 AI-disabled Compose services
+  passed health checks on the 48 GiB host / 7.75 GiB Docker VM. Actual `docker stats` samples are retained locally;
+  this does not certify the original 32 GiB hardware target.
+- Fixed two executed startup failures: PostgreSQL init bind-mount executable permission and frontend health probe's
+  IPv6 localhost mismatch. Initial database provisioning is now additive, owner-checked and explicitly rerunnable;
+  the partially initialized PostgreSQL volume was repaired and preserved. No `down -v`, password reset or data reset.
+- Four Chrome cases PASS in 22.7 s on real Compose Keycloak/gateway/services, after documented `demo.py seed` created
+  the initially missing fixtures. Exact successful-stock commitment/decline compensation verification PASS. First
+  unseeded browser failures remain in logs and are not counted as passes.
+- Prometheus acquired all seven authenticated service targets; Grafana provisioned all three dashboards. Added
+  `METRICS_MODE=compose` to collect these samples without publishing internal application management ports. Its initial
+  native-port collector failure was fixed and reran successfully. Original pod restart/remote CI gates remain open.

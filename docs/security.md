@@ -25,3 +25,17 @@ tests.
 Development Compose infrastructure binds host ports to loopback and uses plaintext within its local network. It is not a
 hardened remote deployment. Production identity secrets, TLS, network restrictions and Kafka ACLs require
 deployment-specific configuration. Do not expose the local fixture publicly.
+
+## Copilot and deployment boundaries
+
+See [AI security](ai-security.md). Caller context controls ownership/mode and fixed downstream targets; model arguments
+cannot supply authority or arbitrary endpoints. Confirmation is an authenticated typed command, never inferred from
+model/user agreement text. Generation outages reject new inference work; owned committed Cart intents can reconcile
+without generation. Only current public order state/cause/version/observation reaches the model; full Order history
+remains in its authorized API.
+
+Local kind installs Calico and verifies actual allow/deny connections. AI/model/provisioning pods are excluded from the
+base namespace allowance and get explicit dependency policies. Native inference uses a private nonroot proxy limited
+to tags/version/chat/embed, no published host port and an exact /32 destination rule. Model pull access is separate,
+explicit and temporary. CI artifacts use `collect-safe-evidence.py`; raw browser traces, HTTP dumps, logs and rendered
+Kubernetes Secrets are excluded.

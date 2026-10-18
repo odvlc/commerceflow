@@ -13,3 +13,5 @@ dist/
 *.tsbuildinfo
 infra/.generated*
 __pycache__/
+deploy/ai/base/.generated*
+deploy/ai/host/.generated*

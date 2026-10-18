@@ -1039,3 +1039,22 @@ footer > span {
         font-size: 30px;
     }
 }
+
+.copilot-shell { position: fixed; right: 1rem; bottom: 1rem; z-index: 40; width: min(26rem, calc(100vw - 2rem)); }
+.copilot-toggle { background: #1c372e; color: #fff; width: 100%; box-shadow: 0 4px 18px #0002; }
+.copilot-panel { background: #fffdf7; border: 1px solid #c4cec5; border-radius: .75rem; padding: 1.2rem; max-height: min(78vh, 54rem); overflow-y: auto; box-shadow: 0 8px 35px #0003; }
+.copilot-panel h2 { margin: .3rem 0; font-size: 1.35rem; }
+.copilot-panel h3 { font-size: 1rem; }
+.copilot-panel .field { margin-bottom: .8rem; }
+.copilot-panel textarea { min-height: 5rem; width: 100%; }
+.copilot-messages { list-style: none; padding: 0; }
+.copilot-messages > li { padding: .85rem; margin: .7rem 0; background: #f0f3ed; border-radius: .5rem; overflow-wrap: anywhere; }
+.copilot-messages > .user { background: #ece8df; }
+.copilot-answer { white-space: pre-wrap; overflow-wrap: anywhere; }
+.copilot-citation { border-top: 1px solid #ccd3c9; padding: .5rem 0; font-size: .85rem; }
+.copilot-citation summary { cursor: pointer; }
+.copilot-progress { font-size: .8rem; padding-left: 1.2rem; }
+.copilot-proposal { border: 2px solid #577660; border-radius: .5rem; padding: .8rem; margin: 1rem 0; overflow-wrap: anywhere; }
+.copilot-controls { display: flex; flex-wrap: wrap; gap: .4rem; margin: .6rem 0; }
+.copilot-shell button:focus-visible,.copilot-shell summary:focus-visible { outline: 3px solid #b08027; outline-offset: 3px; }
+@media(max-width: 600px) { .copilot-shell { right: .5rem; bottom: .5rem; width: calc(100vw - 1rem); } .copilot-panel { max-height: 75vh; } }

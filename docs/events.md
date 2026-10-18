@@ -28,3 +28,12 @@ delivery. Outbox failures retry indefinitely with backoff capped at 60 seconds; 
 
 The local broker uses three partitions per topic and replication factor one. This is development durability, not broker
 high availability. Kafka/PostgreSQL never share an atomic transaction.
+
+## AI knowledge events
+
+`commerceflow.ai-knowledge.v1` carries `KnowledgeChanged` versioned wire DTOs from AI's local transactional outbox.
+Knowledge versions/chunks/import intent and the outbox row commit together. The consumer deduplicates its ready-job
+marker in the AI database, then the index worker acknowledges external-version Elasticsearch writes before marking
+projection complete. A process crash may replay those writes. Rebuild/live projection share a PostgreSQL session
+advisory lock; acquiring it permits recovery of an abandoned RUNNING rebuild without its diagnostic lease delay.
+No database transaction spans inference/search HTTP, and no PostgreSQL/Kafka atomic commit is claimed.

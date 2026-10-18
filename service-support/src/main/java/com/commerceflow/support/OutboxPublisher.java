@@ -89,6 +89,7 @@ public class OutboxPublisher {
     private static String topic(String type) {
         return switch (type) {
             case "ProductChanged" -> Topics.CATALOG;
+            case "KnowledgeChanged" -> Topics.AI_KNOWLEDGE;
             case "ReserveInventory",
                  "CommitInventory",
                  "ReleaseInventory",

@@ -18,6 +18,8 @@ settings.update(os.environ)
 secret = settings.get("SERVICE_CLIENT_SECRET", "local-service-only")
 source = (root / "infra/prometheus/prometheus.yaml").read_text()
 source = source.replace("client_secret: local-service-only", "client_secret: " + json.dumps(secret))
+if settings.get("AI_ENABLED", "false").lower() == "true":
+    source = source.replace('"api-gateway:8080" ]', '"api-gateway:8080","ai-service:8080" ]')
 if not native:
     (root / "infra/.generated-prometheus.yaml").write_text(source)
 else:
@@ -27,7 +29,7 @@ else:
     source = source.replace("http://keycloak:8080", "http://localhost:8180")
     for service, port in {"catalog-service": 8081, "cart-service": 8085, "order-service": 8082,
                           "inventory-service": 8083, "payment-service": 8084,
-                          "notification-service": 8086, "api-gateway": 8080}.items():
+                          "notification-service": 8086, "api-gateway": 8080, "ai-service": 8087}.items():
         source = source.replace(service + ":8080", f"localhost:{port}")
     (directory / "prometheus.yaml").write_text(source)
     provisioning = directory / "provisioning"

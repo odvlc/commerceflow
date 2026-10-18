@@ -3,16 +3,17 @@
 A Java 25 / Spring Boot event-driven commerce application with a React storefront, Keycloak login, PostgreSQL-owned
 service data, Kafka checkout orchestration, Redis carts/cache and Elasticsearch search.
 
-The business application has been executed with real local infrastructure: **43 Java tests, 2 frontend unit tests and 4
-Chrome end-to-end tests pass**. Both thread modes were load-tested; Prometheus scraped all seven applications and
-Grafana returned live order metrics through its provisioned datasource. See [verification](docs/verification.md)
-and [measured results](docs/load-tests.md).
+The latest regression passes **82 Java tests**, **5 frontend unit tests**, lint/build and **8 real-browser cases**.
+The optional local Llama copilot adds cited retrieval, authorized tools, durable investigations and explicitly confirmed
+cart changes. Its frozen 80-case hybrid corpus ran three times: 240 scenario checks passed with zero observed unsafe
+business effects. These checks do not certify every factual assertion; see [AI evaluation](docs/ai-evaluation.md).
 
-**Deployment validation is incomplete:** this workspace has no Docker daemon, kind or kubectl. The full Compose
-configuration validates and 61 rendered Kubernetes resources pass strict schema validation, but images, container
-startup and Kubernetes restart durability have not been executed. CI definitions have not run on
-GitHub. [PLAN.md](PLAN.md) preserves the exact verified progress and outstanding acceptance checks. The initial
-directory was not a Git repository; no commits or remote changes were made.
+The full Compose host-model stack and native-model kind deployment run with real infrastructure. Calico allow/deny
+checks and real process/pod recovery have execution evidence. The complete CPU model co-location profile exceeds the
+current 7.75 GiB Docker VM; standalone CPU generation/embeddings and model-volume restart pass. The host has 48 GiB,
+so the original 32 GiB hardware target remains unverified. GitHub Actions definitions are validated but have not run
+remotely. [PLAN.md](PLAN.md), [AI_PLAN.md](AI_PLAN.md) and [verification](docs/verification.md) retain exact scope/results.
+No commits, remote deployment or volume deletion were performed.
 
 ## Prerequisites
 
@@ -49,8 +50,8 @@ npm run --prefix frontend dev
 
 Open [localhost:5173](http://localhost:5173). This harness launches real infrastructure and all services, seeds six
 synthetic products/stock, and keeps authoritative state in real PostgreSQL databases until stopped. It is a test
-convenience; use Compose/PVCs for persistent development. Stop it with Ctrl-C and allow its shutdown hook to finish
-before restarting. To run Chrome verification against it:
+convenience; use Compose/PVCs for persistent development. Stop it with `touch .cache/verification/browser-stop` and
+wait for ordered application/infrastructure shutdown before restarting. To run Chrome verification against it:
 
 ```bash
 npm run --prefix frontend test:e2e
@@ -67,8 +68,8 @@ cp infra/.env.example infra/.env   # only if the file does not already exist
 bash scripts/compose-up.sh
 ```
 
-This renders ignored monitoring configuration, validates Compose, builds images and waits for health. **It is provided
-for execution on a Docker-enabled machine; startup has not been verified here.** Defaults are public local-development
+This renders ignored monitoring configuration, validates Compose, builds images and waits for health. The default is
+`--ai=off`; startup and full browser workflows have been verified locally. Defaults are public local-development
 credentials. Keep overrides in ignored `infra/.env`; the renderer keeps Prometheus's client secret consistent with
 Keycloak.
 
@@ -93,8 +94,9 @@ docker compose -f infra/compose.yaml --profile full logs --tail=100 order-servic
 docker compose -f infra/compose.yaml --profile full down
 ```
 
-Named volumes preserve development data. `down -v` removes those volumes. PostgreSQL database/user changes in the init
-script apply only to an empty volume; use migrations/explicit role changes for existing data.
+Named volumes preserve development data. `down -v` removes them and is not a repair/upgrade step. Initial database
+provisioning is additive and owner-checked if explicitly rerun after interrupted setup. AI startup separately verifies
+its owned role/database for existing volumes without changing existing passwords.
 
 ## Kubernetes
 
@@ -112,8 +114,27 @@ For cluster monitoring, port-forward `service/grafana 3001:3000` and `service/pr
 `commerceflow` using context `kind-commerceflow`, in separate terminals.
 
 Read [operations](docs/operations.md) before recovery/teardown. A single-node kind cluster is not a production
-high-availability deployment. NetworkPolicies require a CNI that enforces them; kind's default networking is not
-evidence of policy enforcement. Deployment and restart checks remain unexecuted.
+high-availability deployment. The startup script installs pinned Calico on a new cluster; actual allowed/denied
+connections were verified. It refuses to erase or silently migrate an existing default-kindnet cluster.
+
+## Optional local Llama copilot
+
+```bash
+python3 scripts/prepare-ai-models.py --warmup  # explicit download/digest/inference checks
+bash scripts/compose-up.sh --ai=host
+python3 scripts/demo.py seed                # synthetic demo stock only; no pending reservations
+python3 scripts/import-ai-knowledge.py
+```
+
+Open the storefront, sign in as alice and open **Local copilot**. Ask about the synthetic 30-day return window, compare
+Workspace products, or explain an owned order. Cart changes require the exact typed proposal and explicit confirmation.
+No checkout, payment, refund or inventory write tool exists. SUPPORT can investigate through its scoped read route.
+Use `--ai=off` to withdraw AI routes and stop optional workers while retaining all data.
+
+For native-model kind, use `bash scripts/kind-up.sh --ai=host`; `--skip-build` reuses already-built local images.
+The host runtime stays on localhost. A fixed inference-only proxy on the private kind Docker network handles Docker
+Desktop routing, publishes no host port and is allowed by an exact endpoint policy. CPU mode uses explicit model
+preparation and a retained volume/PVC; read [AI operations](docs/ai-operations.md) for capacity/status and recovery commands.
 
 ## Five-minute demonstration
 
@@ -138,11 +159,13 @@ SERVICE_CLIENT_SECRET=local-test-service-only bash scripts/demo.sh
 
 It seeds only loopback synthetic data, runs the browser cases, checks exact committed/released stock, captures
 authenticated metrics and checks both dashboards. Compose uses its own documented service-client secret. The full
-demonstration on Compose/kind remains an outstanding acceptance check.
+demonstration and recovery evidence for Compose/kind are recorded in the dated verification supplement.
 
 ## Documentation
 
 - [Authoritative specification](CODEX_PROMPT.md), [engineering rules](AGENTS.md), [phase plan](PLAN.md)
+- [AI copilot implementation plan](AI_PLAN.md) — implementation, verified progress and explicit remaining release gates.
+- [AI operations](docs/ai-operations.md), [API](docs/ai-api.md), [security](docs/ai-security.md), [evaluation](docs/ai-evaluation.md).
 - [Architecture](docs/architecture.md), [data model](docs/data-model.md), [API](docs/api.md), [events](docs/events.md)
 - [Security](docs/security.md), [search consistency](docs/search.md), [observability](docs/observability.md)
 - [Recovery](docs/recovery.md), [operations](docs/operations.md), [dependencies](docs/dependencies.md)

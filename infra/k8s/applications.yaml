@@ -134,7 +134,7 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": { }
+            "emptyDir": {}
           }
         ],
         "initContainers": [
@@ -182,7 +182,8 @@
               }
             }
           }
-        ]
+        ],
+        "enableServiceLinks": false
       }
     }
   }
@@ -327,9 +328,10 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": { }
+            "emptyDir": {}
           }
-        ]
+        ],
+        "enableServiceLinks": false
       }
     }
   }
@@ -495,7 +497,7 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": { }
+            "emptyDir": {}
           }
         ],
         "initContainers": [
@@ -543,7 +545,8 @@
               }
             }
           }
-        ]
+        ],
+        "enableServiceLinks": false
       }
     }
   }
@@ -705,7 +708,7 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": { }
+            "emptyDir": {}
           }
         ],
         "initContainers": [
@@ -753,7 +756,8 @@
               }
             }
           }
-        ]
+        ],
+        "enableServiceLinks": false
       }
     }
   }
@@ -915,7 +919,7 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": { }
+            "emptyDir": {}
           }
         ],
         "initContainers": [
@@ -963,7 +967,8 @@
               }
             }
           }
-        ]
+        ],
+        "enableServiceLinks": false
       }
     }
   }
@@ -1125,7 +1130,7 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": { }
+            "emptyDir": {}
           }
         ],
         "initContainers": [
@@ -1173,7 +1178,8 @@
               }
             }
           }
-        ]
+        ],
+        "enableServiceLinks": false
       }
     }
   }
@@ -1342,9 +1348,10 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": { }
+            "emptyDir": {}
           }
-        ]
+        ],
+        "enableServiceLinks": false
       }
     }
   }
@@ -1418,7 +1425,7 @@
                 "memory": "128Mi"
               }
             },
-            "env": [ ],
+            "env": [],
             "securityContext": {
               "runAsNonRoot": true,
               "runAsUser": 101,
@@ -1468,9 +1475,10 @@
         "volumes": [
           {
             "name": "tmp",
-            "emptyDir": { }
+            "emptyDir": {}
           }
-        ]
+        ],
+        "enableServiceLinks": false
       }
     }
   }

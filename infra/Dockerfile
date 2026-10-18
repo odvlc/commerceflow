@@ -3,7 +3,7 @@ WORKDIR /workspace
 COPY . .
 ARG APP_MODULE
 # The CI verification job runs the full native/Testcontainers suite first. Image builds compile/package the selected app.
-RUN mvn -B -pl "${APP_MODULE}" -am package -DskipTests && \
+RUN --mount=type=cache,id=commerceflow-maven,target=/root/.m2,sharing=locked mvn -B -pl "${APP_MODULE}" -am package -DskipTests && \
     cp "${APP_MODULE}/target/${APP_MODULE}-0.1.0-SNAPSHOT-exec.jar" /tmp/app.jar && \
     javac -d /tmp/health infra/HealthCheck.java
 

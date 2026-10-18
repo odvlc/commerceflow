@@ -53,3 +53,32 @@ SERVICE_CLIENT_SECRET=local-test-service-only bash scripts/demo.sh
 Maven reports remain under each module's ignored `target/surefire-reports`. Execution logs, browser screenshot/traces,
 scrape evidence and local monitoring data remain under ignored `.cache/verification` and `frontend/test-results`.
 Synthetic test infrastructure is stopped after verification; reproduce it with the documented scripts.
+
+## AI and deployment supplement — 2026-10-18
+
+The original absent-tool/deployment statements above describe the 2026-10-17 baseline. Docker/kind/Ollama are now
+available and the following commands executed successfully on the 48 GiB M5 Pro host, Docker VM 7.75 GiB:
+
+| Check | Actual result |
+|---|---|
+| `./mvnw -B -pl workflow-tests -am -Pai-real-model verify` (final) | 82 tests, no failures/errors/skips; 30 AI core, 5 actual-model tests plus all business/security suites |
+| Frozen `-Pai-real-model,ai-evaluation` candidate v3 | 240/240 procedural cases; 60/60 semantic recall/expected citations; 120/120 positive procedural checks; zero observed unsafe effects |
+| Frontend lint/unit/build | PASS, 5 unit tests; actual compiled storefront served by nginx/Ingress |
+| Full commerce + Copilot Chrome suite | Compose host mode 8/8 (41.7 s); kind built Ingress 8/8 (42.7 s) |
+| Updated ready-stack AI demo | Four AI browser cases include distinct-product comparison, then four actual crash/outage cases and fresh post-restart Prometheus samples; PASS |
+| Compose | Nine nonroot application images build; 16-service host-mode health, explicit off transition, additive database provisioning and actual lost-ack process recovery pass |
+| CPU Docker | Both pinned digests, actual CPU generation/embedding warmup and retained-model-volume restart pass; full CPU/business co-location not certified |
+| kind policy | Calico 3.33.0 installed; 12 actual allow/deny probes pass, including forbidden payment/inventory/notification egress and forbidden Catalog-to-AI ingress |
+| kind durable recovery | Waiting proposals, physical container termination/read resume, same-key lost Cart acknowledgment while inference unavailable, Order/PG/Redis PVC and interrupted rebuild recovery pass |
+| Monitoring | All three provisioned Grafana dashboards and eight authenticated Prometheus targets queried live through Grafana; first-text-token metric sampled after new post-restart inference |
+| Source/deployment validators | All shell/Python syntax, actionlint, three Compose modes and strict base/AI/Job/policy Kubernetes schemas pass; `git diff --check` passes |
+
+`docs/ai-results/` retains safe candidate-specific JSON, capacity events, recovery/monitoring evidence and an explicit
+source-review note. Final API Cart-resume admission, rebuild session-lock recovery and integer-overflow rejection have
+separate final regression/operational evidence; do not relabel v3 model-quality hashes as a newer full evaluation.
+The >=95% factual-assertion/independent review gate remains open despite passing procedural/citation checks.
+
+The CPU kind attempt produced a real insufficient-memory scheduler event for a 6 GiB model request. It was suspended,
+its check Job stopped and PVC retained; native-model mode was restored and actual grounded inference rechecked. CPU
+kind/PVC inference, full CPU Compose co-location, the specified 32 GiB hardware target and remote GitHub Actions remain
+open. No VM settings, remote resources, commits, user data resets or destructive volume/cluster teardown were performed.

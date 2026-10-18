@@ -191,4 +191,14 @@ public class OrderRepository {
                 .param("error", error)
                 .update();
     }
+    public void recordReason(UUID id,String reason) {
+        jdbc.sql("UPDATE orders SET public_reason_code=:reason WHERE id=:id AND public_reason_code IS NULL")
+            .param("id",id).param("reason",reason).update();
+    }
+    public OrderExplanation explanation(Row order) {
+        String reason=jdbc.sql("SELECT public_reason_code FROM orders WHERE id=:id").param("id",order.id()).query(String.class).optional().orElse(null);
+        var history=jdbc.sql("SELECT * FROM order_status_history WHERE order_id=:id ORDER BY version LIMIT 100")
+            .param("id",order.id()).query((rs,n)->new StatusHistory(rs.getLong("version"),OrderState.valueOf(rs.getString("status")),rs.getString("public_reason_code"),rs.getTimestamp("recorded_at").toInstant())).list();
+        return new OrderExplanation(order.id(),order.status(),order.version(),reason,reason!=null,Instant.now(),history);
+    }
 }

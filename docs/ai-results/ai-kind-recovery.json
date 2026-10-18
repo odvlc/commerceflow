@@ -1,0 +1,12 @@
+{
+  "target": "local kind",
+  "realProcessKill": true,
+  "complete": true,
+  "checks": [
+    "Waiting proposal survived process replacement; fresh confirmation and duplicate confirmation had one effect",
+    "SIGKILL during model step required fresh same-owner resume and completed from durable state",
+    "SIGKILL after real Cart acknowledgment before AI recorded response: same execution/key replay, one added unit while inference unavailable",
+    "Model outage rejected message without persistence; history and commerce gateway remained available"
+  ],
+  "lastKilledPodUid": "7672201a-273d-4c74-a11a-ddbade5fecac"
+}

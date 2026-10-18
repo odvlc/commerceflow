@@ -1,0 +1,148 @@
+[
+  {
+    "name": "searchProducts",
+    "description": "Search actual active catalog products with optional maximum USD price. Responses mark partial matches if an empty multiword search was broadened. Label partial matches clearly; catalog presence never proves live stock availability.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Nonempty product or category words from the current question, for example keyboard, desk lamp, or Workspace. Do not use an empty query."
+        },
+        "maxPrice": {
+          "description": "Optional maximum USD decimal amount string. Omit when no limit applies. JSON null and the literal string null are explicitly accepted as absent filters for Llama 3.1 compatibility; currency names are invalid.",
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "const": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "getProduct",
+    "description": "Read current actual product details.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "productId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "productId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "getMyOrderExplanation",
+    "description": "Read the current caller-owned order explanation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "orderId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "getSupportOrderExplanation",
+    "description": "Read an order explanation in authorized SUPPORT mode.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "orderId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "getMyCart",
+    "description": "Read the current caller cart.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "searchKnowledge",
+    "description": "Find curated demo-policy or authorized support evidence.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "proposeCartChange",
+    "description": "Prepare, never execute, a precise caller cart mutation. Requires explicit application confirmation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "operation": {
+          "type": "string",
+          "enum": [
+            "ADD",
+            "SET",
+            "DELETE"
+          ]
+        },
+        "productId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        }
+      },
+      "required": [
+        "operation",
+        "productId",
+        "quantity"
+      ],
+      "additionalProperties": false
+    }
+  }
+]

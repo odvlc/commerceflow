@@ -23,6 +23,7 @@
         <module>cart-service</module>
         <module>api-gateway</module>
         <module>notification-service</module>
+        <module>ai-service</module>
         <module>workflow-tests</module>
     </modules>
     <properties>

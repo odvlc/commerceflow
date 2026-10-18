@@ -1,0 +1,324 @@
+{
+  "uid": "commerceflow-copilot",
+  "title": "CommerceFlow Local Copilot",
+  "schemaVersion": 42,
+  "version": 1,
+  "refresh": "15s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "tags": [
+    "commerceflow",
+    "local-ai"
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Durable run states",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "commerceflow-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(state)(commerceflow_ai_runs)",
+          "legendFormat": "{{state}}{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "title": "Local inference p95",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "commerceflow-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95,sum by(le,operation)(rate(commerceflow_ai_model_seconds_bucket[5m])))",
+          "legendFormat": "{{state}}{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "title": "Tool and retrieval p95",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "commerceflow-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95,sum by(le)(rate(commerceflow_ai_tool_seconds_bucket[5m])))",
+          "legendFormat": "{{state}}{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "title": "Model token use",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "commerceflow-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(operation)(rate(commerceflow_ai_tokens_total[5m]))",
+          "legendFormat": "{{state}}{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "Indexing backlog",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "commerceflow-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "commerceflow_ai_index_pending",
+          "legendFormat": "{{state}}{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "Index lag",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "commerceflow-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "commerceflow_ai_index_lag_seconds",
+          "legendFormat": "{{state}}{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "title": "Approved changes",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "commerceflow-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "commerceflow_ai_approvals",
+          "legendFormat": "{{state}}{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "title": "Unknown cart outcomes",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "commerceflow-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "commerceflow_ai_outcomes_unknown",
+          "legendFormat": "{{state}}{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 9,
+      "title": "Model failures",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "commerceflow-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(operation)(increase(commerceflow_ai_model_failures_total[5m]))",
+          "legendFormat": "{{state}}{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "title": "Lexical fallback",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "commerceflow-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "increase(commerceflow_ai_retrieval_embedding_fallback_total[5m])",
+          "legendFormat": "{{state}}{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 11,
+      "title": "First generated text token p95 (backend inference)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "commerceflow-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95,sum by(le)(rate(commerceflow_ai_model_first_token_seconds_bucket[5m])))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    }
+  ]
+}

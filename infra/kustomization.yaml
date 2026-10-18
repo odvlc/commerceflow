@@ -26,4 +26,4 @@ configMapGenerator:
   - name: grafana-provider
     files: [ grafana/provisioning/dashboards/dashboards.yaml ]
   - name: grafana-dashboards
-    files: [ grafana/dashboards/service-health.json,grafana/dashboards/order-processing.json ]
+    files: [ grafana/dashboards/service-health.json,grafana/dashboards/order-processing.json,grafana/dashboards/copilot.json ]

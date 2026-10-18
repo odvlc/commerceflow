@@ -52,6 +52,7 @@ public class SagaCoordinator {
             }
             case "REJECTED" -> {
                 if (order.status() != PENDING_INVENTORY) return;
+                orders.recordReason(id,"INSUFFICIENT_STOCK".equals(result.reason())?"INSUFFICIENT_STOCK":"INVENTORY_REJECTED");
                 orders.step(id, "RESERVE_INVENTORY", "FAILED", result.reason());
                 move(order, CANCELLED);
             }
@@ -81,6 +82,7 @@ public class SagaCoordinator {
             }
             case "DECLINED", "CANCELLED", "REFUNDED" -> {
                 if (order.status() != AWAITING_PAYMENT && order.status() != CANCELLING_PAYMENT) return;
+                if(result.status().equals("DECLINED")) orders.recordReason(id,"PAYMENT_DECLINED");
                 orders.step(
                         id,
                         order.status() == CANCELLING_PAYMENT ? "CANCEL_PAYMENT" : "AUTHORIZE_PAYMENT",
@@ -118,11 +120,13 @@ public class SagaCoordinator {
     private void reconcile(OrderRepository.Row order, String reason) {
         switch (order.status()) {
             case PENDING_INVENTORY -> {
+                orders.recordReason(order.id(),"RESERVATION_EXPIRED".equals(reason)?"RESERVATION_EXPIRED":"INVENTORY_TIMEOUT");
                 orders.step(order.id(), "RESERVE_INVENTORY", "FAILED", reason);
                 move(order, CANCELLING_INVENTORY);
                 command(order, "RELEASE_INVENTORY", "ReleaseInventory", new Command(reason));
             }
             case AWAITING_PAYMENT -> {
+                orders.recordReason(order.id(),"RESERVATION_EXPIRED".equals(reason)?"RESERVATION_EXPIRED":"PAYMENT_TIMEOUT");
                 orders.step(order.id(), "AUTHORIZE_PAYMENT", "FAILED", reason);
                 move(order, CANCELLING_PAYMENT);
                 command(order, "CANCEL_PAYMENT", "CancelPayment", new Command(reason));

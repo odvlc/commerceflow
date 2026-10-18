@@ -1,0 +1,10 @@
+{
+  "target": "full CPU kind mode",
+  "status": "blocked",
+  "modelMemoryRequest": "6Gi",
+  "nodeAllocatableMemory": "8122332Ki",
+  "reason": "0/1 nodes are available: 1 Insufficient memory. preemption: 0/1 nodes are available: 1 No preemption victims found for incoming pod.",
+  "noModelProcessStarted": true,
+  "pvcPreserved": true,
+  "dockerResourceSettingChanged": false
+}

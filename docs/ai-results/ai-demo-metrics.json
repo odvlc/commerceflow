@@ -1,0 +1,101 @@
+{
+  "targets": [
+    {
+      "metric": {
+        "__name__": "up",
+        "instance": "ai-service:8080",
+        "job": "commerceflow"
+      },
+      "value": [
+        1792358853.001,
+        "1"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "up",
+        "instance": "api-gateway:8080",
+        "job": "commerceflow"
+      },
+      "value": [
+        1792358853.001,
+        "1"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "up",
+        "instance": "catalog-service:8080",
+        "job": "commerceflow"
+      },
+      "value": [
+        1792358853.001,
+        "1"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "up",
+        "instance": "notification-service:8080",
+        "job": "commerceflow"
+      },
+      "value": [
+        1792358853.001,
+        "1"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "up",
+        "instance": "order-service:8080",
+        "job": "commerceflow"
+      },
+      "value": [
+        1792358853.001,
+        "1"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "up",
+        "instance": "cart-service:8080",
+        "job": "commerceflow"
+      },
+      "value": [
+        1792358853.001,
+        "1"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "up",
+        "instance": "inventory-service:8080",
+        "job": "commerceflow"
+      },
+      "value": [
+        1792358853.001,
+        "1"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "up",
+        "instance": "payment-service:8080",
+        "job": "commerceflow"
+      },
+      "value": [
+        1792358853.001,
+        "1"
+      ]
+    }
+  ],
+  "backendFirstTokenCount": [
+    {
+      "metric": {},
+      "value": [
+        1792358853.061,
+        "1"
+      ]
+    }
+  ]
+}

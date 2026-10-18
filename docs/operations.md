@@ -38,3 +38,15 @@ empty initial volume or explicit migration/role administration.
 This single-node deployment has no infrastructure high availability. Restarts must preserve volumes, credentials and
 consumer groups. Broker replication factor one is a local development choice. Production capacity, backups, TLS, secret
 distribution and CNI enforcement require separate deployment validation.
+
+## Executed deployment supplement (2026-10-18)
+
+The historical missing-tool statements above are superseded. All nine application images (including AI) build; full
+Compose host mode and native-model kind browser workflows pass. Kind now installs Calico, disables Service-link env
+injection, publishes Kafka controller DNS before readiness, and grants Traefik the read-only Node discovery required
+by its running informer. Exact controller API egress remains unchanged. AI-owned provisioning is additive and waits
+for real database readiness. Actual allow/deny, process-loss, database/cart PVC and rebuild recovery evidence is in
+[AI operations](ai-operations.md), [AI_PLAN.md](../AI_PLAN.md) and `docs/ai-results/`.
+
+The full CPU model profile is blocked by the current Docker VM memory, and 32 GiB target hardware/remote GitHub Actions
+remain unverified. No cluster or volume was erased to repair startup. New UI/AI data is synthetic demonstration data.

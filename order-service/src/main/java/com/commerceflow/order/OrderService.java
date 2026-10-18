@@ -106,12 +106,14 @@ public class OrderService {
                 return orders.view(order);
             }
             case PENDING_INVENTORY -> {
+                orders.recordReason(id,"CUSTOMER_CANCELLED");
                 orders.move(order, OrderState.CANCELLING_INVENTORY, Instant.now().plus(timeout));
                 orders.step(id, "RELEASE_INVENTORY", "PENDING", null);
                 outbox.append(
                         "ReleaseInventory", id, order.correlation(), new Command("CUSTOMER_CANCELLED"));
             }
             case AWAITING_PAYMENT -> {
+                orders.recordReason(id,"CUSTOMER_CANCELLED");
                 orders.move(order, OrderState.CANCELLING_PAYMENT, Instant.now().plus(timeout));
                 orders.step(id, "CANCEL_PAYMENT", "PENDING", null);
                 outbox.append("CancelPayment", id, order.correlation(), new Command("CUSTOMER_CANCELLED"));
@@ -123,6 +125,11 @@ public class OrderService {
         }
         return orders.view(orders.required(id, false));
     }
+
+    @Transactional(readOnly=true)
+    public OrderExplanation explanation(UUID customer,UUID id) { return orders.explanation(owned(customer,id,false)); }
+    @Transactional(readOnly=true)
+    public OrderExplanation adminExplanation(UUID id) { return orders.explanation(orders.required(id,false)); }
 
     private OrderRepository.Row owned(UUID customer, UUID id, boolean lock) {
         var order = orders.required(id, lock);

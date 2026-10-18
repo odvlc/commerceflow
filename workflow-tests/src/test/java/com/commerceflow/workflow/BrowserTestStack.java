@@ -14,7 +14,7 @@ import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
 
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
+
 
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -44,7 +44,7 @@ public class BrowserTestStack {
         try (var c = postgres.getPostgresDatabase().getConnection();
              var sql = c.createStatement()) {
             for (var service :
-                    List.of("keycloak", "catalog", "order", "inventory", "payment", "notification")) {
+                    List.of("keycloak", "catalog", "order", "inventory", "payment", "notification", "ai")) {
                 sql.execute("CREATE ROLE cf_" + service + " LOGIN PASSWORD 'test-only-" + service + "'");
                 sql.execute("CREATE DATABASE cf_" + service + " OWNER cf_" + service);
                 sql.execute("REVOKE ALL ON DATABASE cf_" + service + " FROM PUBLIC");
@@ -60,12 +60,10 @@ public class BrowserTestStack {
                         Topics.PAYMENT,
                         Topics.CATALOG,
                         Topics.NOTIFICATION,
-                        Topics.DEAD_LETTER);
+                        Topics.DEAD_LETTER, Topics.AI_KNOWLEDGE);
         broker.afterPropertiesSet();
-        Runtime.getRuntime()
-                .addShutdownHook(
-                        new Thread(
-                                () -> {
+        var stopping=new java.util.concurrent.atomic.AtomicBoolean();
+        Runnable cleanup=() -> {if(!stopping.compareAndSet(false,true))return;
                                     var reversed = new ArrayList<>(APPS);
                                     Collections.reverse(reversed);
                                     reversed.forEach(ConfigurableApplicationContext::close);
@@ -78,7 +76,10 @@ public class BrowserTestStack {
                                     } catch (Exception error) {
                                         error.printStackTrace();
                                     }
-                                }));
+                                };
+        Runtime.getRuntime().addShutdownHook(new Thread(cleanup));
+        var stopFile=java.nio.file.Path.of(System.getenv().getOrDefault("BROWSER_STOP_FILE",".cache/verification/browser-stop"));
+        java.nio.file.Files.deleteIfExists(stopFile);
         var definitions = new LinkedHashMap<String, Class<?>>();
         definitions.put("catalog", CatalogApplication.class);
         definitions.put("order", OrderApplication.class);
@@ -86,6 +87,7 @@ public class BrowserTestStack {
         definitions.put("payment", PaymentApplication.class);
         definitions.put("cart", CartApplication.class);
         definitions.put("notification", NotificationApplication.class);
+        if(Boolean.parseBoolean(System.getenv().getOrDefault("AI_ENABLED","false")))definitions.put("ai",com.commerceflow.ai.AiApplication.class);
         definitions.put("gateway", GatewayApplication.class);
         var ports =
                 Map.of(
@@ -101,8 +103,7 @@ public class BrowserTestStack {
                         8085,
                         "notification",
                         8086,
-                        "gateway",
-                        8080);
+                        "gateway", 8080, "ai",8087);
         CatalogService catalog = null;
         InventoryService inventory = null;
         for (var entry : definitions.entrySet()) {
@@ -132,6 +133,9 @@ public class BrowserTestStack {
                                     "--spring.data.redis.connect-timeout=500ms",
                                     "--spring.elasticsearch.uris=" + search.url(),
                                     "--logging.level.root=WARN"));
+            if(Boolean.parseBoolean(System.getenv().getOrDefault("AI_ENABLED","false")))parameters.add("--AI_ENABLED=true");
+            if(service.equals("ai"))for(String metric:List.of("model","tool","retrieval","run","step"))parameters.add("--management.metrics.distribution.percentiles-histogram.commerceflow.ai."+metric+"=true");
+            if(service.equals("ai"))parameters.addAll(List.of("--ai.search-url="+search.url(),"--ai.index-delay=1000","--ai.embeddings-enabled=true"));
             if (!service.equals("gateway")) parameters.add("--spring.config.name=browser-test");
             if (!Set.of("cart", "gateway").contains(service))
                 parameters.addAll(
@@ -143,7 +147,7 @@ public class BrowserTestStack {
                                 "--spring.jpa.hibernate.ddl-auto=validate",
                                 "--spring.jpa.open-in-view=false"));
             var app =
-                    new SpringApplicationBuilder(entry.getValue()).run(parameters.toArray(String[]::new));
+                    new SpringApplicationBuilder(entry.getValue()).registerShutdownHook(false).run(parameters.toArray(String[]::new));
             APPS.add(app);
             if (service.equals("catalog")) catalog = app.getBean(CatalogService.class);
             if (service.equals("inventory")) inventory = app.getBean(InventoryService.class);
@@ -202,8 +206,18 @@ public class BrowserTestStack {
             var product = catalog.create("browser-seed-" + (++number), item, "browser-seed");
             inventory.setStock(product.id(), 25, null);
         }
+        var ai=APPS.stream().filter(app->app.getBeansOfType(com.commerceflow.ai.retrieval.KnowledgeStore.class).size()==1).findFirst();
+        if(ai.isPresent()){
+            var mapper=ai.get().getBean(tools.jackson.databind.json.JsonMapper.class);var sources=ai.get().getBean(com.commerceflow.ai.retrieval.KnowledgeStore.class);var root=java.nio.file.Path.of(System.getProperty("commerceflow.root"));
+            for(var source:mapper.readTree(java.nio.file.Files.readString(root.resolve("knowledge/manifest.json")))){
+                var input=new com.commerceflow.ai.retrieval.KnowledgeModels.ImportDocument(source.path("sourceId").asText(),1,source.path("title").asText(),source.path("audience").asText(),java.nio.file.Files.readString(root.resolve("knowledge").resolve(source.path("file").asText())),true);
+                sources.ingest(UUID.randomUUID(),"browser-knowledge-"+input.sourceId(),input,"browser-seed");
+            }
+            org.awaitility.Awaitility.await().atMost(java.time.Duration.ofSeconds(90)).until(()->ai.get().getBean(org.springframework.jdbc.core.simple.JdbcClient.class).sql("SELECT count(*) FROM knowledge_index_jobs WHERE state<>'SUCCEEDED'").query(Long.class).single()==0);
+        }
         System.out.println(
                 "BROWSER_STACK_READY gateway=http://localhost:8080 keycloak=http://localhost:8180");
-        new CountDownLatch(1).await();
+        while(!java.nio.file.Files.exists(stopFile))Thread.sleep(500);
+        cleanup.run();
     }
 }

@@ -1,0 +1,34 @@
+[
+  {
+    "sourceId": "returns",
+    "version": 1,
+    "title": "Demo return policy",
+    "audience": "PUBLIC",
+    "active": true,
+    "file": "returns.md"
+  },
+  {
+    "sourceId": "shipping",
+    "version": 1,
+    "title": "Demo shipping guide",
+    "audience": "PUBLIC",
+    "active": true,
+    "file": "shipping.md"
+  },
+  {
+    "sourceId": "payments",
+    "version": 1,
+    "title": "Simulated payment guide",
+    "audience": "PUBLIC",
+    "active": true,
+    "file": "payments.md"
+  },
+  {
+    "sourceId": "operations",
+    "version": 1,
+    "title": "Support investigation runbook",
+    "audience": "SUPPORT",
+    "active": true,
+    "file": "operations.md"
+  }
+]

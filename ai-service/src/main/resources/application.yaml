@@ -1,0 +1,68 @@
+server:
+  port: ${PORT:8087}
+  address: ${BIND_ADDRESS:127.0.0.1}
+  shutdown: graceful
+spring:
+  application:
+    name: ai-service
+  threads:
+    virtual:
+      enabled: ${VIRTUAL_THREADS:true}
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/ai}
+    username: ${DB_USERNAME:ai}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      connection-timeout: 3000
+  flyway:
+    locations: classpath:db/migration/ai
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        commerceflow.ai.model: true
+        commerceflow.ai.model.first.token: true
+        commerceflow.ai.model.first.tool.request: true
+        commerceflow.ai.tool: true
+        commerceflow.ai.retrieval: true
+        commerceflow.ai.run: true
+        commerceflow.ai.step: true
+      percentiles:
+        http.server.requests: 0.95,0.99
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+logging:
+  structured:
+    format:
+      console: logstash
+springdoc:
+  swagger-ui:
+    path: /docs
+
+commerceflow:
+  messaging:
+    enabled: ${MESSAGING_ENABLED:true}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+ai:
+  model-url: ${OLLAMA_BASE_URL:http://127.0.0.1:11434}
+  chat-model: ${AI_CHAT_MODEL:llama3.1:8b}
+  embedding-model: ${AI_EMBEDDING_MODEL:nomic-embed-text:latest}
+  search-url: ${ELASTICSEARCH_URL:http://127.0.0.1:9200}
+  catalog-url: ${CATALOG_URL:http://127.0.0.1:8081}
+  order-url: ${ORDER_URL:http://127.0.0.1:8082}
+  cart-url: ${CART_URL:http://127.0.0.1:8085}
+  worker-enabled: ${AI_WORKER_ENABLED:true}
+  embeddings-enabled: ${AI_EMBEDDINGS_ENABLED:true}
+  embedding-dimensions: ${AI_EMBEDDING_DIMENSIONS:768}
+  chat-digest: ${AI_CHAT_DIGEST:46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e}
+  embedding-digest: ${AI_EMBEDDING_DIGEST:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f}
+  queue-limit: ${AI_QUEUE_LIMIT:8}

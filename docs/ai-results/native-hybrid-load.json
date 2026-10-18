@@ -1,0 +1,42 @@
+{
+  "hostGiB": 48,
+  "dockerVmGiB": 7.75,
+  "model": "llama3.1:8b",
+  "quantization": "Q4_K_M",
+  "contextTokens": 4096,
+  "inferenceConcurrency": 1,
+  "scope": "Native real services, Keycloak PKCE, local Ollama; no 32 GiB or container capacity certification",
+  "retrieval": {
+    "requests": 20,
+    "semantic": {
+      "passes": 20,
+      "fails": 0,
+      "value": 1
+    },
+    "latencyMs": {
+      "avg": 36.7281,
+      "med": 26.1545,
+      "p(95)": 47.39784999999985,
+      "p(99)": 187.99557,
+      "max": 223.145
+    }
+  },
+  "investigation": {
+    "requests": 10,
+    "completion": {
+      "passes": 10,
+      "fails": 0,
+      "thresholds": {
+        "rate==1": false
+      },
+      "value": 1
+    },
+    "latencyMs": {
+      "avg": 2164.7,
+      "med": 2086,
+      "p(95)": 2951.149999999999,
+      "p(99)": 3510.23,
+      "max": 3650
+    }
+  }
+}

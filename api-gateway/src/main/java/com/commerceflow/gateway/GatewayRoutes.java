@@ -14,6 +14,12 @@ import org.springframework.web.servlet.function.*;
 public class GatewayRoutes {
 
     @Bean
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name="AI_ENABLED",havingValue="true")
+    RouterFunction<ServerResponse> aiRoutes(@Value("${AI_URL:http://localhost:8087}") String target) {
+        return proxy("ai",target,"/api/v1/ai/**","/api/v1/admin/ai/**");
+    }
+
+    @Bean
     RouterFunction<ServerResponse> catalogRoutes(
             @Value("${CATALOG_URL:http://localhost:8081}") String target) {
         return proxy(

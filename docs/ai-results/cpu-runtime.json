@@ -1,0 +1,109 @@
+{
+  "cpuOnly": true,
+  "wallSeconds": 14.656942041008733,
+  "samples": [
+    {
+      "BlockIO": "4GB / 5.2GB",
+      "CPUPerc": "98.17%",
+      "Container": "commerceflow-ollama-1",
+      "ID": "6ee994ef4d55",
+      "MemPerc": "14.98%",
+      "MemUsage": "920.6MiB / 6GiB",
+      "Name": "commerceflow-ollama-1",
+      "NetIO": "5.25GB / 31.1MB",
+      "PIDs": "44"
+    },
+    {
+      "BlockIO": "5.59GB / 5.2GB",
+      "CPUPerc": "90.51%",
+      "Container": "commerceflow-ollama-1",
+      "ID": "6ee994ef4d55",
+      "MemPerc": "34.26%",
+      "MemUsage": "2.055GiB / 6GiB",
+      "Name": "commerceflow-ollama-1",
+      "NetIO": "5.25GB / 31.1MB",
+      "PIDs": "44"
+    },
+    {
+      "BlockIO": "7.24GB / 5.2GB",
+      "CPUPerc": "87.89%",
+      "Container": "commerceflow-ollama-1",
+      "ID": "6ee994ef4d55",
+      "MemPerc": "60.46%",
+      "MemUsage": "3.628GiB / 6GiB",
+      "Name": "commerceflow-ollama-1",
+      "NetIO": "5.25GB / 31.1MB",
+      "PIDs": "44"
+    },
+    {
+      "BlockIO": "8.96GB / 5.2GB",
+      "CPUPerc": "86.72%",
+      "Container": "commerceflow-ollama-1",
+      "ID": "6ee994ef4d55",
+      "MemPerc": "82.86%",
+      "MemUsage": "4.971GiB / 6GiB",
+      "Name": "commerceflow-ollama-1",
+      "NetIO": "5.25GB / 31.1MB",
+      "PIDs": "44"
+    },
+    {
+      "BlockIO": "9.15GB / 5.2GB",
+      "CPUPerc": "1523.10%",
+      "Container": "commerceflow-ollama-1",
+      "ID": "6ee994ef4d55",
+      "MemPerc": "94.36%",
+      "MemUsage": "5.662GiB / 6GiB",
+      "Name": "commerceflow-ollama-1",
+      "NetIO": "5.25GB / 31.1MB",
+      "PIDs": "62"
+    },
+    {
+      "BlockIO": "9.15GB / 5.2GB",
+      "CPUPerc": "1922.98%",
+      "Container": "commerceflow-ollama-1",
+      "ID": "6ee994ef4d55",
+      "MemPerc": "94.36%",
+      "MemUsage": "5.662GiB / 6GiB",
+      "Name": "commerceflow-ollama-1",
+      "NetIO": "5.25GB / 31.1MB",
+      "PIDs": "62"
+    },
+    {
+      "BlockIO": "9.15GB / 5.2GB",
+      "CPUPerc": "1820.22%",
+      "Container": "commerceflow-ollama-1",
+      "ID": "6ee994ef4d55",
+      "MemPerc": "94.35%",
+      "MemUsage": "5.661GiB / 6GiB",
+      "Name": "commerceflow-ollama-1",
+      "NetIO": "5.25GB / 31.1MB",
+      "PIDs": "62"
+    }
+  ],
+  "residency": {
+    "models": [
+      {
+        "name": "llama3.1:8b",
+        "model": "llama3.1:8b",
+        "size": 5584527031,
+        "digest": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "llama",
+          "families": [
+            "llama"
+          ],
+          "parameter_size": "8.0B",
+          "quantization_level": "Q4_K_M"
+        },
+        "expires_at": "2026-10-18T20:49:56.696669263Z",
+        "size_vram": 0,
+        "context_length": 4096,
+        "runner": "llamacpp"
+      }
+    ]
+  },
+  "generationTokens": 64,
+  "singleRequestNotPercentileBenchmark": true
+}

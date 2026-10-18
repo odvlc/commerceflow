@@ -1,0 +1,12 @@
+{
+  "target": "local persisted kind",
+  "complete": true,
+  "checks": [
+    "Terminal order/customer/money/items survived an Order pod rollout",
+    "PostgreSQL PVC retained exact order and owned AI messages/citations after database pod replacement",
+    "Redis AOF/PVC retained cart items and incarnation/revision after graceful pod replacement",
+    "SIGKILL during RUNNING rebuild recovered the same generation/job and restored cited knowledge without waiting ten minutes"
+  ],
+  "rebuildStateAfterKill": "RUNNING",
+  "exclusiveIndexLockAvailableAfterKill": true
+}

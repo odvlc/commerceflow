@@ -23,3 +23,10 @@ export async function accessToken(): Promise<string | undefined> {
 }
 
 export const roles = () => identity.realmAccess?.roles || [];
+
+// Keycloak callbacks notify React immediately so private views unmount on session changes.
+const notifySession = () => window.dispatchEvent(new Event("commerceflow-session"));
+identity.onAuthSuccess = notifySession;
+identity.onAuthRefreshSuccess = notifySession;
+identity.onAuthLogout = notifySession;
+identity.onAuthRefreshError = () => { identity.clearToken(); notifySession(); };

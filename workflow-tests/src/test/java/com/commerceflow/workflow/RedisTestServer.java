@@ -16,6 +16,7 @@ import org.testcontainers.utility.DockerImageName;
 final class RedisTestServer implements AutoCloseable {
 
     private Process process;
+    private ProcessBuilder launch;
     private GenericContainer<?> container;
     private String host = "127.0.0.1";
     private int port;
@@ -30,7 +31,7 @@ final class RedisTestServer implements AutoCloseable {
                 redis.port = socket.getLocalPort();
             }
             var directory = Files.createTempDirectory("commerceflow-redis-");
-            redis.process =
+            redis.launch =
                     new ProcessBuilder(
                             binary.toString(),
                             "--bind",
@@ -44,8 +45,8 @@ final class RedisTestServer implements AutoCloseable {
                             "--dir",
                             directory.toString())
                             .redirectErrorStream(true)
-                            .redirectOutput(directory.resolve("redis.log").toFile())
-                            .start();
+                            .redirectOutput(directory.resolve("redis.log").toFile());
+            redis.process=redis.launch.start();
             await()
                     .atMost(Duration.ofSeconds(10))
                     .until(
@@ -74,6 +75,15 @@ final class RedisTestServer implements AutoCloseable {
 
     int port() {
         return port;
+    }
+
+    void pause() throws Exception {
+        if(process==null)throw new IllegalStateException("Fault evaluation requires the documented native Redis fixture");
+        process.destroy();if(!process.waitFor(5,TimeUnit.SECONDS))process.destroyForcibly().waitFor();
+    }
+    void resume() throws Exception {
+        if(launch==null)throw new IllegalStateException("Native Redis launch configuration is absent");
+        process=launch.start();await().atMost(Duration.ofSeconds(10)).until(()->{try(var client=new Socket()){client.connect(new InetSocketAddress(host,port),100);return true;}catch(java.io.IOException e){return false;}});
     }
 
     @Override

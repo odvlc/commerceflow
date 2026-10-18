@@ -3,6 +3,11 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      real_model:
+        description: Run pinned local models and the frozen corpus on a dedicated commerceflow-ai runner
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -49,17 +54,23 @@ jobs:
         run: |
           if [ -f .cache/verification/browser-stack.pid ]; then
             read -r BROWSER_PID < .cache/verification/browser-stack.pid
-            kill "$BROWSER_PID" || true
+            touch .cache/verification/browser-stop
+            for attempt in $(seq 1 45); do
+              if ! kill -0 "$BROWSER_PID" 2>/dev/null; then break; fi
+              sleep 1
+            done
+            if kill -0 "$BROWSER_PID" 2>/dev/null; then kill "$BROWSER_PID"; fi
           fi
-      - name: Retain verification evidence
+      - name: Collect safe test evidence
+        id: safe
         if: always()
+        run: python3 scripts/collect-safe-evidence.py
+      - name: Retain sanitized verification evidence
+        if: always() && steps.safe.outputs.ready == 'true'
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: verification
-          path: |
-            **/target/surefire-reports
-            frontend/test-results
-            .cache/verification
+          name: verification-safe
+          path: .cache/verification/ci-safe
   manifests:
     runs-on: ubuntu-24.04
     steps:
@@ -75,13 +86,25 @@ jobs:
           curl -fsSL https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz | tar -xz -C .cache/tools kubeconform
           .cache/tools/kustomize build infra > .cache/verification/kubernetes.yaml
           .cache/tools/kubeconform -strict -summary .cache/verification/kubernetes.yaml
+          AI_ENABLED=true python3 scripts/render-monitoring.py
+          python3 scripts/render-ai-kubernetes.py
+          python3 scripts/render-ai-host.py --host-ip=192.0.2.1
+          for mode in host cpu; do
+            .cache/tools/kustomize build "deploy/ai/$mode" > ".cache/verification/kubernetes-ai-$mode.yaml"
+            .cache/tools/kubeconform -strict -summary ".cache/verification/kubernetes-ai-$mode.yaml"
+          done
+          .cache/tools/kubeconform -strict -summary deploy/ai/cpu/model-job.yaml deploy/ai/cpu/download-policy.yaml
+          AI_ENABLED=true docker compose -f infra/compose.yaml --profile full --profile ai config --quiet
+          AI_ENABLED=true AI_OLLAMA_URL=http://ollama:11434 docker compose -f infra/compose.yaml --profile full --profile ai --profile ai-model config --quiet
+          bash -n scripts/compose-up.sh scripts/kind-up.sh scripts/kind-model-proxy.sh
+          python3 -m py_compile scripts/*.py
   docker:
     needs: [ verify, manifests ]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        module: [ catalog-service,cart-service,order-service,inventory-service,payment-service,notification-service,api-gateway,frontend ]
+        module: [ catalog-service,cart-service,order-service,inventory-service,payment-service,notification-service,api-gateway,ai-service,frontend ]
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: docker/setup-buildx-action@v4.4.1
@@ -92,3 +115,63 @@ jobs:
           build-args: APP_MODULE=${{ matrix.module }}
           tags: commerceflow/${{ matrix.module }}:ci
           push: false
+
+  real-model:
+    if: github.event_name == 'workflow_dispatch' && inputs.real_model
+    runs-on: [self-hosted, commerceflow-ai]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Require installed toolchain and actual pinned local models
+        run: |
+          java -version
+          node --version
+          python3 scripts/prepare-ai-models.py --check --warmup
+      - name: Deterministic, real-infrastructure and separate actual-model evaluation reports
+        run: |
+          bash scripts/bootstrap-test-tools.sh
+          ./mvnw -B -pl workflow-tests -am -Pai-real-model,ai-evaluation verify dependency:build-classpath -Dmdep.outputFile=target/test-classpath.txt -Dmdep.includeScope=test
+          python3 scripts/summarize-ai-evaluation.py .cache/verification/ai-evaluation-all.json --require-complete
+      - name: Prepare browser tooling
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run lint
+          npm test
+          npm run build
+          npx playwright install chromium
+      - name: AI browser cases with real Keycloak and local models
+        env:
+          AI_ENABLED: "true"
+        run: |
+          mkdir -p .cache/verification
+          bash scripts/browser-stack.sh > .cache/verification/browser-stack.log 2>&1 &
+          echo $! > .cache/verification/browser-stack.pid
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://localhost:8080/actuator/health/readiness; then break; fi
+            sleep 2
+          done
+          curl -fsS http://localhost:8080/actuator/health/readiness
+          npm run --prefix frontend test:e2e
+      - name: Stop model-job browser fixtures
+        if: always()
+        run: |
+          touch .cache/verification/browser-stop
+          if [ -f .cache/verification/browser-stack.pid ]; then
+            read -r BROWSER_PID < .cache/verification/browser-stack.pid
+            for attempt in $(seq 1 45); do
+              if ! kill -0 "$BROWSER_PID" 2>/dev/null; then break; fi
+              sleep 1
+            done
+            if kill -0 "$BROWSER_PID" 2>/dev/null; then kill "$BROWSER_PID"; fi
+          fi
+      - name: Collect safe model evidence
+        id: model-safe
+        if: always()
+        run: python3 scripts/collect-safe-evidence.py
+      - name: Retain sanitized actual-model evidence
+        if: always() && steps.model-safe.outputs.ready == 'true'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: actual-local-model-safe
+          path: .cache/verification/ci-safe

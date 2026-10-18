@@ -121,6 +121,7 @@ public class MessagingConfiguration {
                                 Topics.INVENTORY,
                                 Topics.PAYMENT,
                                 Topics.CATALOG,
+                                Topics.AI_KNOWLEDGE,
                                 Topics.NOTIFICATION,
                                 Topics.DEAD_LETTER)
                         .map(name -> TopicBuilder.name(name).partitions(3).replicas(1).build())

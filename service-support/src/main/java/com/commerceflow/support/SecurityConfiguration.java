@@ -84,7 +84,7 @@ public class SecurityConfiguration {
                                                 "/swagger-ui/**")
                                         .permitAll()
                                         .requestMatchers(
-                                                org.springframework.http.HttpMethod.GET, "/api/v1/admin/orders")
+                                                org.springframework.http.HttpMethod.GET, "/api/v1/admin/orders", "/api/v1/admin/orders/*/explanation")
                                         .hasAnyRole("ADMIN", "SUPPORT")
                                         .requestMatchers("/api/v1/admin/**")
                                         .hasRole("ADMIN")

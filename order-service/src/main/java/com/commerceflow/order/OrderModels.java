@@ -44,4 +44,7 @@ public final class OrderModels {
     public record OrderPage(List<OrderView> items, int page, int size, long totalElements) {
 
     }
+    public record StatusHistory(long version,OrderState status,String reason,Instant recordedAt) {}
+    public record OrderExplanation(UUID id,OrderState status,long version,String reason,boolean reasonKnown,
+                                   Instant observedAt,List<StatusHistory> history) {}
 }

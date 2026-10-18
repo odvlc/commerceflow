@@ -27,3 +27,17 @@ health probes diagnose startup. Host Kafka clients use `localhost:9092`; Compose
 18 persists at `/var/lib/postgresql`, not the older `/var/lib/postgresql/data` mount.
 
 Container/Kubernetes restart demonstrations have not run because the current machine has no container daemon or kind.
+
+## Executed AI/deployment supplement (2026-10-18)
+
+The earlier absent-Docker/kind statement above is historical. Full Compose host-model and native-model kind browser
+workflows now pass. Actual SIGKILL/pod replacement tests verify waiting proposals, fresh-authentication resume and
+replay of a real Cart acknowledgment lost before AI recorded it, with the same execution/key and one business effect.
+`python3 scripts/ai-recovery-smoke.py --target=compose|kind` runs those local synthetic checks and restores endpoints.
+
+`python3 scripts/kind-durability.py` verifies Order/PostgreSQL/Redis PVC state and interruption during AI index rebuild.
+PostgreSQL restart may temporarily invalidate Keycloak pool connections; wait for actual PKCE readiness, not only a
+TCP/realm metadata probe. Rebuild/live indexing are mutually exclusive under a session advisory lock; a dead worker's
+lock is released by PostgreSQL and the new worker safely replays its retained generation. Never reset a database,
+change an execution key or delete volumes to clear pending work. See [AI operations](ai-operations.md) and the dated
+results in [AI_PLAN.md](../AI_PLAN.md) for the exact completed checks and remaining CPU/hardware/review limits.

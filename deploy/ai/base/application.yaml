@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-service
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: ai-service}
+  template:
+    metadata:
+      labels: {app: ai-service}
+    spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      initContainers:
+        - name: wait-owned-database
+          image: postgres:18.6-bookworm
+          command: [bash, -euc]
+          args:
+            - |
+              for attempt in $(seq 1 150); do
+                if psql -h postgres -U ai -d ai -tAc 'SELECT 1' >/dev/null 2>&1; then exit 0; fi
+                sleep 2
+              done
+              echo 'AI-owned database/authentication not ready within deadline' >&2
+              exit 1
+          env:
+            - {name: PGCONNECT_TIMEOUT, value: "3"}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef: {name: commerceflow-secrets, key: AI_DB_PASSWORD}
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {cpu: 100m, memory: 64Mi}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+      containers:
+        - name: ai-service
+          image: commerceflow/ai-service:local
+          imagePullPolicy: IfNotPresent
+          ports: [{containerPort: 8080}]
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: "2", memory: 768Mi}
+          env:
+            - {name: DB_URL, value: "jdbc:postgresql://postgres:5432/ai"}
+            - {name: DB_USERNAME, value: ai}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: commerceflow-secrets, key: AI_DB_PASSWORD}
+            - {name: DB_POOL_SIZE, value: "8"}
+            - {name: PORT, value: "8080"}
+            - {name: BIND_ADDRESS, value: "0.0.0.0"}
+            - {name: KAFKA_BOOTSTRAP_SERVERS, value: "kafka:29092"}
+            - {name: ELASTICSEARCH_URL, value: "http://elasticsearch:9200"}
+            - {name: SECURITY_ISSUER, value: "http://localhost:8180/realms/commerceflow"}
+            - {name: SECURITY_JWK_SET_URI, value: "http://keycloak:8080/realms/commerceflow/protocol/openid-connect/certs"}
+            - {name: CATALOG_URL, value: "http://catalog-service:8080"}
+            - {name: CART_URL, value: "http://cart-service:8080"}
+            - {name: ORDER_URL, value: "http://order-service:8080"}
+            - {name: OLLAMA_BASE_URL, value: "http://ollama:11434"}
+            - {name: AI_EMBEDDINGS_ENABLED, value: "true"}
+            - {name: AI_QUEUE_LIMIT, value: "8"}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
+          readinessProbe:
+            httpGet: {path: /actuator/health/readiness, port: 8080}
+            periodSeconds: 10
+            timeoutSeconds: 4
+          livenessProbe:
+            httpGet: {path: /actuator/health/liveness, port: 8080}
+            periodSeconds: 10
+            timeoutSeconds: 4
+          startupProbe:
+            httpGet: {path: /actuator/health/readiness, port: 8080}
+            periodSeconds: 5
+            timeoutSeconds: 4
+            failureThreshold: 60
+      volumes: [{name: tmp, emptyDir: {}}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-service
+spec:
+  selector: {app: ai-service}
+  ports: [{name: http, port: 8080, targetPort: 8080}]
