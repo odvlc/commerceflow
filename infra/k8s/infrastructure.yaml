@@ -1,0 +1,1317 @@
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "postgres-headless"
+  },
+  "spec": {
+    "selector": {
+      "app": "postgres"
+    },
+    "ports": [
+      {
+        "name": "port-5432",
+        "port": 5432,
+        "targetPort": 5432
+      }
+    ],
+    "clusterIP": "None"
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "StatefulSet",
+  "metadata": {
+    "name": "postgres"
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app": "postgres"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "postgres"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "postgres",
+            "image": "postgres:18.6-bookworm",
+            "ports": [
+              {
+                "containerPort": 5432
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "100m",
+                "memory": "256Mi"
+              },
+              "limits": {
+                "cpu": "1000m",
+                "memory": "1Gi"
+              }
+            },
+            "env": [
+              {
+                "name": "CATALOG_DB_PASSWORD",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "commerceflow-secrets",
+                    "key": "CATALOG_DB_PASSWORD"
+                  }
+                }
+              },
+              {
+                "name": "INVENTORY_DB_PASSWORD",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "commerceflow-secrets",
+                    "key": "INVENTORY_DB_PASSWORD"
+                  }
+                }
+              },
+              {
+                "name": "KEYCLOAK_DB_PASSWORD",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "commerceflow-secrets",
+                    "key": "KEYCLOAK_DB_PASSWORD"
+                  }
+                }
+              },
+              {
+                "name": "NOTIFICATION_DB_PASSWORD",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "commerceflow-secrets",
+                    "key": "NOTIFICATION_DB_PASSWORD"
+                  }
+                }
+              },
+              {
+                "name": "ORDER_DB_PASSWORD",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "commerceflow-secrets",
+                    "key": "ORDER_DB_PASSWORD"
+                  }
+                }
+              },
+              {
+                "name": "PAYMENT_DB_PASSWORD",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "commerceflow-secrets",
+                    "key": "PAYMENT_DB_PASSWORD"
+                  }
+                }
+              },
+              {
+                "name": "POSTGRES_PASSWORD",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "commerceflow-secrets",
+                    "key": "POSTGRES_PASSWORD"
+                  }
+                }
+              }
+            ],
+            "volumeMounts": [
+              {
+                "name": "data",
+                "mountPath": "/var/lib/postgresql"
+              },
+              {
+                "name": "pg-init",
+                "mountPath": "/docker-entrypoint-initdb.d/10-databases.sh",
+                "subPath": "init.sh",
+                "readOnly": true
+              }
+            ],
+            "readinessProbe": {
+              "exec": {
+                "command": [
+                  "pg_isready",
+                  "-U",
+                  "postgres",
+                  "-d",
+                  "postgres"
+                ]
+              },
+              "periodSeconds": 5,
+              "timeoutSeconds": 4
+            },
+            "livenessProbe": {
+              "exec": {
+                "command": [
+                  "pg_isready",
+                  "-U",
+                  "postgres",
+                  "-d",
+                  "postgres"
+                ]
+              },
+              "periodSeconds": 5,
+              "timeoutSeconds": 4
+            },
+            "startupProbe": {
+              "exec": {
+                "command": [
+                  "pg_isready",
+                  "-U",
+                  "postgres",
+                  "-d",
+                  "postgres"
+                ]
+              },
+              "periodSeconds": 5,
+              "timeoutSeconds": 4,
+              "failureThreshold": 60
+            }
+          }
+        ],
+        "volumes": [
+          {
+            "name": "pg-init",
+            "configMap": {
+              "name": "postgres-init"
+            }
+          }
+        ],
+        "securityContext": {
+          "fsGroup": 999
+        }
+      }
+    },
+    "serviceName": "postgres-headless",
+    "updateStrategy": {
+      "type": "RollingUpdate"
+    },
+    "volumeClaimTemplates": [
+      {
+        "metadata": {
+          "name": "data"
+        },
+        "spec": {
+          "accessModes": [
+            "ReadWriteOnce"
+          ],
+          "resources": {
+            "requests": {
+              "storage": "5Gi"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "postgres"
+  },
+  "spec": {
+    "selector": {
+      "app": "postgres"
+    },
+    "ports": [
+      {
+        "name": "port-5432",
+        "port": 5432,
+        "targetPort": 5432
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "kafka-headless"
+  },
+  "spec": {
+    "selector": {
+      "app": "kafka"
+    },
+    "ports": [
+      {
+        "name": "port-29092",
+        "port": 29092,
+        "targetPort": 29092
+      },
+      {
+        "name": "port-29093",
+        "port": 29093,
+        "targetPort": 29093
+      }
+    ],
+    "clusterIP": "None"
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "StatefulSet",
+  "metadata": {
+    "name": "kafka"
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app": "kafka"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "kafka"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "kafka",
+            "image": "apache/kafka:4.2.2",
+            "ports": [
+              {
+                "containerPort": 29092
+              },
+              {
+                "containerPort": 29093
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "100m",
+                "memory": "256Mi"
+              },
+              "limits": {
+                "cpu": "1000m",
+                "memory": "1Gi"
+              }
+            },
+            "env": [
+              {
+                "name": "CLUSTER_ID",
+                "value": "MkU3OEVBNTcwNTJENDM2Qk"
+              },
+              {
+                "name": "KAFKA_ADVERTISED_LISTENERS",
+                "value": "INTERNAL://kafka:29092"
+              },
+              {
+                "name": "KAFKA_CONTROLLER_LISTENER_NAMES",
+                "value": "CONTROLLER"
+              },
+              {
+                "name": "KAFKA_CONTROLLER_QUORUM_VOTERS",
+                "value": "1@kafka:29093"
+              },
+              {
+                "name": "KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS",
+                "value": "0"
+              },
+              {
+                "name": "KAFKA_HEAP_OPTS",
+                "value": "-Xms256m -Xmx512m"
+              },
+              {
+                "name": "KAFKA_INTER_BROKER_LISTENER_NAME",
+                "value": "INTERNAL"
+              },
+              {
+                "name": "KAFKA_LISTENERS",
+                "value": "INTERNAL://:29092,CONTROLLER://:29093"
+              },
+              {
+                "name": "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP",
+                "value": "INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+              },
+              {
+                "name": "KAFKA_LOG_DIRS",
+                "value": "/var/lib/kafka/data"
+              },
+              {
+                "name": "KAFKA_NODE_ID",
+                "value": "1"
+              },
+              {
+                "name": "KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR",
+                "value": "1"
+              },
+              {
+                "name": "KAFKA_PROCESS_ROLES",
+                "value": "broker,controller"
+              },
+              {
+                "name": "KAFKA_TRANSACTION_STATE_LOG_MIN_ISR",
+                "value": "1"
+              },
+              {
+                "name": "KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR",
+                "value": "1"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "name": "data",
+                "mountPath": "/var/lib/kafka/data"
+              }
+            ],
+            "readinessProbe": {
+              "tcpSocket": {
+                "port": 29092
+              },
+              "periodSeconds": 10
+            },
+            "livenessProbe": {
+              "tcpSocket": {
+                "port": 29092
+              },
+              "periodSeconds": 10
+            },
+            "startupProbe": {
+              "tcpSocket": {
+                "port": 29092
+              },
+              "periodSeconds": 5,
+              "failureThreshold": 60
+            }
+          }
+        ],
+        "volumes": [],
+        "securityContext": {
+          "fsGroup": 1000
+        }
+      }
+    },
+    "serviceName": "kafka-headless",
+    "updateStrategy": {
+      "type": "RollingUpdate"
+    },
+    "volumeClaimTemplates": [
+      {
+        "metadata": {
+          "name": "data"
+        },
+        "spec": {
+          "accessModes": [
+            "ReadWriteOnce"
+          ],
+          "resources": {
+            "requests": {
+              "storage": "5Gi"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "kafka"
+  },
+  "spec": {
+    "selector": {
+      "app": "kafka"
+    },
+    "ports": [
+      {
+        "name": "port-29092",
+        "port": 29092,
+        "targetPort": 29092
+      },
+      {
+        "name": "port-29093",
+        "port": 29093,
+        "targetPort": 29093
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "redis-headless"
+  },
+  "spec": {
+    "selector": {
+      "app": "redis"
+    },
+    "ports": [
+      {
+        "name": "port-6379",
+        "port": 6379,
+        "targetPort": 6379
+      }
+    ],
+    "clusterIP": "None"
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "StatefulSet",
+  "metadata": {
+    "name": "redis"
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app": "redis"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "redis"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "redis",
+            "image": "redis:8.10.2-alpine",
+            "ports": [
+              {
+                "containerPort": 6379
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "100m",
+                "memory": "256Mi"
+              },
+              "limits": {
+                "cpu": "1000m",
+                "memory": "384Mi"
+              }
+            },
+            "env": [],
+            "volumeMounts": [
+              {
+                "name": "data",
+                "mountPath": "/data"
+              }
+            ],
+            "args": [
+              "--appendonly",
+              "yes",
+              "--maxmemory",
+              "256mb",
+              "--maxmemory-policy",
+              "noeviction"
+            ],
+            "readinessProbe": {
+              "exec": {
+                "command": [
+                  "redis-cli",
+                  "ping"
+                ]
+              },
+              "periodSeconds": 5
+            },
+            "livenessProbe": {
+              "exec": {
+                "command": [
+                  "redis-cli",
+                  "ping"
+                ]
+              },
+              "periodSeconds": 5
+            },
+            "startupProbe": {
+              "exec": {
+                "command": [
+                  "redis-cli",
+                  "ping"
+                ]
+              },
+              "periodSeconds": 5,
+              "failureThreshold": 60
+            }
+          }
+        ],
+        "volumes": [],
+        "securityContext": {
+          "fsGroup": 1000
+        }
+      }
+    },
+    "serviceName": "redis-headless",
+    "updateStrategy": {
+      "type": "RollingUpdate"
+    },
+    "volumeClaimTemplates": [
+      {
+        "metadata": {
+          "name": "data"
+        },
+        "spec": {
+          "accessModes": [
+            "ReadWriteOnce"
+          ],
+          "resources": {
+            "requests": {
+              "storage": "1Gi"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "redis"
+  },
+  "spec": {
+    "selector": {
+      "app": "redis"
+    },
+    "ports": [
+      {
+        "name": "port-6379",
+        "port": 6379,
+        "targetPort": 6379
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "elasticsearch-headless"
+  },
+  "spec": {
+    "selector": {
+      "app": "elasticsearch"
+    },
+    "ports": [
+      {
+        "name": "port-9200",
+        "port": 9200,
+        "targetPort": 9200
+      }
+    ],
+    "clusterIP": "None"
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "StatefulSet",
+  "metadata": {
+    "name": "elasticsearch"
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app": "elasticsearch"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "elasticsearch"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "elasticsearch",
+            "image": "docker.elastic.co/elasticsearch/elasticsearch:9.4.5",
+            "ports": [
+              {
+                "containerPort": 9200
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "100m",
+                "memory": "256Mi"
+              },
+              "limits": {
+                "cpu": "1000m",
+                "memory": "1536Mi"
+              }
+            },
+            "env": [
+              {
+                "name": "ES_JAVA_OPTS",
+                "value": "-Xms512m -Xmx512m"
+              },
+              {
+                "name": "discovery.type",
+                "value": "single-node"
+              },
+              {
+                "name": "xpack.security.enabled",
+                "value": "false"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "name": "data",
+                "mountPath": "/usr/share/elasticsearch/data"
+              }
+            ],
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/_cluster/health?wait_for_status=yellow&timeout=1s",
+                "port": 9200
+              },
+              "periodSeconds": 10,
+              "timeoutSeconds": 4,
+              "failureThreshold": 6
+            },
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/_cluster/health?wait_for_status=yellow&timeout=1s",
+                "port": 9200
+              },
+              "periodSeconds": 10,
+              "timeoutSeconds": 4,
+              "failureThreshold": 6
+            },
+            "startupProbe": {
+              "httpGet": {
+                "path": "/_cluster/health?wait_for_status=yellow&timeout=1s",
+                "port": 9200
+              },
+              "periodSeconds": 5,
+              "timeoutSeconds": 4,
+              "failureThreshold": 60
+            }
+          }
+        ],
+        "volumes": [],
+        "securityContext": {
+          "fsGroup": 1000
+        }
+      }
+    },
+    "serviceName": "elasticsearch-headless",
+    "updateStrategy": {
+      "type": "RollingUpdate"
+    },
+    "volumeClaimTemplates": [
+      {
+        "metadata": {
+          "name": "data"
+        },
+        "spec": {
+          "accessModes": [
+            "ReadWriteOnce"
+          ],
+          "resources": {
+            "requests": {
+              "storage": "5Gi"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "elasticsearch"
+  },
+  "spec": {
+    "selector": {
+      "app": "elasticsearch"
+    },
+    "ports": [
+      {
+        "name": "port-9200",
+        "port": 9200,
+        "targetPort": 9200
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "keycloak"
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app": "keycloak"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "keycloak"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "keycloak",
+            "image": "quay.io/keycloak/keycloak:26.8.1",
+            "ports": [
+              {
+                "containerPort": 8080
+              },
+              {
+                "containerPort": 9000
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "100m",
+                "memory": "256Mi"
+              },
+              "limits": {
+                "cpu": "1000m",
+                "memory": "1Gi"
+              }
+            },
+            "env": [
+              {
+                "name": "KC_BOOTSTRAP_ADMIN_PASSWORD",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "commerceflow-secrets",
+                    "key": "KEYCLOAK_ADMIN_PASSWORD"
+                  }
+                }
+              },
+              {
+                "name": "KC_BOOTSTRAP_ADMIN_USERNAME",
+                "value": "local-admin"
+              },
+              {
+                "name": "KC_DB",
+                "value": "postgres"
+              },
+              {
+                "name": "KC_DB_PASSWORD",
+                "value": "local-keycloak-only"
+              },
+              {
+                "name": "KC_DB_URL",
+                "value": "jdbc:postgresql://postgres:5432/keycloak"
+              },
+              {
+                "name": "KC_DB_USERNAME",
+                "value": "keycloak"
+              },
+              {
+                "name": "KC_HEALTH_ENABLED",
+                "value": "true"
+              },
+              {
+                "name": "KC_HOSTNAME",
+                "value": "http://localhost:8180"
+              },
+              {
+                "name": "SERVICE_CLIENT_SECRET",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "commerceflow-secrets",
+                    "key": "SERVICE_CLIENT_SECRET"
+                  }
+                }
+              }
+            ],
+            "volumeMounts": [
+              {
+                "name": "realm",
+                "mountPath": "/opt/keycloak/data/import/commerceflow-realm.json",
+                "subPath": "commerceflow-realm.json",
+                "readOnly": true
+              }
+            ],
+            "args": [
+              "start-dev",
+              "--import-realm"
+            ],
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/health/ready",
+                "port": 9000
+              },
+              "periodSeconds": 10,
+              "timeoutSeconds": 4,
+              "failureThreshold": 6
+            },
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/health/ready",
+                "port": 9000
+              },
+              "periodSeconds": 10,
+              "timeoutSeconds": 4,
+              "failureThreshold": 6
+            },
+            "startupProbe": {
+              "httpGet": {
+                "path": "/health/ready",
+                "port": 9000
+              },
+              "periodSeconds": 5,
+              "timeoutSeconds": 4,
+              "failureThreshold": 60
+            }
+          }
+        ],
+        "volumes": [
+          {
+            "name": "realm",
+            "configMap": {
+              "name": "keycloak-realm"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "keycloak"
+  },
+  "spec": {
+    "selector": {
+      "app": "keycloak"
+    },
+    "ports": [
+      {
+        "name": "port-8080",
+        "port": 8080,
+        "targetPort": 8080
+      },
+      {
+        "name": "port-9000",
+        "port": 9000,
+        "targetPort": 9000
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "prometheus-headless"
+  },
+  "spec": {
+    "selector": {
+      "app": "prometheus"
+    },
+    "ports": [
+      {
+        "name": "port-9090",
+        "port": 9090,
+        "targetPort": 9090
+      }
+    ],
+    "clusterIP": "None"
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "StatefulSet",
+  "metadata": {
+    "name": "prometheus"
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app": "prometheus"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "prometheus"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "prometheus",
+            "image": "prom/prometheus:v3.15.0",
+            "ports": [
+              {
+                "containerPort": 9090
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "100m",
+                "memory": "256Mi"
+              },
+              "limits": {
+                "cpu": "1000m",
+                "memory": "384Mi"
+              }
+            },
+            "env": [],
+            "volumeMounts": [
+              {
+                "name": "data",
+                "mountPath": "/prometheus"
+              },
+              {
+                "name": "prom-config",
+                "mountPath": "/etc/prometheus/prometheus.yml",
+                "subPath": "prometheus.yaml",
+                "readOnly": true
+              },
+              {
+                "name": "prom-config",
+                "mountPath": "/etc/prometheus/alerts.yaml",
+                "subPath": "alerts.yaml",
+                "readOnly": true
+              }
+            ],
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/-/ready",
+                "port": 9090
+              },
+              "periodSeconds": 10,
+              "timeoutSeconds": 4,
+              "failureThreshold": 6
+            },
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/-/ready",
+                "port": 9090
+              },
+              "periodSeconds": 10,
+              "timeoutSeconds": 4,
+              "failureThreshold": 6
+            },
+            "startupProbe": {
+              "httpGet": {
+                "path": "/-/ready",
+                "port": 9090
+              },
+              "periodSeconds": 5,
+              "timeoutSeconds": 4,
+              "failureThreshold": 60
+            }
+          }
+        ],
+        "volumes": [
+          {
+            "name": "prom-config",
+            "configMap": {
+              "name": "prometheus-config"
+            }
+          }
+        ],
+        "securityContext": {
+          "fsGroup": 1000
+        }
+      }
+    },
+    "serviceName": "prometheus-headless",
+    "updateStrategy": {
+      "type": "RollingUpdate"
+    },
+    "volumeClaimTemplates": [
+      {
+        "metadata": {
+          "name": "data"
+        },
+        "spec": {
+          "accessModes": [
+            "ReadWriteOnce"
+          ],
+          "resources": {
+            "requests": {
+              "storage": "2Gi"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "prometheus"
+  },
+  "spec": {
+    "selector": {
+      "app": "prometheus"
+    },
+    "ports": [
+      {
+        "name": "port-9090",
+        "port": 9090,
+        "targetPort": 9090
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "grafana-headless"
+  },
+  "spec": {
+    "selector": {
+      "app": "grafana"
+    },
+    "ports": [
+      {
+        "name": "port-3000",
+        "port": 3000,
+        "targetPort": 3000
+      }
+    ],
+    "clusterIP": "None"
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "StatefulSet",
+  "metadata": {
+    "name": "grafana"
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app": "grafana"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "grafana"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "grafana",
+            "image": "grafana/grafana:13.2.4",
+            "ports": [
+              {
+                "containerPort": 3000
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "100m",
+                "memory": "256Mi"
+              },
+              "limits": {
+                "cpu": "1000m",
+                "memory": "512Mi"
+              }
+            },
+            "env": [
+              {
+                "name": "GF_SECURITY_ADMIN_PASSWORD",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "commerceflow-secrets",
+                    "key": "GRAFANA_ADMIN_PASSWORD"
+                  }
+                }
+              },
+              {
+                "name": "GF_SECURITY_ADMIN_USER",
+                "value": "local-admin"
+              },
+              {
+                "name": "GF_USERS_ALLOW_SIGN_UP",
+                "value": "false"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "name": "data",
+                "mountPath": "/var/lib/grafana"
+              },
+              {
+                "name": "grafana-source",
+                "mountPath": "/etc/grafana/provisioning/datasources/prometheus.yaml",
+                "subPath": "prometheus.yaml",
+                "readOnly": true
+              },
+              {
+                "name": "grafana-provider",
+                "mountPath": "/etc/grafana/provisioning/dashboards/dashboards.yaml",
+                "subPath": "dashboards.yaml",
+                "readOnly": true
+              },
+              {
+                "name": "dashboards",
+                "mountPath": "/var/lib/grafana/dashboards",
+                "readOnly": true
+              }
+            ],
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/api/health",
+                "port": 3000
+              },
+              "periodSeconds": 10,
+              "timeoutSeconds": 4,
+              "failureThreshold": 6
+            },
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/api/health",
+                "port": 3000
+              },
+              "periodSeconds": 10,
+              "timeoutSeconds": 4,
+              "failureThreshold": 6
+            },
+            "startupProbe": {
+              "httpGet": {
+                "path": "/api/health",
+                "port": 3000
+              },
+              "periodSeconds": 5,
+              "timeoutSeconds": 4,
+              "failureThreshold": 60
+            }
+          }
+        ],
+        "volumes": [
+          {
+            "name": "grafana-source",
+            "configMap": {
+              "name": "grafana-datasource"
+            }
+          },
+          {
+            "name": "grafana-provider",
+            "configMap": {
+              "name": "grafana-provider"
+            }
+          },
+          {
+            "name": "dashboards",
+            "configMap": {
+              "name": "grafana-dashboards"
+            }
+          }
+        ],
+        "securityContext": {
+          "fsGroup": 472
+        }
+      }
+    },
+    "serviceName": "grafana-headless",
+    "updateStrategy": {
+      "type": "RollingUpdate"
+    },
+    "volumeClaimTemplates": [
+      {
+        "metadata": {
+          "name": "data"
+        },
+        "spec": {
+          "accessModes": [
+            "ReadWriteOnce"
+          ],
+          "resources": {
+            "requests": {
+              "storage": "1Gi"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "grafana"
+  },
+  "spec": {
+    "selector": {
+      "app": "grafana"
+    },
+    "ports": [
+      {
+        "name": "port-3000",
+        "port": 3000,
+        "targetPort": 3000
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "keycloak-public"
+  },
+  "spec": {
+    "selector": {
+      "app": "keycloak"
+    },
+    "ports": [
+      {
+        "name": "port-8080",
+        "port": 8080,
+        "targetPort": 8080,
+        "nodePort": 30180
+      }
+    ],
+    "type": "NodePort"
+  }
+}

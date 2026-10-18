@@ -1,0 +1,309 @@
+name: commerceflow
+services:
+  postgres:
+    image: postgres:18.6-bookworm
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-postgres-only}
+      CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD:-local-catalog-only}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:-local-order-only}
+      INVENTORY_DB_PASSWORD: ${INVENTORY_DB_PASSWORD:-local-inventory-only}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:-local-payment-only}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-local-notification-only}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-local-keycloak-only}
+    ports: ["127.0.0.1:5432:5432"]
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./postgres/init.sh:/docker-entrypoint-initdb.d/10-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    mem_limit: 1g
+  kafka:
+    image: apache/kafka:4.2.2
+    profiles: [events, apps, full]
+    ports: ["127.0.0.1:9092:9092"]
+    environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:29093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx512m
+    volumes: ["kafka-data:/var/lib/kafka/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+    mem_limit: 1g
+  redis:
+    image: redis:8.10.2-alpine
+    profiles: [cache, apps, full]
+    command: [redis-server, --appendonly, "yes", --maxmemory, 256mb, --maxmemory-policy, noeviction]
+    ports: ["127.0.0.1:6379:6379"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 384m
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.5
+    profiles: [search, apps, full]
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports: ["127.0.0.1:9200:9200"]
+    volumes: ["search-data:/usr/share/elasticsearch/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s' >/dev/null"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+    mem_limit: 1536m
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    profiles: [identity, apps, full]
+    command: [start-dev, --http-port=8080, --import-realm]
+    environment:
+      SERVICE_CLIENT_SECRET: ${SERVICE_CLIENT_SECRET:-local-service-only}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-local-keycloak-only}
+      KC_BOOTSTRAP_ADMIN_USERNAME: local-admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-local-admin-only}
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME: http://localhost:8180
+    volumes: ["./keycloak:/opt/keycloak/data/import:ro"]
+    ports: ["127.0.0.1:8180:8080"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/9000; printf \"GET /health/ready HTTP/1.0\\r\\n\\r\\n\" >&3; grep -q \"200 OK\" <&3'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    mem_limit: 1g
+  catalog-service:
+    image: commerceflow/catalog-service:local
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: {APP_MODULE: catalog-service}
+    profiles: [apps, full]
+    environment:
+      SECURITY_ISSUER: http://localhost:8180/realms/commerceflow
+      SECURITY_JWK_SET_URI: http://keycloak:8080/realms/commerceflow/protocol/openid-connect/certs
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      DB_URL: jdbc:postgresql://postgres:5432/catalog
+      DB_USERNAME: catalog
+      DB_PASSWORD: ${CATALOG_DB_PASSWORD:-local-catalog-only}
+    depends_on:
+      keycloak: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      elasticsearch: {condition: service_healthy}
+    mem_limit: 512m
+  cart-service:
+    image: commerceflow/cart-service:local
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: {APP_MODULE: cart-service}
+    profiles: [apps, full]
+    environment:
+      SECURITY_ISSUER: http://localhost:8180/realms/commerceflow
+      SECURITY_JWK_SET_URI: http://keycloak:8080/realms/commerceflow/protocol/openid-connect/certs
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    depends_on:
+      keycloak: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    mem_limit: 512m
+  order-service:
+    image: commerceflow/order-service:local
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: {APP_MODULE: order-service}
+    profiles: [apps, full]
+    environment:
+      SECURITY_ISSUER: http://localhost:8180/realms/commerceflow
+      SECURITY_JWK_SET_URI: http://keycloak:8080/realms/commerceflow/protocol/openid-connect/certs
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      DB_URL: jdbc:postgresql://postgres:5432/order
+      DB_USERNAME: order
+      DB_PASSWORD: ${ORDER_DB_PASSWORD:-local-order-only}
+      CATALOG_BASE_URL: http://catalog-service:8080
+    depends_on:
+      keycloak: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+      catalog-service: {condition: service_healthy}
+    mem_limit: 512m
+  inventory-service:
+    image: commerceflow/inventory-service:local
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: {APP_MODULE: inventory-service}
+    profiles: [apps, full]
+    environment:
+      SECURITY_ISSUER: http://localhost:8180/realms/commerceflow
+      SECURITY_JWK_SET_URI: http://keycloak:8080/realms/commerceflow/protocol/openid-connect/certs
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      DB_URL: jdbc:postgresql://postgres:5432/inventory
+      DB_USERNAME: inventory
+      DB_PASSWORD: ${INVENTORY_DB_PASSWORD:-local-inventory-only}
+    depends_on:
+      keycloak: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    mem_limit: 512m
+  payment-service:
+    image: commerceflow/payment-service:local
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: {APP_MODULE: payment-service}
+    profiles: [apps, full]
+    environment:
+      SECURITY_ISSUER: http://localhost:8180/realms/commerceflow
+      SECURITY_JWK_SET_URI: http://keycloak:8080/realms/commerceflow/protocol/openid-connect/certs
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      DB_URL: jdbc:postgresql://postgres:5432/payment
+      DB_USERNAME: payment
+      DB_PASSWORD: ${PAYMENT_DB_PASSWORD:-local-payment-only}
+    depends_on:
+      keycloak: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    mem_limit: 512m
+  notification-service:
+    image: commerceflow/notification-service:local
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: {APP_MODULE: notification-service}
+    profiles: [apps, full]
+    environment:
+      SECURITY_ISSUER: http://localhost:8180/realms/commerceflow
+      SECURITY_JWK_SET_URI: http://keycloak:8080/realms/commerceflow/protocol/openid-connect/certs
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      DB_URL: jdbc:postgresql://postgres:5432/notification
+      DB_USERNAME: notification
+      DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-local-notification-only}
+    depends_on:
+      keycloak: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    mem_limit: 512m
+  api-gateway:
+    image: commerceflow/api-gateway:local
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: {APP_MODULE: api-gateway}
+    profiles: [apps, full]
+    environment:
+      SECURITY_ISSUER: http://localhost:8180/realms/commerceflow
+      SECURITY_JWK_SET_URI: http://keycloak:8080/realms/commerceflow/protocol/openid-connect/certs
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      CATALOG_URL: http://catalog-service:8080
+      CART_URL: http://cart-service:8080
+      ORDER_URL: http://order-service:8080
+      INVENTORY_URL: http://inventory-service:8080
+      PAYMENT_URL: http://payment-service:8080
+      NOTIFICATION_URL: http://notification-service:8080
+    depends_on:
+      keycloak: {condition: service_healthy}
+      catalog-service: {condition: service_healthy}
+      cart-service: {condition: service_healthy}
+      order-service: {condition: service_healthy}
+      inventory-service: {condition: service_healthy}
+      payment-service: {condition: service_healthy}
+      notification-service: {condition: service_healthy}
+    ports: ["127.0.0.1:8080:8080"]
+    mem_limit: 512m
+  frontend:
+    image: commerceflow/frontend:local
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    profiles: [apps, full]
+    ports: ["127.0.0.1:3000:8080"]
+    depends_on:
+      api-gateway: {condition: service_healthy}
+    mem_limit: 128m
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    profiles: [observability, full]
+    ports: ["127.0.0.1:9090:9090"]
+    volumes:
+      - ./.generated-prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yaml:/etc/prometheus/alerts.yaml:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O /dev/null http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    mem_limit: 384m
+  grafana:
+    image: grafana/grafana:13.2.4
+    profiles: [observability, full]
+    ports: ["127.0.0.1:3001:3000"]
+    environment:
+      GF_SECURITY_ADMIN_USER: local-admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-local-grafana-only}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O /dev/null http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    mem_limit: 512m
+
+volumes:
+  postgres-data:
+  kafka-data:
+  redis-data:
+  search-data:
+  prometheus-data:
+  grafana-data:

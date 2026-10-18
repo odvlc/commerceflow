@@ -1,0 +1,36 @@
+server:
+  port: ${PORT:8085}
+  address: ${BIND_ADDRESS:127.0.0.1}
+spring:
+  application:
+    name: cart-service
+  threads:
+    virtual:
+      enabled: ${VIRTUAL_THREADS:true}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      connect-timeout: 500ms
+      timeout: 500ms
+cart:
+  ttl: ${CART_TTL:PT24H}
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.95,0.99
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+logging:
+  structured:
+    format:
+      console: logstash

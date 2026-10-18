@@ -1,0 +1,94 @@
+name: CommerceFlow verification
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-java@v6.1.0
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Real infrastructure, Java build and integration tests
+        run: |
+          bash scripts/bootstrap-test-tools.sh
+          ./mvnw -B verify dependency:build-classpath -Dmdep.outputFile=target/test-classpath.txt -Dmdep.includeScope=test
+      - name: Frontend lint, unit tests and production build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run lint
+          npm test
+          npm run build
+          npx playwright install --with-deps chromium
+      - name: Browser tests against real local services
+        run: |
+          mkdir -p .cache/verification
+          bash scripts/browser-stack.sh > .cache/verification/browser-stack.log 2>&1 &
+          echo $! > .cache/verification/browser-stack.pid
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://localhost:8080/actuator/health/readiness; then break; fi
+            sleep 2
+          done
+          curl -fsS http://localhost:8080/actuator/health/readiness
+          npm run --prefix frontend test:e2e
+      - name: Stop browser-test services
+        if: always()
+        run: |
+          if [ -f .cache/verification/browser-stack.pid ]; then
+            read -r BROWSER_PID < .cache/verification/browser-stack.pid
+            kill "$BROWSER_PID" || true
+          fi
+      - name: Retain verification evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: verification
+          path: |
+            **/target/surefire-reports
+            frontend/test-results
+            .cache/verification
+  manifests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Validate Compose and Kubernetes
+        run: |
+          cp infra/.env.example infra/.env
+          python3 scripts/render-monitoring.py
+          python3 scripts/render-api-policy.py
+          docker compose -f infra/compose.yaml --profile full config --quiet
+          mkdir -p .cache/verification .cache/tools
+          curl -fsSL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v5.8.3/kustomize_v5.8.3_linux_amd64.tar.gz | tar -xz -C .cache/tools kustomize
+          curl -fsSL https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz | tar -xz -C .cache/tools kubeconform
+          .cache/tools/kustomize build infra > .cache/verification/kubernetes.yaml
+          .cache/tools/kubeconform -strict -summary .cache/verification/kubernetes.yaml
+  docker:
+    needs: [verify, manifests]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [catalog-service,cart-service,order-service,inventory-service,payment-service,notification-service,api-gateway,frontend]
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: docker/setup-buildx-action@v4.4.1
+      - uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          file: ${{ matrix.module == 'frontend' && 'frontend/Dockerfile' || 'infra/Dockerfile' }}
+          build-args: APP_MODULE=${{ matrix.module }}
+          tags: commerceflow/${{ matrix.module }}:ci
+          push: false

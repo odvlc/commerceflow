@@ -1,0 +1,50 @@
+{
+  "virtual": {
+    "heapUsedBytes": 185943000.0,
+    "livePlatformThreads": 342.0,
+    "catalogActiveConnections": 0.0,
+    "catalogIdleConnections": 10.0,
+    "snapshotUtc": "2026-10-18T01:16:16.846502+00:00",
+    "searchQueries": 1351.0,
+    "searchDurationSeconds": 4.237824953,
+    "searchMeanMilliseconds": 3.1368060347890445,
+    "cacheHits": 1345.0,
+    "cacheMisses": 5.0
+  },
+  "platform": {
+    "heapUsedBytes": 333779200.0,
+    "livePlatformThreads": 386.0,
+    "catalogActiveConnections": 0.0,
+    "catalogIdleConnections": 10.0,
+    "snapshotUtc": "2026-10-18T01:20:13.438699+00:00",
+    "searchQueries": 1360.0,
+    "searchDurationSeconds": 3.959903315,
+    "searchMeanMilliseconds": 2.9116936139705882,
+    "cacheHits": 1355.0,
+    "cacheMisses": 5.0
+  },
+  "workflowSample": {
+    "capturedUtc": "2026-10-18T01:54:31.441932+00:00",
+    "note": "Cumulative shared native platform-mode process after browser/demo and checkout smoke workloads; not an isolated throughput benchmark.",
+    "order": {
+      "processedEvents": 48.0,
+      "processingSeconds": 0.061956006,
+      "meanProcessingMilliseconds": 1.290750125
+    },
+    "inventory": {
+      "processedEvents": 32.0,
+      "processingSeconds": 0.054313586,
+      "meanProcessingMilliseconds": 1.6972995624999998
+    },
+    "payment": {
+      "processedEvents": 16.0,
+      "processingSeconds": 0.030803456,
+      "meanProcessingMilliseconds": 1.925216
+    },
+    "notification": {
+      "processedEvents": 48.0,
+      "processingSeconds": 0.036076624,
+      "meanProcessingMilliseconds": 0.7515963333333334
+    }
+  }
+}
