@@ -5,15 +5,17 @@ Maintenance: Lists environment and capacity prerequisites; a satisfied source de
 proof of runtime readiness.
 -->
 
-**Historical prerequisite audit.** Its missing-model/deployment observations below preceded implementation on the same
-date. Both pinned models now work; native-model Compose/kind deployments and recovery are verified. Current results,
-including the actual CPU-memory blocker, are in [AI_PLAN.md](../AI_PLAN.md), [verification](verification.md) and
-[AI operations](ai-operations.md). No 32 GiB or remote-CI acceptance is implied.
+This prerequisite audit predates implementation on the same date. Its missing-model and deployment
+observations are historical. Both pinned models now work; native-model Compose/kind deployments and
+recovery are verified. Current results, including the actual CPU-memory blocker, are in
+[AI_PLAN.md](../AI_PLAN.md), [verification](verification.md) and [AI operations](ai-operations.md).
+No 32 GiB or remote-CI acceptance is implied.
 
 Checked on 2026-10-18 against [AI_PLAN.md](../AI_PLAN.md), using the current local workspace.
 
-**Result: ready to begin development and finish A0. Real AI execution is blocked by missing local models.
-Docker/kind tooling is available, but image/deployment and cluster acceptance remain unverified.**
+At the time of the audit, development could begin and A0 could be finished. Missing local models
+blocked real AI execution. Docker/kind tooling was available, but images, deployments and cluster
+behavior still needed verification.
 
 ## Observed environment
 
@@ -36,11 +38,12 @@ Docker/kind tooling is available, but image/deployment and cluster acceptance re
 | Local models      | `/api/tags` and `/api/ps` both empty                                         | Blocks real generation, tool-calling and embedding checks.                          |
 | Git               | Repository present; remote named `origin`                                    | Available; no remote operation or CI run performed.                                 |
 
-The earlier planning-time diagnosis of missing Docker/kind/kubectl/Ollama is superseded by this audit. Existing
-deployment tasks stay unchecked: installed tools do not demonstrate deployed applications.
+This audit replaces the earlier finding that Docker/kind/kubectl/Ollama were missing. Deployment
+tasks remain unchecked until the applications run with those tools.
 
-kubectl 1.36 is within the documented one-minor skew for the planned Kubernetes 1.37 node; verify the actual server
-version when a cluster exists. [Kubernetes version policy](https://kubernetes.io/releases/version-skew-policy/).
+kubectl 1.36 is within the documented one-minor skew for the planned Kubernetes 1.37 node; verify
+the actual server version when a cluster exists.
+[Kubernetes version policy](https://kubernetes.io/releases/version-skew-policy/).
 
 ## Fresh verification results
 
@@ -53,18 +56,20 @@ version when a cluster exists. [Kubernetes version policy](https://kubernetes.io
 | Chrome E2E against temporary native stack      | PASS: 4 cases, customer purchase/decline, search/mobile, ADMIN product/stock, SUPPORT monitoring. |
 | Full Docker Compose `config --quiet`           | PASS.                                                                                             |
 
-The temporary native browser stack was stopped after verification; pre-existing Ollama remains running. No model
-download, deployment, Docker resource setting change, Git remote modification or persisted user-data deletion occurred.
+The temporary native browser stack was stopped after verification; pre-existing Ollama remains
+running. No model download, deployment, Docker resource setting change, Git remote modification or
+persisted user-data deletion occurred.
 
 Logs remain in ignored `.cache/verification/ai-prereq-java.log`, `ai-prereq-browser.log`,
-`ai-prereq-browser-stack.log`, `ai-prereq-dependencies.log` and `ai-prereq-classloading.log`, plus module Surefire
-reports.
+`ai-prereq-browser-stack.log`, `ai-prereq-dependencies.log` and `ai-prereq-classloading.log`, plus
+module Surefire reports.
 
 ## Isolated Spring AI compatibility probe
 
-An ignored Maven probe under `.cache/verification/ai-dependency-probe` used Java 25, Boot 4.1.1 and candidate Spring AI
-BOM 2.0.1. Ollama and Elasticsearch vector-store starters resolved and compiled. Chat, embedding, vector-store and
-tool API classes loaded; basic Boot-managed Jackson 3 serialization passed. Production POMs were not changed.
+An ignored Maven probe under `.cache/verification/ai-dependency-probe` used Java 25, Boot 4.1.1 and
+candidate Spring AI BOM 2.0.1. Ollama and Elasticsearch vector-store starters resolved and compiled.
+Chat, embedding, vector-store and tool API classes loaded; basic Boot-managed Jackson 3
+serialization passed. Production POMs were not changed.
 
 | Selected dependency                                                 | Version |
 |---------------------------------------------------------------------|---------|
@@ -75,21 +80,23 @@ tool API classes loaded; basic Boot-managed Jackson 3 serialization passed. Prod
 | `tools.jackson.core:jackson-databind`                               | 3.1.5   |
 | Elasticsearch runtime `com.fasterxml.jackson.core:jackson-databind` | 2.21.5  |
 
-The Jackson coordinates use separate namespaces. This probe checks resolution, compilation, classloading and basic
-serialization, **not Spring AI application autoconfiguration, inference, tools, embeddings or vector queries**.
-The candidate remains unpinned in production. Documented Boot 4.1 support agrees with the initial probe.
+The Jackson coordinates use separate namespaces. The probe checks resolution, compilation,
+classloading and basic serialization. It does not check Spring AI application autoconfiguration,
+inference, tools, embeddings or vector queries. The candidate remains unpinned in production.
+Documented Boot 4.1 support agrees with the initial probe.
 [Spring AI compatibility/BOM guidance](https://docs.spring.io/spring-ai/reference/getting-started.html).
 
 ## Remaining setup and checks
 
 ### 1. Download and test models
 
-Initial candidates are `qwen3:8b` for chat/tool selection and `nomic-embed-text` for embeddings. They are not final
-digest/license/capability selections. The official Qwen listing advertises tool support and a roughly 5.2 GB download;
-embedding weights are additional. [Qwen3 8B](https://ollama.com/library/qwen3:8b),
+Initial candidates are `qwen3:8b` for chat/tool selection and `nomic-embed-text` for embeddings.
+They are not final digest/license/capability selections. The official Qwen listing advertises tool
+support and a roughly 5.2 GB download; embedding weights are additional.
+[Qwen3 8B](https://ollama.com/library/qwen3:8b),
 [Nomic embeddings](https://ollama.com/library/nomic-embed-text).
 
-Preparation commands, **not executed by this check**:
+Preparation commands, not executed by this check:
 
 ```bash
 ollama pull qwen3:8b
@@ -99,30 +106,33 @@ ollama show qwen3:8b
 ollama show nomic-embed-text
 ```
 
-Then execute actual generation, structured tool requests and embeddings. Record full digests/licenses, actual
-embedding dimension, context/quantization, memory and cold/warm timing. Model presence alone does not satisfy A0.
-Keep inference local as specified.
+Then execute actual generation, structured tool requests and embeddings. Record full
+digests/licenses, actual embedding dimension, context/quantization, memory and cold/warm timing.
+Model presence alone does not satisfy A0. Keep inference local as specified.
 
 ### 2. Review Docker memory before full-stack testing
 
-The VM currently has about 7.75 GiB. Existing full-stack configured container ceilings sum to 9.375 GiB, before an
-additional AI service/container model. These ceilings are not measured consumption or a minimum-memory requirement;
-they do show insufficient room for all containers to reach their configured limits together.
+The VM currently has about 7.75 GiB. Existing full-stack configured container ceilings sum to 9.375
+GiB, before an additional AI service/container model. These ceilings describe configured limits.
+They measure neither consumption nor the minimum memory requirement, but the VM cannot accommodate
+every container reaching its limit at the same time.
 
-Use the README's approximately 12 GiB Docker allocation as an initial full-stack baseline and measure actual usage.
-Review Docker Desktop **Settings -> Resources** (or its controlling resource manager) and verify the reported VM
-allocation after applying changes. Budget native models, OS and IDE separately within the 48 GiB host. Container
-inference would need additional measured VM headroom.
+Use the README's approximately 12 GiB Docker allocation as an initial full-stack baseline and
+measure actual usage. Review Docker Desktop Settings -> Resources (or its controlling resource
+manager) and verify the reported VM allocation after applying changes. Budget native models, OS and
+IDE separately within the 48 GiB host. Container inference would need additional measured VM
+headroom.
 
-Native Ollama is preferred initially because Docker Desktop on macOS lacks Ollama GPU acceleration. Host loopback
-availability does not establish model reachability from containers; verify that network path during A10.
-[Ollama runtime/network/GPU guidance](https://docs.ollama.com/faq).
+Native Ollama is preferred initially because Docker Desktop on macOS lacks Ollama GPU acceleration.
+Host loopback availability does not establish model reachability from containers; verify that
+network path during A10. [Ollama runtime/network/GPU guidance](https://docs.ollama.com/faq).
 
-### 3. Execute deployment gates in their phases
+### 3. Execute deployment checks in their phases
 
-First image pulls/builds, full Compose startup/health, persistent restarts, kind deployment and PVC recovery are now
-unverified tasks rather than missing-tool blockers. No local cluster exists yet. The proposed `compose-up.sh --ai=...`
-options are still future interfaces, not implemented commands.
+With the tools available, first image pulls/builds, full Compose startup/health, persistent
+restarts, kind deployment and PVC recovery still need execution checks. No local cluster exists yet.
+The proposed `compose-up.sh --ai=...` options are still future interfaces, not implemented commands.
 
-Only the baseline and isolated dependency-inspection A0 tasks are checked in AI_PLAN.md. Real-model selection,
-evaluation fixtures, ADR and complete A0 acceptance remain open. No AI implementation is marked complete.
+Only the baseline and isolated dependency-inspection A0 tasks are checked in AI_PLAN.md. Real-model
+selection, evaluation fixtures, ADR and complete A0 acceptance remain open. No AI implementation is
+marked complete.

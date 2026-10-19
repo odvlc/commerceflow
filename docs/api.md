@@ -5,10 +5,11 @@ Maintenance: Describes commerce endpoint contracts and public errors; service ow
 remain mandatory behind the gateway.
 -->
 
-All paths are relative to `/api/v1`. OpenAPI for each application is generated at `/v3/api-docs`; Swagger UI is `/docs`
-on catalog and the other configured service UIs. Customer identity comes from the JWT UUID subject. Pagination is
-zero-based, `size` 1–100. Errors use `application/problem+json` with `code` and correlation ID; clients may provide a
-validated `X-Correlation-ID`.
+All paths are relative to `/api/v1`. OpenAPI for each application is generated at `/v3/api-docs`;
+Swagger UI is `/docs` on catalog and the other configured service UIs. Customer identity comes from
+the JWT UUID subject. Pagination is zero-based, `size` 1 to 100. Errors use
+`application/problem+json` with `code` and correlation ID; clients may provide a validated
+`X-Correlation-ID`.
 
 | Endpoint                             | Authorization / request                                                                                                                                                           |
 |--------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -31,9 +32,9 @@ validated `X-Correlation-ID`.
 | `GET /admin/payments/{orderId}`      | ADMIN; payment and authorization/refund attempts.                                                                                                                                 |
 | `GET /notifications`                 | Authenticated customer subject; paginated owned local messages.                                                                                                                   |
 
-Order scenarios are APPROVE, DECLINE, TIMEOUT, DELAY; no real payment provider or card data is involved. Order creation
-validates nonempty unique items, maximum 100 products and quantities 1–1000, then obtains current catalog prices before
-committing the order/outbox.
+Order scenarios are APPROVE, DECLINE, TIMEOUT, DELAY; no real payment provider or card data is
+involved. Order creation validates nonempty unique items, maximum 100 products and quantities 1 to
+1000, then obtains current catalog prices before committing the order/outbox.
 
 Example product body:
 
@@ -49,6 +50,8 @@ Example product body:
 }
 ```
 
-Internal endpoints require `commerceflow.internal` scope and are never gateway routes: reserve/commit/release under
-`/internal/v1/reservations/{orderId}` and authorize/cancel under `/internal/v1/payments/{orderId}`. Business IDs and
-request hashes prevent repeated stock/payment effects. Routine workflows use Kafka rather than direct HTTP commands.
+Internal endpoints require `commerceflow.internal` scope and are never gateway routes:
+reserve/commit/release under `/internal/v1/reservations/{orderId}` and authorize/cancel under
+`/internal/v1/payments/{orderId}`. Business IDs and request hashes prevent repeated stock/payment
+effects. Routine workflows send commands through Kafka instead of calling the internal HTTP
+endpoints directly.

@@ -2,10 +2,10 @@
 
 ## Delivery estimates
 
-The fictional standard-delivery estimate is 5 to 7 business days after dispatch. No actual shipping or tracking provider
-exists in CommerceFlow.
+For this fictional demo, standard delivery is estimated at 5 to 7 business days after dispatch. CommerceFlow has
+no shipping or tracking provider.
 
 ## Order status
 
-Confirmed means simulated payment authorization and inventory commitment completed. It does not mean shipped or
-delivered. A delivery date cannot be established from an order status alone.
+Confirmed means simulated payment authorization and inventory commitment have completed. That status does not
+establish that an order has shipped or been delivered. An order status alone cannot establish a delivery date.

@@ -5,8 +5,9 @@ Maintenance: Describes AI HTTP/SSE contracts and explicit proposal approval; use
 as the replay authority.
 -->
 
-All endpoints use the existing Keycloak issuer/audience and bearer access token. Tokens are never stored in PostgreSQL,
-passed to the model, or placed in stream URLs. The gateway exposes these paths only when `AI_ENABLED=true`.
+All endpoints use the existing Keycloak issuer/audience and bearer access token. Tokens are never
+stored in PostgreSQL, passed to the model, or placed in stream URLs. The gateway exposes these paths
+only when `AI_ENABLED=true`.
 
 | Method/path (`/api/v1` prefix)                                       | Behavior                                                                                 |
 |----------------------------------------------------------------------|------------------------------------------------------------------------------------------|
@@ -28,25 +29,32 @@ passed to the model, or placed in stream URLs. The gateway exposes these paths o
 | GET `/admin/ai/knowledge/jobs/{id}`                                  | Durable projection/rebuild state                                                         |
 | POST `/admin/ai/knowledge/rebuilds`                                  | ADMIN-only explicit new index generation/rebuild                                         |
 
-Read the generated `/v3/api-docs` for exact validation/DTO contracts. Errors use the common `ProblemDetail` shape and
-correlation ID. Inaccessible resources return 404; unauthorized modes return 403; full admission returns 429; active
-conversation conflicts and stale confirmations return 409. Missing pinned inference models return 503 before a new
-inference message is persisted. Owned proposal/Cart-intent resume can reconcile without generation. Keep the same
-idempotency key and contents after ambiguous
-network failures. A changed body under an existing key conflicts.
+Read the generated `/v3/api-docs` for exact validation/DTO contracts. Errors use the common
+`ProblemDetail` shape and correlation ID. Inaccessible resources return 404; unauthorized modes
+return 403; full admission returns 429; active conversation conflicts and stale confirmations return
 
-SSE carries `queued`, `state`, `step`, `proposal` and `final` event types, each with a monotonic persisted event ID.
-It exposes public progress and committed final content, not private model reasoning or partial token previews. A stream
-never starts/resumes a run. Reconnect with a refreshed header token and the last received ID; use GET run/history to
-recover committed content. Streams stop at token expiry, after at most two minutes, or at a terminal/paused state.
-There are at most two per subject and 32 per application instance. Disconnecting does not cancel the run.
+409. Missing pinned inference models return 503 before a new inference message is persisted. Owned
+     proposal/Cart-intent resume can reconcile without generation. After an ambiguous network failure,
+     retry with the same idempotency key and contents. Reusing the key with a changed body returns a
+     conflict.
 
-CUSTOMER tools forward the current user's JWT to live APIs. SUPPORT tools include only the scoped order explanation
-read and public catalog/authorized knowledge reads. Neither mode can invoke checkout, refunds, stock edits, arbitrary
-HTTP/SQL or shell operations. `proposeCartChange` only prepares a proposal; model text saying “yes” cannot confirm it.
+SSE carries `queued`, `state`, `step`, `proposal` and `final` event types, each with a monotonic
+persisted event ID. Streams expose public progress and committed final content. Private model
+reasoning and partial token previews are excluded. Opening a stream never starts or resumes a run.
+Reconnect with a refreshed header token and the last received ID; use GET run/history to recover
+committed content. Streams stop at token expiry, after at most two minutes, or at a terminal/paused
+state. There are at most two per subject and 32 per application instance. Disconnecting does not
+cancel the run.
 
-Cart reads return `revision` and an ETag of `"<incarnation UUID>:<counter>"`. Existing cart writes remain compatible;
-AI writes always send the approved `If-Match` plus their persisted downstream key. Redis checks its request memo before
-the revision, so an acknowledged-but-lost response can be safely recovered with that same request inside its retention
-window. Proposal expiry is five minutes. Recovery is capped below the observed cart TTL and at 23 hours; after expiry
-or uncertain Redis state, inspect `OUTCOME_UNKNOWN` and the current cart rather than retrying with a new key.
+CUSTOMER tools forward the current user's JWT to live APIs. SUPPORT tools include only the scoped
+order explanation read and public catalog/authorized knowledge reads. Neither mode can invoke
+checkout, refunds, stock edits, arbitrary HTTP/SQL or shell operations. `proposeCartChange` only
+prepares a proposal; model text saying “yes” cannot confirm it.
+
+Cart reads return `revision` and an ETag of `"<incarnation UUID>:<counter>"`. Existing cart writes
+remain compatible; AI writes always send the approved `If-Match` plus their persisted downstream
+key. Redis checks its request memo before the revision, so an acknowledged-but-lost response can be
+safely recovered with that same request inside its retention window. Proposal expiry is five
+minutes. Recovery is capped below the observed cart TTL and at 23 hours; if recovery expires or
+Redis state is uncertain, inspect `OUTCOME_UNKNOWN` and the current cart. Do not retry with a new
+key.

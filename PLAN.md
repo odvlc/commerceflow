@@ -1,26 +1,28 @@
 # CommerceFlow implementation plan
 
-The scope and phase order come from `CODEX_PROMPT.md`. A checked box means implemented **and verified**; unchecked
-includes partial work. Each phase depends on the preceding phase; additional dependencies appear below. Runtime blockers
-do not count as successful validation.
+The scope and phase order come from `CODEX_PROMPT.md`. Check a box only when the task is implemented
+and verified. Leave partial work unchecked. Each phase depends on the preceding phase; additional
+dependencies appear below. A runtime blocker leaves its validation check incomplete.
 
-**Original native baseline (2026-10-17, superseded by the update below):** all seven applications and the frontend run
-against real native infrastructure. The
-final reactor passes 43 tests with no failures or skips; frontend lint/build, 2 unit tests and 4 Chrome cases pass.
-Phases 2–10 have native execution evidence. Phases 1, 11–13 retain deployment/remote-CI acceptance checks because
-Docker, kind and kubectl are absent. [Executed verification](docs/verification.md) distinguishes these limits from
-source/schema validation.
+Original native baseline (2026-10-17, superseded by the update below): all seven applications and
+the frontend run against real native infrastructure. The final reactor passes 43 tests with no
+failures or skips; frontend lint/build, 2 unit tests and 4 Chrome cases pass. Phases 2 to 10 have
+native execution evidence. Phases 1, 11 to 13 retain deployment/remote-CI acceptance checks because
+Docker, kind and kubectl are absent. [Executed verification](docs/verification.md) distinguishes
+these limits from source/schema validation.
 
-**AI extension (2026-10-18):** [AI_PLAN.md](AI_PLAN.md) tracks the ordered A0–A12 implementation. A0–A8
-have executed source/native verification; A9 quality gates remain open.
-The independent AI service uses local pinned `llama3.1:8b` and 768-dimensional Nomic embeddings. It implements owned
-PostgreSQL state, replay-safe knowledge indexing, authorized API tools, bounded durable runs/SSE, conditional confirmed
-cart changes, and a React Copilot. No cloud model or automatic checkout/payment action is enabled.
+AI extension (2026-10-18): [AI_PLAN.md](AI_PLAN.md) tracks the ordered A0 to A12 implementation. A0
+to A8 have executed source/native verification; A9 quality requirements remain open. The independent
+AI service uses local pinned `llama3.1:8b` and 768-dimensional Nomic embeddings. It implements owned
+PostgreSQL state, replay-safe knowledge indexing, authorized API tools, bounded durable runs/SSE,
+conditional confirmed cart changes, and a React Copilot. No cloud model or automatic
+checkout/payment action is enabled.
 
 - [x] A0: actual pinned generation/tool/embedding calls, frozen 80-case corpus, model/license hashes and ADR.
 - [x] A1: service/security/state APIs and additive owned Compose database provisioning pass.
-- [x] A2–A4: owned order explanations, durable lexical/hybrid knowledge pipeline and actual-model generation verified.
-- [x] A5–A7: typed tools, leased/fenced runs and exact Cart proposals pass, including 100 concurrent confirmations,
+- [x] A2 to A4: owned order explanations, durable lexical/hybrid knowledge pipeline and actual-model generation
+  verified.
+- [x] A5 to A7: typed tools, leased/fenced runs and exact Cart proposals pass, including 100 concurrent confirmations,
   real lost-acknowledgment replay, fresh-auth process/pod recovery and model-independent Cart reconciliation.
 - [x] A8: 5 frontend unit tests, lint/build and 8 actual Chrome/Keycloak cases pass on Compose and built kind Ingress.
 - [ ] A9 release quality: frozen hybrid corpus passes 240 procedural checks; recall/citations 60/60, positive procedural
@@ -33,18 +35,21 @@ cart changes, and a React Copilot. No cloud model or automatic checkout/payment 
 - [ ] A12 final release: CI/image/manifest/artifact sources and demo execute/validate locally; remote GitHub Actions,
   final factual review and hardware gates remain open. All implementation/docs/evidence are reviewable in AI_PLAN.md.
 
-Latest regression: **82 Java tests, no failures/errors/skips**; 5 frontend tests plus lint/build. Four ready-stack AI
-browser demo cases additionally verify two distinct product sources and fresh post-restart metrics. Compose and kind
-volumes remain intact. Native-model kind is restored and running at http://localhost:3000.
+Latest regression: 82 Java tests, no failures/errors/skips; 5 frontend tests plus lint/build. Four
+ready-stack AI browser demo cases additionally verify two distinct product sources and fresh
+post-restart metrics. Compose and kind volumes remain intact. Native-model kind is restored and
+running at http://localhost:3000.
 
-**Prerequisites:** Docker 29.8.2 / Compose 5.6.0, kind 0.33.0, kubectl 1.36.1 and Ollama 0.40.6 now respond. Historical
-missing-tool blockers below are superseded; their runtime acceptance checks remain open. Host RAM is 48 GiB and Docker's
-VM has about 7.75 GiB, so this run cannot certify the specified 32 GiB target. Both actual models are downloaded and
-verified. A temporary container successfully reached the native localhost-bound Ollama through `host.docker.internal`.
-No Docker Desktop resource settings were changed. Source and native runtime evidence are distinct from Docker/kind
-acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](docs/ai-results/).
+Prerequisites: Docker 29.8.2 / Compose 5.6.0, kind 0.33.0, kubectl 1.36.1 and Ollama 0.40.6 now
+respond. Historical missing-tool blockers below are superseded; their runtime acceptance checks
+remain open. Host RAM is 48 GiB and Docker's VM has about 7.75 GiB, so this run cannot certify the
+specified 32 GiB target. Both actual models are downloaded and verified. A temporary container
+successfully reached the native localhost-bound Ollama through `host.docker.internal`. No Docker
+Desktop resource settings were changed. Source and native runtime evidence are distinct from
+Docker/kind acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained
+[results](docs/ai-results/).
 
-## Phase 1 — Maven repository and local infrastructure
+## Phase 1: Maven repository and local infrastructure
 
 - [x] Inspect repository/specification and create persistent engineering rules (`AGENTS.md`).
 - [x] Verify official dependency/image compatibility and record pins and sources (runtime image checks remain blocked).
@@ -57,7 +62,7 @@ acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](do
 - [x] Start container infrastructure and verify its health (2026-10-18 full Compose health checks passed).
 - Acceptance: reproducible Maven build and healthy local infrastructure; no shared service database credentials.
 
-## Phase 2 — Catalog Service and PostgreSQL
+## Phase 2: Catalog Service and PostgreSQL
 
 - [x] Implement Flyway products/categories/outbox schema, constraints, indexes, JPA versioning and repositories.
 - [x] Implement catalog list/detail and admin create/update with typed DTOs, validation, pagination, errors, correlation
@@ -67,7 +72,7 @@ acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](do
 - [x] Build, migrate, run and smoke-test the catalog in the Spring integration context; record evidence.
 - Acceptance: real PostgreSQL-backed CRUD with trusted money and transactional outbox intent; no runtime mocks.
 
-## Phase 3 — Order and Inventory Services
+## Phase 3: Order and Inventory Services
 
 - [x] Implement owned schemas for orders/items/saga steps/outbox/processed events and inventory/reservations.
 - [x] Implement trusted catalog pricing, request-hash idempotency, ownership-ready order queries, cancellation and
@@ -78,7 +83,7 @@ acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](do
   legal transitions.
 - Acceptance: durable orders and reservations, no overselling, no cross-service SQL.
 
-## Phase 4 — Kafka and transactional outbox
+## Phase 4: Kafka and transactional outbox
 
 - [x] Define versioned topics/envelopes/contracts with order ID keys and correlation IDs.
 - [x] Implement acknowledged, durable outbox publishing and transactional consumer deduplication.
@@ -86,7 +91,7 @@ acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](do
 - [x] Verify replay causes one effect and broker outage retains recoverable outbox rows.
 - Acceptance: eventual at-least-once delivery without lost committed business events.
 
-## Phase 5 — Payment Service and saga orchestration
+## Phase 5: Payment Service and saga orchestration
 
 - [x] Implement simulated authorize/decline/timeout/delay/refund, payments/attempts schema and idempotency.
 - [x] Implement durable saga with reservation, payment, commitment, confirmation, release/cancellation and
@@ -94,14 +99,14 @@ acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](do
 - [x] Verify success, insufficient stock, decline, timeout, late authorization, duplicate events and process restart.
 - Acceptance: correct final money/stock/order state under each failure; no double charge.
 
-## Phase 6 — Redis cache and Cart Service
+## Phase 6: Redis cache and Cart Service
 
 - [x] Implement cache-aside catalog TTL/invalidation, hit/miss/failure metrics and safe degradation.
 - [x] Implement atomic user-scoped TTL carts with validated typed endpoints and trusted checkout conversion.
 - [x] Verify Redis concurrency, isolation, expiry and outage behavior with real Redis.
 - Acceptance: Redis-backed cart/cache; durable authoritative data unaffected by cache outage.
 
-## Phase 7 — Elasticsearch indexing and search
+## Phase 7: Elasticsearch indexing and search
 
 - [x] Verify server/client/Spring Data compatibility; define explicit mappings, versioned index and read alias.
 - [x] Implement Kafka indexing, stale-event protection, deactivation, full PostgreSQL rebuild and recovery.
@@ -109,7 +114,7 @@ acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](do
 - [x] Verify creation/update/deactivation, replay, stale events, rebuild and unavailable search.
 - Acceptance: real Elasticsearch results and documented eventual consistency.
 
-## Phase 8 — Keycloak and security
+## Phase 8: Keycloak and security
 
 - [x] Configure local realm, CUSTOMER/ADMIN/SUPPORT roles, public PKCE client and service identities.
 - [x] Implement gateway routing, JWT validation in all services, method/route authorization, ownership and
@@ -117,7 +122,7 @@ acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](do
 - [x] Verify 401/403, cross-customer isolation, administrative access and issuer/audience behavior.
 - Acceptance: authenticated workflow with no custom identity/password system.
 
-## Phase 9 — Notifications and React frontend
+## Phase 9: Notifications and React frontend
 
 - [x] Implement durable asynchronous local notifications and replay-safe consumption.
 - [x] Build responsive typed React/Vite application: catalog/search/details, cart, login/logout, checkout/history/status
@@ -126,7 +131,7 @@ acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](do
 - [x] Verify frontend lint/test/build and authenticated end-to-end purchase flows.
 - Acceptance: usable UI backed by real secured services and durable notifications.
 
-## Phase 10 — Observability and load testing
+## Phase 10: Observability and load testing
 
 - [x] Implement Actuator, Micrometer, JSON logs, propagation and specified HTTP/JVM/DB/Kafka/outbox/saga/cache/search
   metrics; inspect authenticated live samples.
@@ -139,7 +144,7 @@ acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](do
   population profiling (future performance work; no capacity claim).
 - Acceptance: meaningful live monitoring and reproducible measured benchmark artifacts.
 
-## Phase 11 — Complete Docker Compose stack
+## Phase 11: Complete Docker Compose stack
 
 - [x] Add multi-stage application/frontend Dockerfiles and all application/monitoring services; validate configuration
   and compile/run the Java readiness helper.
@@ -151,7 +156,7 @@ acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](do
   GiB capacity unverified).
 - Acceptance: documented reproducible Compose startup on a 32 GB Mac.
 
-## Phase 12 — Complete Kubernetes deployment
+## Phase 12: Complete Kubernetes deployment
 
 - [x] Implement kind/Kustomize namespace, config/secrets templates, Deployments/Services/Ingress and stateful
   infrastructure/PVCs; render and schema-check all 61 resources.
@@ -163,9 +168,10 @@ acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](do
 - [x] Execute restart/PVC durability and recovery demonstrations on kind (Order, PostgreSQL, Redis and AI/index state).
 - Acceptance: working local kind deployment with persisted data after restarts.
 
-## Phase 13 — Failure tests, CI, documentation and polish
+## Phase 13: Failure tests, CI, documentation and polish
 
-- [x] Execute critical failure scenarios 1–8 and the full native E2E suite; additionally restart the real Kafka broker
+- [x] Execute critical failure scenarios 1 to 8 and the full native E2E suite; additionally restart the real Kafka
+  broker
   over retained logs and recover a pending outbox command.
 - [x] Execute critical scenario 9: Kubernetes service restarts preserve durable data.
 - [x] Add CI Java/frontend/integration checks and eight-image Docker build matrix; validate workflow with actionlint and
@@ -194,10 +200,11 @@ acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained [results](do
 
 ## Next action
 
-Independently review the retained v3 factual assertions/wording before closing AI release quality; run the explicit
-CPU Compose/kind profiles on a VM with sufficient measured memory and verify the 32 GiB hardware target; dispatch the
-configured CI when remote execution is authorized. These open gates do not invalidate the completed native-model
-Compose/kind demonstrations. No routine repair deletes data or changes Docker Desktop allocation.
+Independently review the retained v3 factual assertions/wording before closing AI release quality;
+run the explicit CPU Compose/kind profiles on a VM with sufficient measured memory and verify the 32
+GiB hardware target; dispatch the configured CI when remote execution is authorized. These open
+gates do not invalidate the completed native-model Compose/kind demonstrations. No routine repair
+deletes data or changes Docker Desktop allocation.
 
 ### Phase 1 verification
 
@@ -352,7 +359,7 @@ Compose/kind demonstrations. No routine repair deletes data or changes Docker De
 
 - Final
   `./mvnw -B verify dependency:build-classpath -Dmdep.outputFile=target/test-classpath.txt -Dmdep.includeScope=test`:
-  PASS, **43 tests, zero failures/errors/skips**. Contracts 2, catalog 5, inventory 6, Kafka 5, orders 7, payments 3,
+  PASS, 43 tests, zero failures/errors/skips. Contracts 2, catalog 5, inventory 6, Kafka 5, orders 7, payments 3,
   multi-service workflows 12, real Keycloak 3. Full report: `docs/verification.md`; latest log:
   `.cache/verification/java-final.log`.
 - Final hardening verified canonical PostgreSQL UUID lock ordering under concurrent mixed-product reservation/release,
@@ -394,8 +401,8 @@ Compose/kind demonstrations. No routine repair deletes data or changes Docker De
 | Security/authorization                      | Real Keycloak PKCE/service scope tests, issuer/audience/UUID subjects, roles and cross-customer ownership tests pass.                   |
 | Architecture/setup/API/troubleshooting docs | Written/reviewed and linked from README; blocked deployment instructions explicitly identified as unexecuted.                           |
 
-The repository intentionally remains partially accepted until the unchecked deployment/runtime items above execute
-successfully. No remote deployment, Git initialization/commit or persisted user-data deletion was performed.
+Acceptance remains partial until the unchecked deployment/runtime items above pass. No remote
+deployment, Git initialization/commit or persisted user-data deletion was performed.
 
 ### IntelliJ cache exclusion follow-up
 
@@ -431,7 +438,7 @@ successfully. No remote deployment, Git initialization/commit or persisted user-
   all 5 frontend tests and production build; `bash -n scripts/compose-up.sh`, Python AST parsing of
   `scripts/collect-safe-evidence.py` and `git diff --check` pass. The initial sandboxed Maven attempt could not open
   its existing cache lock; the approved rerun passed. Java tests, model evaluations and deployment recovery were
-  not rerun for these comments-only edits; existing runtime acceptance gates remain unchanged.
+  not rerun for these comments-only edits; existing runtime acceptance requirements remain unchanged.
 
 ### Project-wide clarifying comments (2026-10-18)
 
@@ -452,7 +459,7 @@ successfully. No remote deployment, Git initialization/commit or persisted user-
   XML parsing (12 files) and JSON parsing (33 files) pass. Compose configuration validation with
   full/AI/model profiles and Kustomize builds for base, host AI and CPU AI pass. `git diff --check` passes.
   Local byte-comparison audit and verification logs are retained under ignored `.cache/comment-review`
-  and `/private/tmp/commerceflow-project-comments-maven.log`; existing runtime acceptance gates are unchanged.
+  and `/private/tmp/commerceflow-project-comments-maven.log`; existing runtime acceptance requirements are unchanged.
 
 ### Inline explanations beside executable code (2026-10-18)
 
@@ -473,7 +480,7 @@ successfully. No remote deployment, Git initialization/commit or persisted user-
   production build pass. Bash syntax (12 scripts), JSON parsing (33 files), Compose full/AI/model
   configuration, base/host-AI/CPU-AI Kustomize builds and `git diff --check` pass.
 - Full infrastructure, browser, real-model and crash-recovery suites were not rerun for comment-only
-  edits. Existing acceptance gates remain open. Audit snapshots/insertion metadata are retained in
+  edits. Existing acceptance requirements remain open. Audit snapshots/insertion metadata are retained in
   ignored `.cache/inline-comment-review`; Maven output is in
   `/private/tmp/commerceflow-inline-comments-maven.log`.
 
@@ -517,7 +524,7 @@ successfully. No remote deployment, Git initialization/commit or persisted user-
 - [x] Document port ownership inspection, safe kind pause, failed-container network recovery and
   migration-checksum troubleshooting in `docs/run-and-demo.md`. Validate its Bash examples, links,
   restored migration checksums and `git diff --check`. Full browser, model evaluation and saga fault
-  suites were not rerun for this targeted recovery; existing acceptance gates remain unchanged.
+  suites were not rerun for this targeted recovery; existing acceptance requirements remain unchanged.
 
 ### Persistent SQL formatting preference (2026-10-18)
 
@@ -547,7 +554,7 @@ successfully. No remote deployment, Git initialization/commit or persisted user-
 - [x] Update the persistent rules and demo guide to preserve the approved formatting and describe the
   reviewed one-time transition, citing official Flyway repair documentation. Guide Bash syntax and
   `git diff --check` pass. Full browser/model-evaluation/fault suites were not rerun for this local
-  metadata repair; other acceptance gates remain unchanged. Logs are retained in
+  metadata repair; other acceptance requirements remain unchanged. Logs are retained in
   `/private/tmp/commerceflow-verified-format-repair.log` and
   `/private/tmp/commerceflow-formatted-sql-startup.log`.
 
@@ -571,3 +578,32 @@ successfully. No remote deployment, Git initialization/commit or persisted user-
   the full corpus/browser/fault suites were not rerun. Import/replay logs are retained in
   `/private/tmp/commerceflow-knowledge-v2-import.log` and
   `/private/tmp/commerceflow-knowledge-v2-replay.log`.
+
+### Humanize the verification report
+
+- [x] Apply the humanizer skill to `docs/verification.md`: rewrite compressed test descriptions in
+  plain prose and clarify the original run's scope alongside the later deployment supplement.
+- [x] Preserve commands, code blocks, inline code/paths, link targets, maintenance metadata, all
+  numbers/dates/versions and table rows. Review the claims against the original and run
+  `git diff --check`. This was a prose edit; no application tests or runtime checks were rerun.
+
+### Humanize project Markdown
+
+- [x] Review all 33 maintained Markdown files with the humanizer skill. Edit prose in 32 files;
+  `docs/verification.md` already contains the preceding reviewed rewrite and needs no further changes.
+  Simplify wording and formatting while retaining specification requirements, historical scope and
+  unverified acceptance items. Preserve code blocks, inline code, commands, paths, link targets,
+  maintenance metadata, quoted evidence, checkbox states and recorded numeric values.
+- [x] Edit the four curated knowledge documents and increment only their manifest versions from 2
+  to 3, keeping source IDs and other metadata unchanged. Update the demo guide's current-version
+  statement. Import all four v3 sources through the ADMIN API, wait for successful indexing, and
+  repeat with the exact final fixture bytes to verify idempotency. Import/replay logs are retained in
+  `/private/tmp/commerceflow-humanized-knowledge-import.log` and
+  `/private/tmp/commerceflow-humanized-knowledge-replay.log`.
+- [x] Compare protected content and numeric values against snapshots, allowing only the guide's
+  required fixture-version update and this new progress entry. Check manifest changes, Markdown
+  structure, command preservation and `git diff --check`. SQL, application code and frozen JSON
+  evaluation results remain untouched; full backend/frontend/model regression suites were not rerun.
+- The later authenticated retrieval check could not connect to Keycloak. Read-only Docker inspection
+  confirmed the Compose containers had stopped during the review. That check remains unverified;
+  the stack was left stopped. Snapshots and review checks are in ignored `.cache/humanizer`.

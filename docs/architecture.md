@@ -39,30 +39,34 @@ flowchart LR
     Grafana --> Prometheus
 ```
 
-One PostgreSQL server hosts independently owned databases. Every business write, outgoing outbox row and consumer marker
-commits in its owning service's local transaction. Services share versioned DTOs and database-local infrastructure
-helpers, never JPA entities, foreign repositories or SQL joins.
+One PostgreSQL server hosts independently owned databases. Every business write, outgoing outbox row
+and consumer marker commits in its owning service's local transaction. Services share versioned DTOs
+and database-local infrastructure helpers. They do not share JPA entities, foreign repositories or
+SQL joins.
 
-Checkout states: PENDING_INVENTORY → AWAITING_PAYMENT → COMMITTING_INVENTORY → CONFIRMED. Insufficient stock cancels
-directly. Declined payment releases reserved stock before cancellation completes. Uncertain payment enters
-CANCELLING_PAYMENT, obtains a terminal cancellation/refund result, then releases inventory. Committing inventory retries
-commitment instead of releasing already-authorized stock. Cancellation tombstones prevent late reservation/authorization
-commands from taking stock or charging.
+Checkout states: PENDING_INVENTORY → AWAITING_PAYMENT → COMMITTING_INVENTORY → CONFIRMED.
+Insufficient stock cancels directly. Declined payment releases reserved stock before cancellation
+completes. Uncertain payment enters CANCELLING_PAYMENT, obtains a terminal cancellation/refund
+result, then releases inventory. Committing inventory retries commitment instead of releasing
+already-authorized stock. Cancellation tombstones prevent late reservation/authorization commands
+from taking stock or charging.
 
-All applications validate JWTs independently, even behind the gateway. PostgreSQL is authoritative for money, stock and
-saga state. Redis outages degrade catalog display reads safely and fail carts explicitly; Elasticsearch outages fail
-search explicitly. Neither derived store supplies authoritative checkout prices.
+All applications validate JWTs independently, even behind the gateway. PostgreSQL is authoritative
+for money, stock and saga state. Redis outages degrade catalog display reads safely and fail carts
+explicitly; Elasticsearch outages fail search explicitly. Neither derived store supplies
+authoritative checkout prices.
 
-App modules: catalog, cart, order, inventory, payment, notification and gateway. `contracts` is wire-only;
-`service-support` is infrastructure-only. `workflow-tests` launches real applications/infrastructure and has no
-production deployment role.
+App modules: catalog, cart, order, inventory, payment, notification and gateway. `contracts` is
+wire-only; `service-support` is infrastructure-only. `workflow-tests` launches real
+applications/infrastructure and has no production deployment role.
 
 ## Optional local AI extension (2026-10-18)
 
-`ai-service` is independently deployable and owns its PostgreSQL schema, migrations and knowledge search aliases.
-Pinned local Llama 3.1 handles generation/tool requests; separate Nomic embeddings augment filtered BM25 retrieval.
-The application validates fixed caller-authorized tools and orchestrates bounded leased/fenced runs. An LLM has no
-SQL, shell, generic HTTP, checkout/payment or inventory authority. Cart preparation is separate from explicit user
-confirmation and stable-key conditional execution.
-See [AI architecture](ai-architecture.md), [ADR 0002](adr/0002-ai-copilot.md)
-and [AI operations](ai-operations.md). Existing checkout remains independent of inference readiness.
+`ai-service` is independently deployable and owns its PostgreSQL schema, migrations and knowledge
+search aliases. Pinned local Llama 3.1 handles generation/tool requests; separate Nomic embeddings
+augment filtered BM25 retrieval. The application validates each tool against the fixed registry and
+caller permissions. It coordinates runs with execution limits, leases and fencing. An LLM has no
+SQL, shell, generic HTTP, checkout/payment or inventory authority. Cart preparation is separate from
+explicit user confirmation and stable-key conditional execution. See
+[AI architecture](ai-architecture.md), [ADR 0002](adr/0002-ai-copilot.md) and
+[AI operations](ai-operations.md). Existing checkout remains independent of inference readiness.

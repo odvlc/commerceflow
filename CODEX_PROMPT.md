@@ -1,18 +1,18 @@
-# CODEX MASTER PROMPT — COMMERCEFLOW
+# Codex master prompt: CommerceFlow
 
-## ROLE AND MISSION
+## Role and mission
 
-Act as a Principal Java Backend Engineer, Distributed Systems Architect, DevOps Engineer, Security Engineer, and Senior
-Frontend Engineer.
+Act as a Principal Java Backend Engineer, Distributed Systems Architect, DevOps Engineer, Security
+Engineer, and Senior Frontend Engineer.
 
-Build a complete, working, production-style **Event-Driven E-Commerce Platform** named **CommerceFlow** in the current
-Git repository.
+Build CommerceFlow, a complete, working, production-style Event-Driven E-Commerce Platform, in the
+current Git repository.
 
-**Do not deliver only scaffolding, pseudocode, or architectural diagrams. Implement, integrate, run, test, and document
-the working application.**
+Implement, integrate, run, test, and document the working application. Scaffolding, pseudocode, or
+architectural diagrams alone do not satisfy the task.
 
-The system must run locally on a MacBook Pro with at least 32 GB RAM, using Docker Compose for development and
-Kubernetes (kind) for orchestration.
+The system must run locally on a MacBook Pro with at least 32 GB RAM, using Docker Compose for
+development and Kubernetes (kind) for orchestration.
 
 ## 1. Engineering standards and working rules
 
@@ -70,11 +70,11 @@ Implement these Maven modules as independently deployable applications:
 8. `contracts`: Versioned Kafka message DTOs without shared JPA entities.
 9. `frontend`: React and TypeScript application.
 
-Use one local PostgreSQL server with independently owned service databases and credentials. Cross-service SQL joins and
-direct writes into another service's database are prohibited.
+Use one local PostgreSQL server with independently owned service databases and credentials.
+Cross-service SQL joins and direct writes into another service's database are prohibited.
 
-Use Kafka as the asynchronous event bus, Redis for cart/cache workloads, and Elasticsearch for derived full-text product
-search.
+Use Kafka as the asynchronous event bus, Redis for cart/cache workloads, and Elasticsearch for
+derived full-text product search.
 
 ## 4. Core business workflow
 
@@ -101,7 +101,7 @@ Persist saga state durably and handle crashes, timeouts, duplicate messages, and
 
 Use separate Flyway migrations for each service.
 
-**Order Service**
+Order Service
 
 - `orders`: id, customer_id, idempotency_key, request_hash, status, total_amount, currency, version, created_at,
   updated_at.
@@ -110,30 +110,30 @@ Use separate Flyway migrations for each service.
 - `outbox_events`: id, aggregate_id, event_type, payload, created_at, published_at.
 - `processed_events`: event_id, processed_at.
 
-**Inventory Service**
+Inventory Service
 
 - `products` or a local product-reference projection.
 - `inventory`: product_id, available_quantity, reserved_quantity, version.
 - `reservations`: id, order_id, product_id, quantity, status, expires_at.
 - `outbox_events` and `processed_events`.
 
-**Payment Service**
+Payment Service
 
 - `payments`: id, order_id, amount, currency, status, timestamps.
 - `payment_attempts`: id, payment_id, attempt_number, result, failure_reason, timestamps.
 - `outbox_events` and `processed_events`.
 
-**Catalog Service**
+Catalog Service
 
 - `products`: id, sku, name, description, category, price, currency, active, version, timestamps.
 - `categories`.
 - `outbox_events`.
 
-Enforce foreign keys where applicable, uniqueness constraints, quantity checks, relevant indexes, and optimistic locking
-where appropriate.
+Enforce foreign keys where applicable, uniqueness constraints, quantity checks, relevant indexes,
+and optimistic locking where appropriate.
 
-Prevent inventory overselling with a conditional SQL update that succeeds only when enough stock exists. Persist
-reservations and outgoing events in the same local transaction.
+Prevent inventory overselling with a conditional SQL update that succeeds only when enough stock
+exists. Persist reservations and outgoing events in the same local transaction.
 
 Implement idempotency for every externally retried business operation.
 
@@ -141,7 +141,7 @@ Implement idempotency for every externally retried business operation.
 
 Implement at least:
 
-**Catalog**
+Catalog
 
 - `GET /api/v1/products`
 - `GET /api/v1/products/{id}`
@@ -149,36 +149,37 @@ Implement at least:
 - `POST /api/v1/admin/products`
 - `PUT /api/v1/admin/products/{id}`
 
-**Cart**
+Cart
 
 - `GET /api/v1/cart`
 - `POST /api/v1/cart/items`
 - `PATCH /api/v1/cart/items/{productId}`
 - `DELETE /api/v1/cart/items/{productId}`
 
-**Order**
+Order
 
 - `POST /api/v1/orders`
 - `GET /api/v1/orders/{id}`
 - `GET /api/v1/orders`
 - `POST /api/v1/orders/{id}/cancel`
 
-**Administration**
+Administration
 
 - `GET /api/v1/admin/orders`
 - `GET /api/v1/admin/inventory/{productId}`
 - `PUT /api/v1/admin/inventory/{productId}`
 - `GET /api/v1/admin/payments/{orderId}`
 
-Use typed request/response DTOs, `ProblemDetail`, input validation, pagination, consistent API error codes, correlation
-IDs, and generated OpenAPI documentation.
+Use typed request/response DTOs, `ProblemDetail`, input validation, pagination, consistent API error
+codes, correlation IDs, and generated OpenAPI documentation.
 
-Order creation must support an idempotency header and prevent different request contents from reusing an idempotency
-key.
+Order creation must support an idempotency header and prevent different request contents from
+reusing an idempotency key.
 
 ## 7. Kafka
 
-Define versioned topics for order, inventory, payment, catalog, and notification events, plus a dead-letter topic.
+Define versioned topics for order, inventory, payment, catalog, and notification events, plus a
+dead-letter topic.
 
 Use an event envelope containing:
 
@@ -192,8 +193,9 @@ Use an event envelope containing:
 
 Key order-related Kafka messages by order ID.
 
-Implement durable transactional outbox publishing, broker acknowledgments, idempotent consumers, retries with bounded
-backoff, poison-message handling, dead-letter queues, and recovery documentation.
+Implement durable transactional outbox publishing, broker acknowledgments, idempotent consumers,
+retries with bounded backoff, poison-message handling, dead-letter queues, and recovery
+documentation.
 
 Do not assume Kafka and PostgreSQL participate in one atomic transaction.
 
@@ -248,7 +250,8 @@ Verify that the Elasticsearch server, Java client, and Spring Data versions are 
 
 Use Keycloak as the local identity provider.
 
-Implement OAuth2/OIDC login with Authorization Code + PKCE for React and JWT validation in backend services.
+Implement OAuth2/OIDC login with Authorization Code + PKCE for React and JWT validation in backend
+services.
 
 Roles:
 
@@ -256,13 +259,13 @@ Roles:
 - ADMIN
 - SUPPORT
 
-Enforce customer-order ownership, authorization of administrative operations, and appropriate service-to-service
-security.
+Enforce customer-order ownership, authorization of administrative operations, and appropriate
+service-to-service security.
 
 Do not implement custom password hashing, JWT signing, or a custom identity provider.
 
-Keep secrets outside the repository. Configure safe local development credentials only in documented development
-settings.
+Keep secrets outside the repository. Configure safe local development credentials only in documented
+development settings.
 
 ## 11. React frontend
 
@@ -280,8 +283,8 @@ Build a responsive frontend with:
 - Admin stock management.
 - Admin order monitoring.
 
-Use TypeScript, typed API clients, reusable components, accessible forms, loading states, validation, and error
-handling.
+Use TypeScript, typed API clients, reusable components, accessible forms, loading states,
+validation, and error handling.
 
 Prevent accidental duplicate checkout submissions.
 
@@ -307,12 +310,13 @@ Services must include:
 - Grafana
 - React frontend
 
-Use multi-stage Dockerfiles, persistent volumes, healthchecks, configuration through environment variables, and reliable
-service discovery.
+Use multi-stage Dockerfiles, persistent volumes, healthchecks, configuration through environment
+variables, and reliable service discovery.
 
 Provide lightweight Compose profiles for day-to-day development.
 
-Configure Kafka internal/external listeners correctly for both host applications and containerized services.
+Configure Kafka internal/external listeners correctly for both host applications and containerized
+services.
 
 Bind development ports to localhost when appropriate.
 
@@ -343,7 +347,8 @@ Ensure service addresses use Kubernetes DNS, not localhost.
 
 Make the local configuration appropriate for a MacBook with 32 GB RAM.
 
-Clearly document that a single-node kind environment is not a production high-availability deployment.
+Clearly document that a single-node kind environment is not a production high-availability
+deployment.
 
 ## 14. Virtual threads and performance
 
@@ -394,9 +399,11 @@ Use correlation IDs for cross-service troubleshooting.
 
 ## 16. Automated tests
 
-Use JUnit, Mockito, AssertJ, Spring Boot Test, MockMvc, Testcontainers, and appropriate React testing tools.
+Use JUnit, Mockito, AssertJ, Spring Boot Test, MockMvc, Testcontainers, and appropriate React
+testing tools.
 
-Implement unit, integration, HTTP contract, security, concurrency, Kafka, Redis, Elasticsearch, and end-to-end tests.
+Implement unit, integration, HTTP contract, security, concurrency, Kafka, Redis, Elasticsearch, and
+end-to-end tests.
 
 Critical tests:
 
@@ -435,8 +442,8 @@ Write:
 - Failure-recovery playbook.
 - Architecture decision records.
 
-Provide a five-minute local demonstration script showing a successful purchase, declined payment, compensating inventory
-release, Elasticsearch product search, Redis caching, and Grafana monitoring.
+Provide a five-minute local demonstration script showing a successful purchase, declined payment,
+compensating inventory release, Elasticsearch product search, Redis caching, and Grafana monitoring.
 
 ## 18. Implementation phases
 
@@ -456,7 +463,7 @@ Implement sequentially:
 12. Complete Kubernetes deployment.
 13. Failure testing, CI, documentation, and final polish.
 
-**At every phase:** compile, test, fix issues, update PLAN.md, and proceed.
+At every phase: compile, test, fix issues, update PLAN.md, and proceed.
 
 ## 19. Final acceptance criteria
 
@@ -482,11 +489,11 @@ Do not mark requirements complete unless they have been implemented and verified
 
 ## 20. Begin implementation now
 
-Inspect the current workspace and available tools. Create PLAN.md and a phased task checklist. Verify dependency
-compatibility, then implement the project from Phase 1 through Phase 13.
+Inspect the current workspace and available tools. Create PLAN.md and a phased task checklist.
+Verify dependency compatibility, then implement the project from Phase 1 through Phase 13.
 
 Work on the actual repository files. Do not respond with just a plan.
 
-Keep the implementation cohesive and testable. If runtime or tool limits prevent completing everything, finish the most
-valuable working vertical slice, record every incomplete requirement and precise blocker, and report verified results
-without exaggeration.
+Keep the implementation cohesive and testable. If runtime or tool limits prevent completion, finish
+the most valuable working vertical slice. Record every incomplete requirement and its precise
+blocker, and report only verified results without exaggeration.

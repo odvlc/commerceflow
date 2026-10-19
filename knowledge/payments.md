@@ -2,9 +2,12 @@
 
 ## Payment scenarios
 
-APPROVE authorizes a simulated payment. DECLINE cancels the order after reserved inventory is released. TIMEOUT
-reconciles uncertain payment before releasing inventory. DELAY produces a delayed result. No card details or real funds
-are used.
+- APPROVE authorizes a simulated payment.
+- DECLINE cancels the order after reserved inventory is released.
+- TIMEOUT reconciles uncertain payment before releasing inventory.
+- DELAY produces a delayed result.
+
+The demo uses no card details or real funds.
 
 ## Current order explanations
 

@@ -2,8 +2,8 @@
 
 ## Return window
 
-Unused items in original packaging may be requested for return within 30 calendar days of delivery.
-This is a fictional policy for the CommerceFlow demo. The application does not implement return processing.
+You may request a return for unused items in their original packaging within 30 calendar days of delivery.
+This fictional policy is for the CommerceFlow demo. The application does not process returns.
 
 ## Damaged items
 

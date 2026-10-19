@@ -2,8 +2,8 @@
 
 ## Investigating a cancellation
 
-Read the authorized administrative order explanation. Report its public reason and state with the observation timestamp.
-If historical cause is unavailable, say so. Never query another service database.
+Read the authorized administrative order explanation. Include its public reason, state and observation timestamp
+in your response. If the historical cause is unavailable, say so. Never query another service database.
 
 ## Uncertain stock or payments
 

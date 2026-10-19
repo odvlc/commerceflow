@@ -1,7 +1,8 @@
 # Retained local AI measurements
 
-Only synthetic fixtures and safe model/tool observations belong here. Credentials, cookies, hidden reasoning, raw
-browser traces and full local logs are excluded. Raw local logs remain ignored under `.cache/verification`.
+Store synthetic fixtures and safe model/tool observations here. Keep credentials, cookies, hidden
+reasoning, raw browser traces and full local logs out of this directory. Raw local logs remain
+ignored under `.cache/verification`.
 
 | Artifact                   | Measured scope                                                                                               | Limits                                                                                                         |
 |----------------------------|--------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
@@ -10,11 +11,12 @@ browser traces and full local logs are excluded. Raw local logs remain ignored u
 | `native-load-initial.json` | Cold/warm short generation, lexical retrieval, full policy runs, three paired baseline/mixed catalog samples | One inference request at a time; cold N=1; 48 GiB host; does not certify 32 GiB or container capacity          |
 | `native-hybrid-load.json`  | Explicit semantic retrieval N=20 and full policy runs N=10                                                   | Small native sample; not a production SLA or a hybrid-versus-lexical quality improvement claim                 |
 
-`corpus-v1.json` records its observed older tool-schema hash. Later candidates must retain separate prompt, schema,
-model and implementation identities; never overwrite an old report to make its results describe newer code. Run
-`scripts/summarize-ai-evaluation.py REPORT --require-complete` for denominators and split-level metrics. A citation-ID
-check establishes reference validity; factual assertion support needs a separate source review. No human review or
-external model judge has been claimed.
+`corpus-v1.json` records its observed older tool-schema hash. Keep the prompt, schema, model and
+implementation identities for each later candidate separate. An old report must continue to describe
+the code that produced it. Run `scripts/summarize-ai-evaluation.py REPORT --require-complete` for
+denominators and split-level metrics. Citation-ID checks validate references. Review the sources
+separately to assess support for each factual assertion. No human review or external model judge has
+been claimed.
 
 Later retained artifacts:
 
@@ -28,6 +30,7 @@ Later retained artifacts:
   authenticated targets/dashboard data, including fresh post-restart inference metrics.
 - `cpu-runtime.json`: actual CPU-only generation/residency; `kind-cpu-capacity.json`: real insufficient-memory event.
 
-Final deterministic/recovery validation includes an integer-overflow guard before tool dispatch and Cart-only resume
-without model admission. Those changes have separate final tests; candidate v3 remains immutable. Raw diagnostics
-remain ignored/private and are not included in CI artifact exports.
+Final deterministic/recovery validation includes an integer-overflow guard before tool dispatch and
+Cart-only resume without model admission. Those changes have separate final tests; candidate v3
+remains immutable. Raw diagnostics remain ignored/private and are not included in CI artifact
+exports.

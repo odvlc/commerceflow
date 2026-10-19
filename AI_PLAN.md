@@ -1,28 +1,30 @@
 # CommerceFlow generative AI and agentic systems implementation plan
 
-Created/implemented: 2026-10-18. Status: **local Llama implementation and native-model Compose/kind demonstrations
-verified; factual-review, full CPU/hardware and remote-CI release gates remain open**. See the current blocker section,
-dated phase evidence and [retained results](docs/ai-results/). The [prerequisite assessment](docs/ai-prerequisites.md)
-is the historical baseline before model download/implementation.
+Created/implemented: 2026-10-18. Status: local Llama implementation and native-model Compose/kind
+demonstrations verified; factual-review, full CPU/hardware and remote-CI release requirements remain
+open. See the current blocker section, dated phase evidence and
+[retained results](docs/ai-results/). The [prerequisite assessment](docs/ai-prerequisites.md) is the
+historical baseline before model download/implementation.
 
-This is the user-requested extension to `CODEX_PROMPT.md`, alongside the original 13-phase plan in
-[PLAN.md](PLAN.md). It preserves the original service boundaries, security, consistency and testing requirements.
-Original deployment checks are updated only where their actual evidence now exists; remaining acceptance gates stay
-open. Check a task here only after its implementation
-and stated verification pass; record actual commands, reports, model identities and blockers after each phase.
+This user-requested extension follows `CODEX_PROMPT.md` and the original 13-phase plan in
+[PLAN.md](PLAN.md). It preserves the original service boundaries, security, consistency and testing
+requirements. Update the original deployment checks only when execution evidence supports them.
+Leave the remaining acceptance requirements open. Check a task only after its implementation and
+stated verification pass. After each phase, record the commands, reports, model identities and
+blockers.
 
 ## 1. Outcome and release scope
 
-Build an independently deployable Java/Spring `ai-service` that powers an authenticated CommerceFlow copilot.
-Demonstrate generation, retrieval, typed tool use, durable orchestration, evaluation, observability and local
-deployment.
+Build an independently deployable Java/Spring `ai-service` that powers an authenticated CommerceFlow
+copilot. Demonstrate generation, retrieval, typed tool use, durable orchestration, evaluation,
+observability and local deployment.
 
 The first release has two increments:
 
-| Increment              | User-visible behavior                                                                                                                                                                            | Release gate                                                                                        |
-|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
-| Read-only copilot      | Answer curated demo-policy questions with citations; find/compare products; explain an owned order using current service data. A SUPPORT mode can read explicitly authorized order explanations. | A0–A6 and the read-only portion of A8; security/evaluation gates in A9; deployment evidence in A10. |
-| Confirmed cart actions | Propose an exact cart change, show its effects, obtain confirmation and execute the approved operation once within the documented retry window.                                                  | A7–A10, plus A11–A12 for complete kind/CI/final acceptance.                                         |
+| Increment              | User-visible behavior                                                                                                                                                                            | Release gate                                                                                           |
+|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| Read-only copilot      | Answer curated demo-policy questions with citations; find/compare products; explain an owned order using current service data. A SUPPORT mode can read explicitly authorized order explanations. | A0 to A6 and the read-only portion of A8; security/evaluation gates in A9; deployment evidence in A10. |
+| Confirmed cart actions | Propose an exact cart change, show its effects, obtain confirmation and execute the approved operation once within the documented retry window.                                                  | A7 to A10, plus A11 to A12 for complete kind/CI/final acceptance.                                      |
 
 Representative demonstrations:
 
@@ -33,10 +35,11 @@ Representative demonstrations:
    only when the user confirms that proposal.
 5. Pause on a proposal, restart `ai-service`, sign in again and resume without duplicating a cart mutation.
 
-Policy fixtures must be labeled synthetic demonstration policies. Do not invent shipping promises, return eligibility,
-stock availability or payment explanations. Checkout stays in the existing UI and order saga. Autonomous order creation,
-payment/refund operations, stock/product edits, shell/SQL tools, arbitrary URL fetching and operations remediation are
-outside this release. Multi-agent coordination, MCP exposure and hosted inference are later extensions.
+Policy fixtures must be labeled synthetic demonstration policies. Do not invent shipping promises,
+return eligibility, stock availability or payment explanations. Checkout stays in the existing UI
+and order saga. Autonomous order creation, payment/refund operations, stock/product edits, shell/SQL
+tools, arbitrary URL fetching and operations remediation are outside this release. Multi-agent
+coordination, MCP exposure and hosted inference are later extensions.
 
 ## 2. Decisions and compatibility gates
 
@@ -63,9 +66,10 @@ Official references checked while planning:
 - [Ollama FAQ](https://docs.ollama.com/faq): Docker Desktop on macOS lacks GPU acceleration; native/container network
   access, memory/context settings and local-only operation require deliberate configuration.
 
-Use no paid cloud resources or real customer data. Record final pins and evidence in `docs/dependencies.md` during A0.
-The original planning task installed no framework/model/image. The subsequent prerequisite audit resolved candidate
-AI dependencies in an ignored isolated probe, without changing production POMs or downloading models/images.
+Use no paid cloud resources or real customer data. Record final pins and evidence in
+`docs/dependencies.md` during A0. The original planning task installed no framework/model/image. The
+subsequent prerequisite audit resolved candidate AI dependencies in an ignored isolated probe,
+without changing production POMs or downloading models/images.
 
 ## 3. Target architecture and boundaries
 
@@ -98,9 +102,10 @@ flowchart LR
 - Knowledge indexing uses the AI service's own outbox and idempotent projection worker. Kafka is not required for
   every conversation turn; background ingestion must not create a second checkout orchestration path.
 
-Proposed package layout under `com.commerceflow.ai`: `api`, `application`, `domain`, `persistence`, `model`,
-`retrieval`, `tools`, `indexing`, `security`, `observability`. Use concrete records/classes and small interfaces around
-provider/HTTP boundaries; do not build a general-purpose agent framework.
+Proposed package layout under `com.commerceflow.ai`: `api`, `application`, `domain`, `persistence`,
+`model`, `retrieval`, `tools`, `indexing`, `security`, `observability`. Use concrete records/classes
+and small interfaces around provider/HTTP boundaries; do not build a general-purpose agent
+framework.
 
 ## 4. Identity, authority and confirmation contracts
 
@@ -111,29 +116,34 @@ provider/HTTP boundaries; do not build a general-purpose agent framework.
 | CUSTOMER          | CUSTOMER or ADMIN acting on their own resources   | Knowledge/product reads, owned order explanations, own cart reads; cart proposals after A7.                                                        |
 | SUPPORT           | SUPPORT or ADMIN explicitly choosing support mode | Public knowledge/product reads and the new scoped administrative order explanation read. No customer cart actions or payment/admin mutation tools. |
 
-The server selects the mode/tool registry from verified roles and explicit UI mode, never model text. Every
-conversation, run, event stream and proposal has an owner derived from JWT `sub`. A role granting access to an order
-does not grant access to another user's AI conversation. ADMIN's ordinary customer mode still uses ownership checks.
+The server selects the mode/tool registry from verified roles and explicit UI mode, never model
+text. Every conversation, run, event stream and proposal has an owner derived from JWT `sub`. A role
+granting access to an order does not grant access to another user's AI conversation. ADMIN's
+ordinary customer mode still uses ownership checks.
 
-User tools forward the current caller token to the owning API, which independently authorizes each operation. Never
-substitute the broad `commerceflow.internal` service credential to make a denied user call succeed. The shared security
-configuration currently has a special SUPPORT rule only for `GET /api/v1/admin/orders`; explicitly add/test the new
-support explanation route without broadening all administrative access.
+User tools forward the current caller token to the owning API, which independently authorizes each
+operation. Never substitute the broad `commerceflow.internal` service credential to make a denied
+user call succeed. The shared security configuration currently has a special SUPPORT rule only for
+`GET /api/v1/admin/orders`; explicitly add/test the new support explanation route without broadening
+all administrative access.
 
-Do not persist access/refresh tokens, send credentials to the model, or place them in tool arguments/logs. Keep the
-short-lived execution credential in process memory, associated with run/subject and token expiry. A restart or expiry
-transitions credential-dependent work to `AUTHENTICATION_REQUIRED`. Resuming requires a fresh caller JWT with matching
-subject and current roles; never silently elevate privileges or reuse a signed-out browser session for a write.
+Do not persist access/refresh tokens, send credentials to the model, or place them in tool
+arguments/logs. Keep the short-lived execution credential in process memory, associated with
+run/subject and token expiry. A restart or expiry transitions credential-dependent work to
+`AUTHENTICATION_REQUIRED`. Resuming requires a fresh caller JWT with matching subject and current
+roles; never silently elevate privileges or reuse a signed-out browser session for a write.
 
 ### Model requests versus application actions
 
-The model can request read tools and prepare a proposed cart action. It cannot call the confirmation endpoint or a
-mutating backend tool directly. A typed application executor performs a confirmed action without asking the model to
-rewrite its arguments. Product UUID, quantity, operation, cart revision and action hash are displayed/validated by code.
+The model can request read tools and prepare a proposed cart action. It cannot call the confirmation
+endpoint or a mutating backend tool directly. A typed application executor performs a confirmed
+action without asking the model to rewrite its arguments. Product UUID, quantity, operation, cart
+revision and action hash are displayed/validated by code.
 
-Confirmation binds the proposal ID/version, owner, mode, canonical arguments hash, target and expiry. A changed cart,
-changed arguments, expired proposal or changed authorization invalidates it. A normal chat reply such as “yes” does
-not bypass the explicit confirmation endpoint. Confirmation and rejection are auditable state transitions.
+Confirmation binds the proposal ID/version, owner, mode, canonical arguments hash, target and
+expiry. A changed cart, changed arguments, expired proposal or changed authorization invalidates it.
+A normal chat reply such as “yes” does not bypass the explicit confirmation endpoint. Confirmation
+and rejection are auditable state transitions.
 
 ## 5. Proposed persistence, APIs and recovery semantics
 
@@ -153,17 +163,18 @@ not bypass the explicit confirmation endpoint. Confirmation and rejection are au
 | `knowledge_index_jobs`              | Document version, phase/status, retry deadline/attempts, target index generation and error; unique document/version/index generation.                               |
 | `outbox_events`, `processed_events` | Existing local durability conventions for knowledge-change/index events. Mark projection completion only after the external index effect is acknowledged.           |
 
-Set foreign keys, check constraints, optimistic versions, bounded JSON/text fields and operational indexes. Store model
-identity, prompt hash and selected source IDs with a run so an evaluation/audit can reproduce its configuration.
-Initial retention targets: 7 days for conversation content and 30 days for sanitized run/action audit metadata;
-implement
-as configurable, documented cleanup with operator opt-in. Deletion must cancel pending work and remove associated
-derived data without deleting business orders/carts. No automatic deletion is authorized by writing this plan.
+Set foreign keys, check constraints, optimistic versions, bounded JSON/text fields and operational
+indexes. Store model identity, prompt hash and selected source IDs with a run so an evaluation/audit
+can reproduce its configuration. Initial retention targets: 7 days for conversation content and 30
+days for sanitized run/action audit metadata; implement as configurable, documented cleanup with
+operator opt-in. Deletion must cancel pending work and remove associated derived data without
+deleting business orders/carts. No automatic deletion is authorized by writing this plan.
 
 ### Proposed HTTP surface
 
-All write commands use canonical request hashes/idempotency where applicable, typed records, Bean Validation,
-ProblemDetail, UTC timestamps and correlation IDs. All user endpoints require JWTs and ownership checks.
+All write commands use canonical request hashes/idempotency where applicable, typed records, Bean
+Validation, ProblemDetail, UTC timestamps and correlation IDs. All user endpoints require JWTs and
+ownership checks.
 
 | Endpoint                                      | Contract                                                                                                                    |
 |-----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
@@ -184,10 +195,11 @@ ProblemDetail, UTC timestamps and correlation IDs. All user endpoints require JW
 | `GET /api/v1/orders/{id}/explanation`         | New owned Order Service API returning public state/reason/history; CUSTOMER/ADMIN, other owner -> 404.                      |
 | `GET /api/v1/admin/orders/{id}/explanation`   | New Order Service read for ADMIN/SUPPORT; explicitly authorized, sanitized DTO.                                             |
 
-Recommended errors include `AI_DISABLED`, `AI_MODEL_UNAVAILABLE`, `AI_CAPACITY_EXCEEDED`, `AI_RUN_LIMIT_REACHED`,
-`AI_AUTHENTICATION_REQUIRED`, `AI_PROPOSAL_EXPIRED`, `AI_APPROVAL_STALE`, `AI_ACTION_OUTCOME_UNKNOWN` and standard
-ownership/idempotency errors. Use 503 for unavailable inference, 429 for bounded admission, 409 for stale/conflicting
-actions, 404 for inaccessible owned resources, and normal 401/403 authentication/role semantics.
+Recommended errors include `AI_DISABLED`, `AI_MODEL_UNAVAILABLE`, `AI_CAPACITY_EXCEEDED`,
+`AI_RUN_LIMIT_REACHED`, `AI_AUTHENTICATION_REQUIRED`, `AI_PROPOSAL_EXPIRED`, `AI_APPROVAL_STALE`,
+`AI_ACTION_OUTCOME_UNKNOWN` and standard ownership/idempotency errors. Use 503 for unavailable
+inference, 429 for bounded admission, 409 for stale/conflicting actions, 404 for inaccessible owned
+resources, and normal 401/403 authentication/role semantics.
 
 ### Durable run state machine
 
@@ -208,47 +220,54 @@ stateDiagram-v2
     RUNNING --> CANCELLED
 ```
 
-Use `SELECT ... FOR UPDATE SKIP LOCKED` to claim short leases and a monotonically increasing fencing version to reject
-stale worker commits. Persist a step intent before dispatch and its result after acknowledgment; do not keep a
-transaction/row lock open during inference or HTTP. Serialize active runs per conversation to preserve message order;
-reject a second concurrent message with a clear conflict until the active run is terminal. Paused runs release workers.
+Use `SELECT ... FOR UPDATE SKIP LOCKED` to claim short leases and a monotonically increasing fencing
+version to reject stale worker commits. Persist a step intent before dispatch and its result after
+acknowledgment; do not keep a transaction/row lock open during inference or HTTP. Serialize active
+runs per conversation to preserve message order; reject a second concurrent message with a clear
+conflict until the active run is terminal. Paused runs release workers.
 
-Checkpoint only safe observable artifacts: selected evidence, model tool requests, tool results, proposals and final
-answers. A crash during model generation can regenerate an incomplete answer; never promise byte-for-byte LLM replay.
-Completed tools reuse durable results where fresh data is not required. Customer-specific data and approval
-preconditions must be refreshed before execution. Partial tokens are previews; persist committed final content and
-bounded progress events. A reconnect may receive a replacement preview after a crash, identified by attempt ID.
+Checkpoint only safe observable artifacts: selected evidence, model tool requests, tool results,
+proposals and final answers. A crash during model generation can regenerate an incomplete answer;
+never promise byte-for-byte LLM replay. Completed tools reuse durable results where fresh data is
+not required. Customer-specific data and approval preconditions must be refreshed before execution.
+Partial tokens are previews; persist committed final content and bounded progress events. A
+reconnect may receive a replacement preview after a crash, identified by attempt ID.
 
-Proposed initial limits, to tune using actual measurements: one concurrent model request, at most 8 queued runs,
-4 model rounds and 8 tool calls per run, 120 seconds active execution time, 45 seconds per model call, 5 seconds per
-ordinary tool call, at most 2 transient retries, 4,000 user characters and 6 retrieved chunks. Pause time does not
-consume
-active execution time. Proposals expire after 5 minutes; authentication pauses expire after 15 minutes. Token/context
-budgets must fit the selected model; truncate by dropping whole older messages/evidence, never authorization context.
+Proposed initial limits, to tune using actual measurements: one concurrent model request, at most 8
+queued runs, 4 model rounds and 8 tool calls per run, 120 seconds active execution time, 45 seconds
+per model call, 5 seconds per ordinary tool call, at most 2 transient retries, 4,000 user characters
+and 6 retrieved chunks. Pause time does not consume active execution time. Proposals expire after 5
+minutes; authentication pauses expire after 15 minutes. Token/context budgets must fit the selected
+model; truncate by dropping whole older messages/evidence, never authorization context.
 
 ### Cart concurrency and ambiguous outcomes
 
-The current cart has a numeric version and 24-hour Redis request memos, but no conditional mutation API. Before AI
-writes, add an opaque cart revision/ETag with an incarnation UUID plus counter and optional `If-Match` support for
-existing clients; AI execution must always supply it. An incarnation prevents an expired/recreated cart from matching
-an old numeric version. Lua must check an existing matching request memo **before** its revision precondition so a
-lost-response retry returns the original result. A mismatched request hash still fails.
+The current cart has a numeric version and 24-hour Redis request memos, but no conditional mutation
+API. Before AI writes, add an opaque cart revision/ETag with an incarnation UUID plus counter and
+optional `If-Match` support for existing clients; AI execution must always supply it. An incarnation
+prevents an expired/recreated cart from matching an old numeric version. Lua must check an existing
+matching request memo before its revision precondition so a lost-response retry returns the original
+result. A mismatched request hash still fails.
 
-Confirm under a PostgreSQL lock, persist one execution ID/key, commit, then call Cart outside the transaction. All
-retries and competing workers use the same key and exact arguments. If the response is lost, reconcile/retry only
-inside the known downstream memo-retention horizon and with the same cart incarnation/preconditions. Configure the
-maximum automatic recovery window to be shorter than the cart memo TTL. If Redis state or memo validity is uncertain,
-record `OUTCOME_UNKNOWN`, show current cart state and require review; do not invent success or retry with a new key.
-Cancellation cannot undo a request already sent. Never describe this cross-store workflow as distributed exactly-once.
+Confirm under a PostgreSQL lock, persist one execution ID/key, commit, then call Cart outside the
+transaction. All retries and competing workers use the same key and exact arguments. If the response
+is lost, reconcile/retry only inside the known downstream memo-retention horizon and with the same
+cart incarnation/preconditions. Configure the maximum automatic recovery window to be shorter than
+the cart memo TTL. If Redis state or memo validity is uncertain, record `OUTCOME_UNKNOWN`, show
+current cart state and require review; do not invent success or retry with a new key. Cancellation
+cannot undo a request already sent. Never describe this cross-store workflow as distributed
+exactly-once.
 
 ## 6. Implementation phases and dependencies
 
-Phases are sequential. Some UI shell work can be prepared earlier, but each acceptance gate depends on the preceding
-verified behavior. Security, tests and operational evidence are implemented throughout, not deferred until A9.
+Follow the phases in order. UI shell work may start earlier, but each acceptance check depends on
+the preceding verified behavior. Implement security and tests, and collect operational evidence
+throughout the work; do not defer them until A9.
 
-### A0 — Baseline, compatibility, model selection and architecture record
+### A0: Baseline, compatibility, model selection and architecture record
 
-Depends on: original CommerceFlow implementation/source baseline and the existing verification record.
+Depends on: original CommerceFlow implementation/source baseline and the existing verification
+record.
 
 - [x] Re-run the baseline Java/frontend checks; record actual current results rather than treating historical 43/2/4
   counts as a new execution. Inspect available Docker/kind/Ollama and machine memory/disk.
@@ -260,16 +279,18 @@ Depends on: original CommerceFlow implementation/source baseline and the existin
   holdout subset. Include owned-order, knowledge, product and adversarial examples.
 - [x] Write `docs/adr/0002-ai-copilot.md`, update dependency evidence and record initial limits/configuration.
 
-Acceptance: baseline passes or precise existing failures/blockers are recorded; at least one real compatible model
-configuration is demonstrated before any claim of working AI. If model execution is unavailable, source work may
-continue under the original environment-limits rule, with all real-model acceptance gates open.
+Acceptance: baseline passes or precise existing failures/blockers are recorded; at least one real
+compatible model configuration is demonstrated before any claim of working AI. If model execution is
+unavailable, source work may continue under the original environment-limits rule, with all
+real-model acceptance requirements open.
 
-Prerequisite evidence (2026-10-18): fresh baseline 43 Java / 2 frontend unit / 4 Chrome tests, frontend lint/build and
-Compose configuration pass. Isolated Boot 4.1.1 / Spring AI 2.0.1 resolution/compilation/classloading and Jackson 3
-serialization pass, with Elasticsearch client 9.4.5 retained. No real-model call was possible because Ollama has no
-downloaded models. A0 remains incomplete. Exact results/limits: [prerequisite assessment](docs/ai-prerequisites.md).
+Prerequisite evidence (2026-10-18): fresh baseline 43 Java / 2 frontend unit / 4 Chrome tests,
+frontend lint/build and Compose configuration pass. Isolated Boot 4.1.1 / Spring AI 2.0.1
+resolution/compilation/classloading and Jackson 3 serialization pass, with Elasticsearch client
+9.4.5 retained. No real-model call was possible because Ollama has no downloaded models. A0 remains
+incomplete. Exact results/limits: [prerequisite assessment](docs/ai-prerequisites.md).
 
-### A1 — AI module, persistence, security and command APIs
+### A1: AI module, persistence, security and command APIs
 
 Depends on: A0 compatibility/architecture decisions.
 
@@ -282,13 +303,14 @@ Depends on: A0 compatibility/architecture decisions.
   `AI_ENABLED`. Keep disabled AI from breaking existing gateway/storefront health or startup.
 - [x] Implement capabilities/status, consistent errors/correlation, health/metrics and generated OpenAPI contracts.
 
-Verification: real PostgreSQL migration/rollback tests; concurrent same-key commands create one message/run; changed
-content conflicts; all endpoints reject cross-owner access, wrong issuer/audience and unauthorized modes.
+Verification: real PostgreSQL migration/rollback tests; concurrent same-key commands create one
+message/run; changed content conflicts; all endpoints reject cross-owner access, wrong
+issuer/audience and unauthorized modes.
 
-Acceptance: durable secured command/status APIs work through the real gateway without requiring model availability
-for baseline commerce functionality.
+Acceptance: durable secured command/status APIs work through the real gateway without requiring
+model availability for baseline commerce functionality.
 
-### A2 — Authoritative order explanations
+### A2: Authoritative order explanations
 
 Depends on: A1 and the unchanged existing saga invariants.
 
@@ -303,14 +325,16 @@ Depends on: A1 and the unchanged existing saga invariants.
 - [x] Add explicit SUPPORT authorization only to the intended new administrative GET route. Customer explanation
   tools must never fall back to the ADMIN payment endpoint.
 
-Verification: real successful/declined/stock/timeout/late-payment workflows; HTTP ownership and role checks; rollback
-and duplicate-event history deduplication; existing saga/concurrency suite still passes.
+Verification: real successful/declined/stock/timeout/late-payment workflows; HTTP ownership and role
+checks; rollback and duplicate-event history deduplication; existing saga/concurrency suite still
+passes.
 
-Acceptance: “why cancelled” can be answered from an authorized, durable source. Missing history is reported honestly.
+Acceptance: “why cancelled” can be answered from an authorized, durable source. Missing history is
+reported honestly.
 
-### A3 — Curated knowledge ingestion and lexical retrieval
+### A3: Curated knowledge ingestion and lexical retrieval
 
-Depends on: A1–A2; A0 corpus definition.
+Depends on: A1 to A2; A0 corpus definition.
 
 - [x] Add `knowledge/` synthetic policy/product-guide/runbook fixtures with IDs, versions, audience, effective dates
   and provenance. Only the appropriate audience is retrievable in each conversation mode.
@@ -325,13 +349,15 @@ Depends on: A1–A2; A0 corpus definition.
 - [x] Serialize/fence rebuild and live indexing so concurrent document updates/tombstones cannot be lost or resurrected
   after alias swap. Return citations only to authorized sources and a version that was actually retrieved.
 
-Verification: real PostgreSQL/Kafka/Elasticsearch ingestion/replay/outage tests; unchanged import idempotency, changed
-version activation, stale rejection, tombstones, audience filtering and concurrent rebuild/indexing tests.
+Verification: real PostgreSQL/Kafka/Elasticsearch ingestion/replay/outage tests; unchanged import
+idempotency, changed version activation, stale rejection, tombstones, audience filtering and
+concurrent rebuild/indexing tests.
 
-Acceptance: useful lexical evidence and valid source references are available without an embedding/model dependency;
-an indexing outage retains recoverable work and is reported as stale/unavailable rather than hidden.
+Acceptance: useful lexical evidence and valid source references are available without an
+embedding/model dependency; an indexing outage retains recoverable work and is reported as
+stale/unavailable rather than hidden.
 
-### A4 — Embeddings, hybrid retrieval and grounded generation
+### A4: Embeddings, hybrid retrieval and grounded generation
 
 Depends on: A0 real embedding configuration and A3 verified lexical pipeline.
 
@@ -346,14 +372,14 @@ Depends on: A0 real embedding configuration and A3 verified lexical pipeline.
   Catalog before presenting actionable choices; do not embed personal order data or synthesize policy eligibility.
 - [x] Define explicit lexical fallback when embeddings fail and clear unavailability when generation itself fails.
 
-Verification: real selected-model/embedding tests; dimension-change rebuild; prompt-injection fixtures; citation-ID
-validation; holdout retrieval/grounding evaluation and absent-evidence responses. No claim of semantic improvement
-unless measured against the same corpus/baseline.
+Verification: real selected-model/embedding tests; dimension-change rebuild; prompt-injection
+fixtures; citation-ID validation; holdout retrieval/grounding evaluation and absent-evidence
+responses. No claim of semantic improvement unless measured against the same corpus/baseline.
 
-Acceptance: grounded answers with working citations and measured retrieval quality; failures produce honest degraded
-responses and never silently call a paid/cloud model.
+Acceptance: grounded answers with working citations and measured retrieval quality; failures produce
+honest degraded responses and never silently call a paid/cloud model.
 
-### A5 — Typed, authorized read tools
+### A5: Typed, authorized read tools
 
 Depends on: A2 order explanations and A4 generation/retrieval.
 
@@ -368,13 +394,14 @@ Depends on: A2 order explanations and A4 generation/retrieval.
 - [x] Register tools through Spring AI with application-enforced validation/dispatch; prove that its automatic tool
   loop cannot bypass orchestration budgets, checkpointing or the future confirmation boundary.
 
-Verification: actual HTTP calls to real secured services; real-model tool-choice checks; negative tests for arbitrary
-targets, cross-owner UUIDs, admin payment/stock access, role changes and malformed tool arguments.
+Verification: actual HTTP calls to real secured services; real-model tool-choice checks; negative
+tests for arbitrary targets, cross-owner UUIDs, admin payment/stock access, role changes and
+malformed tool arguments.
 
-Acceptance: the copilot can investigate a question through multiple authorized read calls without broader authority
-than the user. SUPPORT access never unlocks cart/customer actions.
+Acceptance: the copilot can investigate a question through multiple authorized read calls without
+broader authority than the user. SUPPORT access never unlocks cart/customer actions.
 
-### A6 — Durable bounded orchestration and streaming
+### A6: Durable bounded orchestration and streaming
 
 Depends on: A1 data/state APIs and A5 verified tool dispatch.
 
@@ -391,15 +418,16 @@ Depends on: A1 data/state APIs and A5 verified tool dispatch.
 - [x] On cancellation, prevent future steps and reconcile any already-issued request. A partial model answer is
   explicitly non-final; only a committed final message is presented as complete.
 
-Verification: restart during generation/read tools, two competing workers, lease expiry, duplicate messages, SSE
-reconnect/replay, token expiry and role change, queue saturation and slow/looping model behavior.
+Verification: restart during generation/read tools, two competing workers, lease expiry, duplicate
+messages, SSE reconnect/replay, token expiry and role change, queue saturation and slow/looping
+model behavior.
 
-Acceptance: read-only multi-step investigations finish or stop with an explicit bounded state and recover after
-restart. Safe public progress is visible without exposing hidden model reasoning.
+Acceptance: read-only multi-step investigations finish or stop with an explicit bounded state and
+recover after restart. Safe public progress is visible without exposing hidden model reasoning.
 
-### A7 — Confirmed cart changes and action reconciliation
+### A7: Confirmed cart changes and action reconciliation
 
-Depends on: A5–A6; read-only agent correctness before enabling any write capability.
+Depends on: A5 to A6; read-only agent correctness before enabling any write capability.
 
 - [x] Extend Cart's representation with an opaque incarnation-aware revision/ETag and atomic conditional mutations.
   Preserve current clients; require `If-Match` for AI execution. Check request memo/hash before revision in Lua.
@@ -415,14 +443,15 @@ Depends on: A5–A6; read-only agent correctness before enabling any write capab
   outage/state uncertainty with reviewable errors. Persist an unknown outcome rather than asserting success.
 - [x] Keep checkout, cancellation/refund and admin mutations outside the tool registry for this release.
 
-Verification: 100 concurrent confirmations cause one cart effect; duplicate confirmation returns the same execution;
-crash before call/after backend commit/before local result persistence; cart ABA expiry; changed arguments; token
-expiry; stale revision; Redis outage and deduplication-window expiry; all existing cart concurrency tests pass.
+Verification: 100 concurrent confirmations cause one cart effect; duplicate confirmation returns the
+same execution; crash before call/after backend commit/before local result persistence; cart ABA
+expiry; changed arguments; token expiry; stale revision; Redis outage and deduplication-window
+expiry; all existing cart concurrency tests pass.
 
-Acceptance: every mutation has an exact user-confirmed proposal and audit record; retries do not add duplicate units
-within supported guarantees; ambiguous outcomes never trigger blind re-execution.
+Acceptance: every mutation has an exact user-confirmed proposal and audit record; retries do not add
+duplicate units within supported guarantees; ambiguous outcomes never trigger blind re-execution.
 
-### A8 — React copilot experience
+### A8: React copilot experience
 
 Depends on: A6 for read-only UI; A7 before enabling action controls.
 
@@ -437,15 +466,17 @@ Depends on: A6 for read-only UI; A7 before enabling action controls.
 - [x] Handle model warmup/unavailability, queue limits, offline/reconnect and unknown action outcomes with actionable
   messages. Preserve the storefront and checkout when AI is disabled or unavailable.
 
-Verification: frontend lint/unit/build, accessible keyboard interactions, mobile viewport; real browser PKCE, cited
-answer, order explanation, support restrictions, proposal confirmation, logout/isolation and reconnect/restart flows.
+Verification: frontend lint/unit/build, accessible keyboard interactions, mobile viewport; real
+browser PKCE, cited answer, order explanation, support restrictions, proposal confirmation,
+logout/isolation and reconnect/restart flows.
 
-Acceptance: the complete read-only and confirmed-action demonstrations work through the real gateway/UI; users can
-always distinguish proposed actions, executed actions and incomplete/unknown results.
+Acceptance: the complete read-only and confirmed-action demonstrations work through the real
+gateway/UI; users can always distinguish proposed actions, executed actions and incomplete/unknown
+results.
 
-### A9 — Evaluation, security/failure coverage and observability
+### A9: Evaluation, security/failure coverage and observability
 
-Depends on: A0 frozen fixtures and A4–A8 behavior; extend checks continuously in earlier phases.
+Depends on: A0 frozen fixtures and A4 to A8 behavior; extend checks continuously in earlier phases.
 
 - [x] Build a versioned local evaluation harness with 80 labeled cases: 20 retrieval/citation, 20 product/order
   investigation, 20 tool/action/recovery, 20 authorization/injection/abstention. Reserve 20 cases as a holdout before
@@ -469,17 +500,19 @@ Depends on: A0 frozen fixtures and A4–A8 behavior; extend checks continuously 
   queueing, context/concurrency/model settings and baseline commerce impact. Set a regression budget after measuring
   repeatable baselines; do not invent an AI throughput/SLA target for the Mac.
 
-Verification: deterministic/infrastructure/security suites plus separately reported real-model holdout results; real
-Prometheus/Grafana samples and reproducible measured load artifacts. A scripted model adapter may test failure branches
-in unit tests, but never counts as real-model functionality/evaluation verification.
+Verification: deterministic/infrastructure/security suites plus separately reported real-model
+holdout results; real Prometheus/Grafana samples and reproducible measured load artifacts. A
+scripted model adapter may test failure branches in unit tests, but never counts as real-model
+functionality/evaluation verification.
 
-Acceptance: critical behavior passes with zero unsafe business effects, quality meets declared thresholds, meaningful
-AI metrics are visible and capacity/degraded behavior is measured honestly.
+Acceptance: critical behavior passes with zero unsafe business effects, quality meets declared
+thresholds, meaningful AI metrics are visible and capacity/degraded behavior is measured honestly.
 
-### A10 — Compose, model profiles and non-destructive startup
+### A10: Compose, model profiles and non-destructive startup
 
-Depends on: A0 chosen runtime/models and A1–A9 accepted source/native behavior. Full acceptance also requires closing
-the original Compose startup/image verification checks from PLAN.md on a Docker-enabled machine.
+Depends on: A0 chosen runtime/models and A1 to A9 accepted source/native behavior. Full acceptance
+also requires closing the original Compose startup/image verification checks from PLAN.md on a
+Docker-enabled machine.
 
 - [x] Add AI application multi-stage/nonroot image, environment configuration, owned PostgreSQL provisioning,
   gateway/Prometheus/Grafana integration and optional Compose profiles.
@@ -500,17 +533,19 @@ the original Compose startup/image verification checks from PLAN.md on a Docker-
 - [ ] Measure memory for Docker, native models, OS and IDE together on the 32 GB target. Start with one inference
   slot and bounded context; reduce profiles/model/context if measured pressure requires it.
 
-Verification: shell syntax/parser tests, profile/Compose configuration checks for all modes, actual image builds,
-native-model reachability from container, CPU model startup/warmup, full browser demo, AI-disabled startup, model
-outage,
-additive provisioning on an existing volume and application/infrastructure restart persistence.
+Verification: shell syntax/parser tests, profile/Compose configuration checks for all modes, actual
+image builds, native-model reachability from container, CPU model startup/warmup, full browser demo,
+AI-disabled startup, model outage, additive provisioning on an existing volume and
+application/infrastructure restart persistence.
 
-Acceptance: both documented local inference modes run as described or a specific mode remains unchecked with its
-blocker; standard CommerceFlow startup still works without AI or a downloaded model.
+Acceptance: both documented local inference modes run as described or a specific mode remains
+unchecked with its blocker; standard CommerceFlow startup still works without AI or a downloaded
+model.
 
-### A11 — kind deployment, persistence and recovery
+### A11: kind deployment, persistence and recovery
 
-Depends on: A10 image/runtime verification and the original kind deployment acceptance prerequisites.
+Depends on: A10 image/runtime verification and the original kind deployment acceptance
+prerequisites.
 
 - [x] Add an optional Kustomize AI overlay with application Deployment/ClusterIP, owned credentials/config, probes,
   CPU/memory budgets, bounded-worker configuration and network policies for exact dependencies.
@@ -525,15 +560,17 @@ Depends on: A10 image/runtime verification and the original kind deployment acce
 - [x] Exercise restarts during read runs, waiting approvals, in-flight cart responses and index rebuilding. Verify
   PostgreSQL/PVC state, fresh authentication, same execution keys and no duplicate cart effects.
 
-Verification: render/schema-check base and AI overlay; actual kind deploy/browser demo; pod rollout/model restart/PVC
-recovery; concurrency/fencing and readiness behavior. Schema validity alone never checks runtime boxes.
+Verification: render/schema-check base and AI overlay; actual kind deploy/browser demo; pod
+rollout/model restart/PVC recovery; concurrency/fencing and readiness behavior. Schema validity
+alone never checks runtime boxes.
 
-Acceptance: a local persisted AI deployment recovers predictably and closes the relevant original Kubernetes restart
-check. Document the single-node availability/model-capacity limits.
+Acceptance: a local persisted AI deployment recovers predictably and closes the relevant original
+Kubernetes restart check. Document the single-node availability/model-capacity limits.
 
-### A12 — CI, documentation, demonstration and final audit
+### A12: CI, documentation, demonstration and final audit
 
-Depends on: A9 evaluation gates and A10–A11 execution evidence, or explicitly recorded environment blockers.
+Depends on: A9 evaluation gates and A10 to A11 execution evidence, or explicitly recorded
+environment blockers.
 
 - [x] Extend CI with Java/frontend regression suites, AI integration tests, manifest checks and AI image build.
   Maintain distinct deterministic, real-infrastructure and real-model reports.
@@ -549,8 +586,9 @@ Depends on: A9 evaluation gates and A10–A11 execution evidence, or explicitly 
 - [x] Audit every matrix row below against executed evidence. Update PLAN.md and this plan with actual outcomes,
   commands and unresolved work; never substitute source completion for deployment/model verification.
 
-Acceptance: reproducible documented AI behavior, passing quality/security/business invariants, runnable CI/local
-commands and a complete evidence matrix with any deployment/resource blockers left open.
+Acceptance: reproducible documented AI behavior, passing quality/security/business invariants,
+runnable CI/local commands and a complete evidence matrix with any deployment/resource blockers left
+open.
 
 ## 7. Planned file changes
 
@@ -565,12 +603,14 @@ commands and a complete evidence matrix with any deployment/resource blockers le
 | Kubernetes         | Existing kind/image-loading/monitoring helpers                                                                         | Optional AI Kustomize overlay, CPU model PVC/Job and recovery checks.                          |
 | Verification/docs  | `.github/workflows/verify.yaml`, PLAN/README/dependency and relevant existing docs                                     | Evaluation fixtures/harness/results, Copilot dashboard, AI ADR/docs/load scenarios.            |
 
-Keep project edits additive and reviewable. Preserve unrelated user formatting/work. Existing service tests must pass
-after every affected phase; changed test counts are evidence only after execution.
+Keep project edits additive and reviewable. Preserve unrelated user formatting/work. Existing
+service tests must pass after every affected phase; changed test counts are evidence only after
+execution.
 
 ## 8. Planned validation commands and evidence
 
-The following are execution instructions for implementation phases, **not results produced by this plan**:
+The following are execution instructions for implementation phases, not results produced by this
+plan:
 
 ```bash
 # Existing baseline / regression commands
@@ -588,10 +628,11 @@ bash scripts/compose-up.sh --ai=container
 bash scripts/ai-demo.sh
 ```
 
-Also execute actual Compose configuration/image/startup checks, promtool/dashboard queries, Kustomize/kubeconform,
-kind recovery and separately reported real-model evaluation/load commands. Document their exact paths/options after
-the scripts/profiles exist. Preserve raw measurements and distinguish test-double checks from real model/infrastructure
-results. No application tests were rerun for this documentation-only change.
+Also execute actual Compose configuration/image/startup checks, promtool/dashboard queries,
+Kustomize/kubeconform, kind recovery and separately reported real-model evaluation/load commands.
+Document their exact paths/options after the scripts/profiles exist. Preserve raw measurements and
+distinguish test-double checks from real model/infrastructure results. No application tests were
+rerun for this documentation-only change.
 
 ## 9. Final AI acceptance matrix
 
@@ -613,26 +654,29 @@ results. No application tests were rerun for this documentation-only change.
 
 ## 10. Current blockers and next action
 
-Implementation and local native-model deployment are executed through A12. Both pinned models work in native Ollama;
-standalone CPU Docker generation/embeddings and model-volume restart also pass. Full native-model Compose and kind
-browser/recovery demonstrations pass. The final regression is 82 Java tests, 5 frontend tests plus lint/build; the
-retained v3 frozen corpus passed 240 procedural checks with zero observed unsafe effects. This is not a 95% factual
-assertion measurement. Independent source/wording review stays open, with concerns in
+Implementation and local native-model deployment are executed through A12. Both pinned models work
+in native Ollama; standalone CPU Docker generation/embeddings and model-volume restart also pass.
+Full native-model Compose and kind browser/recovery demonstrations pass. The final regression is 82
+Java tests, 5 frontend tests plus lint/build; the retained v3 frozen corpus passed 240 procedural
+checks with zero observed unsafe effects. This is not a 95% factual assertion measurement.
+Independent source/wording review stays open, with concerns in
 `docs/ai-results/source-review-v3.md`.
 
-The full CPU kind attempt produced an actual `FailedScheduling: Insufficient memory` event for its 6 GiB model request
-on the current 7.75 GiB node. Its pending workload/check Job was stopped after retaining evidence; model PVC and all
-business/AI data were preserved, and native mode restored. Full CPU Compose co-location is likewise not certified:
-measured commerce containers plus CPU model residency exceed this VM. No Docker Desktop setting was changed.
-The host has 48 GiB, so the specified 32 GiB hardware acceptance is unverified. CI source/actionlint/manifest/image
-checks pass locally; GitHub-hosted/self-hosted remote workflows have not been dispatched.
+The full CPU kind attempt produced an actual `FailedScheduling: Insufficient memory` event for its 6
+GiB model request on the current 7.75 GiB node. Its pending workload/check Job was stopped after
+retaining evidence; model PVC and all business/AI data were preserved, and native mode restored.
+Full CPU Compose co-location is likewise not certified: measured commerce containers plus CPU model
+residency exceed this VM. No Docker Desktop setting was changed. The host has 48 GiB, so the
+specified 32 GiB hardware acceptance is unverified. CI source/actionlint/manifest/image checks pass
+locally; GitHub-hosted/self-hosted remote workflows have not been dispatched.
 
-Next actions: independent factual review with assertion denominators; full CPU deployment/restart on sufficient
-measured VM capacity; 32 GiB target verification; authorized remote CI execution. No cloud provider, semantic product
-indexing, general operations agent, MCP or multi-agent scope was added. Detailed completed checks and failed/retested
-attempts follow; source validity is never substituted for an unexecuted deployment/model gate.
+Next actions: independent factual review with assertion denominators; full CPU deployment/restart on
+sufficient measured VM capacity; 32 GiB target verification; authorized remote CI execution. No
+cloud provider, semantic product indexing, general operations agent, MCP or multi-agent scope was
+added. Detailed completed checks and failed/retested attempts follow; source validity is never
+substituted for an unexecuted deployment/model gate.
 
-## Implementation evidence — 2026-10-18
+## Implementation evidence: 2026-10-18
 
 ### A0 completed
 
@@ -734,7 +778,7 @@ attempts follow; source validity is never substituted for an unexecuted deployme
 - Ephemeral browser fixtures now support ordered `.cache/verification/browser-stop` shutdown; application contexts
   close before their native dependencies. Persistent process/pod restart acceptance remains A10/A11.
 
-### A9 development evidence (release gates remain open)
+### A9 development evidence (release requirements remain open)
 
 - `./mvnw -B -pl workflow-tests -am -Pai-evaluation -Dai.eval.split=development -Dai.eval.repeats=1 verify`:
   full 62-test regression PASS; real-model development evaluation 56/60 scenarios PASS, 15/15 retrieval recall@5,
@@ -755,7 +799,7 @@ attempts follow; source validity is never substituted for an unexecuted deployme
 
 - Full first candidate: `./mvnw -B -pl workflow-tests -am -Pai-real-model,ai-evaluation verify` passed 240 real-model
   scenarios at 231 broad passes, with zero observed unauthorized/unconfirmed effects. Retained `corpus-v1.json` is
-  explicitly **lexical**: the fixture omitted the semantic flag. Its tool-selection rubric also admitted empty product
+  explicitly lexical: the fixture omitted the semantic flag. Its tool-selection rubric also admitted empty product
   results, so that broad rate is not reported as task completion. Neither issue is hidden by checking a release gate.
 - Corrected both native/evaluation fixtures to explicitly enable embeddings. The new candidate requires actual hybrid
   retrieval, evidence-backed positive answers and two distinct products for a comparison. Failed cases remain in recall
@@ -882,10 +926,10 @@ attempts follow; source validity is never substituted for an unexecuted deployme
   inference acceptance stays open; it did not silently skip or claim CPU model readiness. Native mode restored with
   `bash scripts/kind-up.sh --ai=host --skip-build`, final image rolled and actual cited inference rechecked.
 
-### A12 implemented and locally verified; final release gates explicit
+### A12 implemented and locally verified; final release requirements explicit
 
-- Final `./mvnw -B -pl workflow-tests -am -Pai-real-model verify`: BUILD SUCCESS, **82 tests**, no failures/errors/skips
-  (30 AI core, 5 actual-model, all existing business/security suites). Includes new proposal-only resume during model
+- Final `./mvnw -B -pl workflow-tests -am -Pai-real-model verify`: BUILD SUCCESS, 82 tests, no failures/errors/skips (30
+  AI core, 5 actual-model, all existing business/security suites). Includes new proposal-only resume during model
   outage and integral-overflow rejection before dispatch. Valid model/tool behavior is unchanged from v3; no new full
   quality-corpus execution is claimed for the later recovery/admission/overflow hardening.
 - Frontend lint, 5 unit tests and production build PASS. Browser tooling now supports an external built storefront;
@@ -906,6 +950,7 @@ attempts follow; source validity is never substituted for an unexecuted deployme
   recovery/verification, README and PLAN are updated. Source and runtime outcomes, failed/retested attempts and blockers
   are distinguished throughout. Local tests/evidence are retained; no commit/push, paid/remote deployment, data reset,
   cluster deletion or Docker Desktop allocation change was performed.
-- Remaining release gates: independent assertion-level factual/wording review (>=95% not claimed); full CPU coexistence/
+- Remaining release requirements: independent assertion-level factual/wording review (>=95% not claimed); full CPU
+  coexistence/
   kind model-PVC execution with sufficient VM memory; the specified 32 GiB host target; remote CI. Corresponding matrix
   rows remain unchecked. The complete native-model implementation/deployment is available locally.
