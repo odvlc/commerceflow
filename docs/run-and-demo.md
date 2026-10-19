@@ -134,6 +134,13 @@ while reservations remain pending. Run it before the demo; rerunning it resets t
 The importer uses the ADMIN API for the curated policy fixtures and waits for successful indexing. Complete it before
 asking the copilot policy questions. These scripts use the documented default local demo accounts.
 
+Re-running imports with unchanged fixtures is safe. If you edit a policy's text or metadata, including Markdown
+formatting, increase that source's `version` in `knowledge/manifest.json` before importing again. Keep its `sourceId`
+unchanged. The current formatted fixtures are version 2. HTTP 409 with `IDEMPOTENCY_CONFLICT` means the same request
+key was previously used with different contents; `KNOWLEDGE_VERSION_CONFLICT` means the source revision is stale or
+reuses a published version with changed contents. Changing only the request key does not resolve a source-version
+conflict. Publish a higher version rather than resetting the database or deleting existing knowledge.
+
 ## 5. Open the applications and sign in
 
 | Application             | Address                       | Default local login                    |
@@ -252,6 +259,59 @@ docker compose -f infra/compose.yaml --profile full --profile ai \
 | Policy answer has no sources        | Check knowledge import completion and AI/indexing logs.                      |
 | Containers fail readiness           | Inspect the failing service's logs and Docker memory/disk availability.      |
 | Grafana panels are initially empty  | Generate requests and wait for the next authenticated Prometheus scrape.     |
+
+### Port 8180 already allocated
+
+If startup reports `Bind for 127.0.0.1:8180 failed: port is already allocated`, another container or process owns
+Keycloak's browser port. Image builds can succeed even though this later container-start step fails. Identify Docker
+port mappings first:
+
+```bash
+docker ps --format 'table {{.Names}}\t{{.Ports}}\t{{.Status}}'
+```
+
+If `commerceflow-control-plane` publishes `8180` and `3000`, this project's kind stack is still running. Pause that
+node and resume Compose:
+
+```bash
+docker stop commerceflow-control-plane
+bash scripts/compose-up.sh --ai=host
+```
+
+The stopped node and its persistent data remain available. If a different container owns the port, identify its
+purpose before stopping it. Do not terminate Docker Desktop itself: `lsof` can show Docker's forwarding process
+rather than the actual container that owns the published port.
+
+A failed port-binding attempt can leave the Keycloak container without its normal Docker network attachment. If the
+port is free but Keycloak then exits with `UnknownHostException: postgres`, inspect its logs and recreate only that
+container before retrying startup:
+
+```bash
+docker compose -f infra/compose.yaml logs --tail=100 keycloak
+docker compose -f infra/compose.yaml --profile full up -d --no-deps --force-recreate \
+  --wait --wait-timeout 180 keycloak
+bash scripts/compose-up.sh --ai=host
+```
+
+This retains Keycloak's existing PostgreSQL database. It is not a database reset.
+
+### Flyway migration checksum mismatch
+
+If an application exits with `Migration checksum mismatch`, compare the migration file with the exact Git version
+originally applied to its existing database. Formatting SQL can change Flyway's checksum even when the SQL behavior is
+unchanged. Keep the project's approved SQL formatting. For a local database created before the intentional formatting
+change, a one-time reviewed [Flyway repair](https://documentation.red-gate.com/flyway/reference/commands/repair) can
+align the recorded checksums with that approved source. Before repair, verify SQL-token equivalence with the applied
+version, check exact old/new checksums, back up migration history, and ensure validation reports only those known
+checksum mismatches. Use the same complete service-owned migration locations as normal startup. After repair, validate
+again and confirm that only the expected checksum fields changed, with no removed/deleted migration entries.
+
+The local formatting transition was repaired this way for Order V3 and AI V1/V3/V4/V5. Verification and before/after
+metadata backups are retained in `.cache/verification/flyway-format-repair`; no application schema or commerce data was
+changed. Future schema changes belong in new migrations, and approved migration formatting should remain stable.
+Do not delete volumes, disable validation, edit Flyway history blindly or add automatic repair to application startup.
+
+### Stop Compose while retaining data
 
 Stop all Compose components while preserving their named volumes:
 

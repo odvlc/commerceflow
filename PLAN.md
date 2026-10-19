@@ -495,3 +495,79 @@ successfully. No remote deployment, Git initialization/commit or persisted user-
   harness from separately launched Vite, IntelliJ, Docker, kind and Ollama processes.
 - [x] Verify the description against `BrowserTestStack` stop-file polling, startup marker removal
   and cleanup order; validate guide Bash examples and `git diff --check`. No processes were stopped.
+
+### Recover Compose port allocation and migration validation (2026-10-18)
+
+- [x] Identify the actual owner of localhost 8180/3000: the existing `commerceflow-control-plane`
+  kind node. Pause that project-owned node, preserving its container/PVC state. The initial sandboxed
+  Docker inspection lacked socket permission; the approved inspection/recovery commands succeeded.
+- [x] Recover the failed Keycloak container's missing Docker network attachment. The first retry
+  failed with `UnknownHostException: postgres`; targeted recreation restored network attachment and
+  Keycloak health using its existing database.
+- [x] Diagnose subsequent Order/AI startup failures as formatting-only changes to applied Flyway
+  SQL. Restore Order V3 and AI V1/V3/V4/V5 exactly from commit `18a12c5`, after checking original
+  checksums against the recorded runtime/database values and verifying no non-whitespace SQL change.
+  Preserve formatted copies and checksum evidence in `.cache/verification/port-recovery`. No Flyway
+  history repair, database reset or volume deletion was performed.
+- [x] Rebuild the affected images, complete full Compose host-model startup and recreate Prometheus
+  to load its rendered configuration. Verify all 16 Compose containers healthy; HTTP 200 from
+  storefront, gateway readiness, Keycloak realm, Prometheus readiness and Grafana health. Real Alice
+  PKCE login and authenticated AI capabilities pass with `llama3.1:8b`, enabled=true/modelReady=true;
+  catalog read succeeds with nine existing products. Existing commerce data was not reseeded.
+- [x] Document port ownership inspection, safe kind pause, failed-container network recovery and
+  migration-checksum troubleshooting in `docs/run-and-demo.md`. Validate its Bash examples, links,
+  restored migration checksums and `git diff --check`. Full browser, model evaluation and saga fault
+  suites were not rerun for this targeted recovery; existing acceptance gates remain unchanged.
+
+### Persistent SQL formatting preference (2026-10-18)
+
+- [x] Record the user's current `V1__ai.sql` layout as the reference for future SQL work in `AGENTS.md`:
+  uppercase keywords, lowercase PostgreSQL types, four-space indentation, aligned columns and separate table
+  parentheses. Preserve already-applied migration bytes; use new versions for schema changes.
+- [x] Compare the instruction with the referenced file and run `git diff --check`. No SQL or runtime state
+  was changed by this preference update; application tests were not needed for the Markdown-only change.
+
+### Retain formatted SQL and realign existing local history (2026-10-18)
+
+- [x] Diagnose the repeated startup failure: Order V3 checksum mismatch; Keycloak and Payment were
+  already healthy when inspected. The existing Order/AI databases still recorded pre-format checksums.
+- [x] Preserve all SQL source formatting. Compare the five affected migrations (Order V3, AI V1/V3/V4/V5)
+  with commit `18a12c5`, verifying identical SQL tokens including quoted literal contents, and verify exact
+  applied/resolved checksums using project-pinned Flyway 12.4.0. Refuse unexpected migration states,
+  missing scripts, description/type changes and any validation error other than the known checksum mismatches.
+- [x] Back up complete service-owned Flyway history and run a one-time repair using each database's own
+  role and complete migration location. Validate all three Order and five AI migrations afterward;
+  compare before/after metadata to prove exactly five checksum fields changed and no other history data,
+  removed/deleted migration entries, schema SQL or commerce records were modified. Retain the isolated
+  verification helper, backups and evidence in ignored `.cache/verification/flyway-format-repair`.
+  No automatic repair was added to application startup and no volume/data reset was performed.
+- [x] Run `bash scripts/compose-up.sh --ai=host` successfully. Verify all 16 Compose containers healthy,
+  HTTP 200 from storefront/gateway/Keycloak/Prometheus/Grafana, real Alice PKCE login and authenticated
+  enabled/modelReady AI capabilities with `llama3.1:8b`. All five SQL files retain their formatted checksums.
+- [x] Update the persistent rules and demo guide to preserve the approved formatting and describe the
+  reviewed one-time transition, citing official Flyway repair documentation. Guide Bash syntax and
+  `git diff --check` pass. Full browser/model-evaluation/fault suites were not rerun for this local
+  metadata repair; other acceptance gates remain unchanged. Logs are retained in
+  `/private/tmp/commerceflow-verified-format-repair.log` and
+  `/private/tmp/commerceflow-formatted-sql-startup.log`.
+
+### Recover versioned policy imports after Markdown formatting (2026-10-18)
+
+- [x] Reproduce and inspect the exact HTTP 409 ProblemDetail: `IDEMPOTENCY_CONFLICT`, import key has
+  different contents. Compare policy fixtures with commit `18a12c5`; all four Markdown files were
+  reformatted while their manifest versions remained 1, matching existing persisted version-1 sources.
+- [x] Publish the current formatted returns/shipping/payments/operations fixtures as explicit version 2
+  in `knowledge/manifest.json`. Preserve their source IDs, audiences, backend version validation and
+  historical chunks/request records. Import through the authenticated ADMIN API without direct database writes.
+- [x] Improve the importer to display bounded public ProblemDetail fields and source-version guidance
+  on known 409 conflicts, exiting without a Python traceback or exposing caller headers/tokens.
+- [x] Execute the real import successfully for all four sources; repeat successfully to verify replay.
+  Read-only AI database checks show one SUCCEEDED current indexing job per source and exactly four v2
+  request records. A controlled stale-v1 replay through the actual importer is rejected with actionable
+  guidance, without changing fixture files. Real Alice CUSTOMER and Support SUPPORT searches retrieve
+  authorized returns/operations citations at version 2 with semantic retrieval enabled.
+- [x] Record fixture-version rules in `AGENTS.md` and the demo guide. Verify importer AST syntax,
+  manifest JSON/versions and `git diff --check`. Original full model-evaluation evidence remains unchanged;
+  the full corpus/browser/fault suites were not rerun. Import/replay logs are retained in
+  `/private/tmp/commerceflow-knowledge-v2-import.log` and
+  `/private/tmp/commerceflow-knowledge-v2-replay.log`.

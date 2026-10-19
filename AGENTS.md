@@ -14,6 +14,18 @@
   return consistent `ProblemDetail` errors, propagate correlation IDs, and generate OpenAPI contracts.
 - Implement real behavior and meaningful tests together. Never expose secrets or real payment/customer data. Development
   credentials belong only in documented local configuration.
+- Follow the current formatting in `ai-service/src/main/resources/db/migration/ai/V1__ai.sql` for future SQL files:
+  uppercase SQL keywords, lowercase PostgreSQL types, four-space indentation, aligned column definitions, and table
+  parentheses on separate lines. Preserve that style when writing new SQL rather than compacting it. Do not reformat
+  already-applied Flyway migrations; their exact bytes must remain stable for checksum validation. Put schema changes
+  in a new versioned migration.
+- The user's currently formatted SQL is the approved baseline; do not revert it to an older compact layout to fix
+  a local checksum conflict. For a database predating that intentional formatting, permit a one-time Flyway repair
+  only after verifying formatting-only differences and exact old/new checksums, backing up migration history, and
+  confirming only the approved checksum fields changed. Never automate repair during application startup.
+- Curated knowledge imports bind each source/version and idempotency key to exact content and metadata. When editing
+  `knowledge/*.md`, including Markdown-only formatting, increment the affected version in `knowledge/manifest.json`.
+  Keep the source ID stable and publish a new version; never bypass conflicts or delete prior import history.
 
 ## Architecture constraints
 

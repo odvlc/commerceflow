@@ -1,7 +1,7 @@
 [
   {
     "sourceId": "returns",
-    "version": 1,
+    "version": 2,
     "title": "Demo return policy",
     "audience": "PUBLIC",
     "active": true,
@@ -9,7 +9,7 @@
   },
   {
     "sourceId": "shipping",
-    "version": 1,
+    "version": 2,
     "title": "Demo shipping guide",
     "audience": "PUBLIC",
     "active": true,
@@ -17,7 +17,7 @@
   },
   {
     "sourceId": "payments",
-    "version": 1,
+    "version": 2,
     "title": "Simulated payment guide",
     "audience": "PUBLIC",
     "active": true,
@@ -25,7 +25,7 @@
   },
   {
     "sourceId": "operations",
-    "version": 1,
+    "version": 2,
     "title": "Support investigation runbook",
     "audience": "SUPPORT",
     "active": true,

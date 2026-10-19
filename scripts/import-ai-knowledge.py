@@ -6,6 +6,7 @@ import json
 import os
 import time
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
@@ -23,9 +24,28 @@ def call(path, body=None, key=None):
     if key:
         headers["Idempotency-Key"] = key
     data = None if body is None else json.dumps(body).encode()
-    with urlopen(Request(base + "/api/v1/admin/ai/knowledge" + path, data=data, headers=headers),
-                 timeout=15) as response:
-        return json.load(response)
+    try:
+        with urlopen(Request(base + "/api/v1/admin/ai/knowledge" + path, data=data, headers=headers),
+                     timeout=15) as response:
+            return json.load(response)
+    except HTTPError as error:
+        # Report only public ProblemDetail fields, never request headers or the caller's token.
+        try:
+            problem = json.loads(error.read(16384))
+        except (ValueError, UnicodeError):
+            problem = {}
+        if not isinstance(problem, dict):
+            problem = {}
+        code = problem.get("code", "REQUEST_REJECTED")
+        message = f"Knowledge API HTTP {error.code} ({code}): {problem.get('detail', 'Request rejected')}"
+        if error.code == 409 and code in {"IDEMPOTENCY_CONFLICT", "KNOWLEDGE_VERSION_CONFLICT"}:
+            # A new key alone cannot authorize different content at an already published version.
+            message += (
+                "\nIf fixture text or metadata changed, increase that source's version in"
+                " knowledge/manifest.json and rerun. Keep its sourceId unchanged; do not delete"
+                " existing knowledge or bypass version validation."
+            )
+        raise SystemExit(message) from None
 
 
 for entry in json.loads(root.joinpath("knowledge/manifest.json").read_text()):
