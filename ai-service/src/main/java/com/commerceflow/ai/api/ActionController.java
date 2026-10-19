@@ -1,3 +1,7 @@
+/*
+ * Exposes owner-scoped proposal review and explicit confirmation; model output alone never
+ * authorizes a cart write.
+ */
 package com.commerceflow.ai.api;
 
 import com.commerceflow.ai.application.CartActions;
@@ -38,6 +42,7 @@ public class ActionController {
 
     @GetMapping("/{id}")
     public Proposal get(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+        // Check ownership before revealing whether an execution record exists for this proposal.
         return store.owned(id, Actor.from(jwt));
     }
 
@@ -52,6 +57,8 @@ public class ActionController {
             @PathVariable UUID id,
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody Confirmation input) {
+        // Confirmation records a durable intent; HTTP acceptance does not mean the Cart API has
+        // acknowledged the write.
         return ResponseEntity.accepted().body(actions.confirm(id, Actor.from(jwt), input));
     }
 

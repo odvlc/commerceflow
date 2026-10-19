@@ -1,3 +1,7 @@
+/*
+ * Appends outgoing events within the caller transaction; each importing service writes only its
+ * own outbox table.
+ */
 package com.commerceflow.support;
 
 import com.commerceflow.contracts.EventEnvelope;
@@ -21,6 +25,7 @@ public class OutboxStore {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public UUID append(String type, UUID aggregate, String correlation, Object payload) {
+        // Persist the envelope identity now so a later publisher retry sends the same event ID.
         var event = EventEnvelope.create(type, aggregate, correlation, payload);
         jdbc.sql(
                         """

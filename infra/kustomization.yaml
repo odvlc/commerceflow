@@ -1,3 +1,5 @@
+# Assembles the commerce base; render ignored local credentials/configuration before applying, and
+# select AI overlays explicitly.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: commerceflow
@@ -11,6 +13,7 @@ resources:
   - k8s/autoscaling.yaml
 generatorOptions:
   disableNameSuffixHash: true
+# Read ignored local credentials at render time; never commit the generated Secret output.
 secretGenerator:
   - name: commerceflow-secrets
     envs: [ .env ]

@@ -1,3 +1,5 @@
+// Renders committed AI state and explicit proposal approval; disconnecting a stream does not
+// itself cancel durable server work.
 import type {FormEvent} from "react";
 import {useEffect, useRef, useState} from "react";
 import {identity} from "./auth";
@@ -116,6 +118,8 @@ function Panel({onCartChanged}: { onCartChanged: () => Promise<void> }) {
 
     async function refresh(id: string) {
         const value = await getRun(id);
+        // Ignore a slow response for a run that the user has already left; it must not repaint the
+        // current conversation.
         if (!alive.current || currentRun.current !== id) return value;
         setRun((previous) =>
             previous?.id === id &&
@@ -131,11 +135,15 @@ function Panel({onCartChanged}: { onCartChanged: () => Promise<void> }) {
 
     async function connect(id: string) {
         controller.current?.abort();
+        // Replace only the local stream connection; the durable run continues unless the cancel
+        // endpoint is called.
         const next = new AbortController();
         controller.current = next;
         setConnected(true);
         try {
             await streamRun(id, cursor.current, next.signal, (event) => {
+                // Reconnect from the last delivered persisted event instead of submitting the question
+                // again.
                 cursor.current = event.id;
                 void refresh(id).catch(fail);
             });
@@ -166,6 +174,8 @@ function Panel({onCartChanged}: { onCartChanged: () => Promise<void> }) {
         e.preventDefault();
         if (!text.trim() || (run && !settled(run.state))) return;
         await command(async () => {
+            // Capture one immutable request intent until the server response is known; retries reuse
+            // both contents and key.
             if (!pending.current)
                 pending.current = {
                     key: crypto.randomUUID(),

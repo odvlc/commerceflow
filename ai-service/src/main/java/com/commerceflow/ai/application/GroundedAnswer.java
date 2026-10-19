@@ -1,3 +1,7 @@
+/*
+ * Accepts citation identifiers only from server-collected evidence; this checks provenance, not
+ * the truth of every generated sentence.
+ */
 package com.commerceflow.ai.application;
 
 import com.commerceflow.ai.retrieval.KnowledgeModels.Evidence;
@@ -27,6 +31,8 @@ public record GroundedAnswer(String content, List<Evidence> citations) {
                 || !references.isArray()
                 || references.isEmpty()
                 || references.size() > 8) throw new IllegalArgumentException("Invalid grounded answer");
+        // Keep citation order while rejecting duplicates; resolve their content only from the server
+        // evidence map.
         var ids = new LinkedHashSet<String>();
         for (var id : references) {
             if (!id.isTextual() || !permitted.containsKey(id.asText()) || !ids.add(id.asText()))

@@ -1,3 +1,7 @@
+/*
+ * Builds idempotent orders from trusted catalog quotes and enforces ownership on customer reads
+ * and cancellations.
+ */
 package com.commerceflow.order;
 
 import com.commerceflow.contracts.CheckoutEvents.Command;
@@ -50,6 +54,8 @@ public class OrderService {
                     HttpStatus.BAD_REQUEST, "DUPLICATE_PRODUCT", "Each product must occur once");
         var hash = RequestHash.sha256(items + ":" + request.paymentScenario());
         orders.lockKey(customer, key);
+        // Resolve retries before repricing: the original accepted order is authoritative for the same
+        // request key.
         var existing = orders.byKey(customer, key);
         if (existing.isPresent()) {
             if (!existing.get().requestHash().equals(hash))
@@ -61,6 +67,7 @@ public class OrderService {
         BigDecimal total = new BigDecimal("0.00");
         String currency = null;
         for (var item : items) {
+            // Prices and active status come from Catalog, never from the browser cart payload.
             var quote = catalog.quote(item.productId(), correlation);
             if (currency != null && !currency.equals(quote.currency()))
                 throw new BusinessException(
@@ -83,6 +90,8 @@ public class OrderService {
                 currency,
                 correlation,
                 Instant.now().plus(timeout));
+        // The order, first saga step and command outbox row commit together; Kafka publication happens
+        // later.
         orders.step(id, "RESERVE_INVENTORY", "PENDING", null);
         outbox.append(
                 "ReserveInventory",
@@ -122,6 +131,8 @@ public class OrderService {
                 outbox.append(
                         "ReleaseInventory", id, order.correlation(), new Command("CUSTOMER_CANCELLED"));
             }
+            // Cancel payment before releasing stock because an in-flight authorization can still
+            // succeed.
             case AWAITING_PAYMENT -> {
                 orders.recordReason(id, "CUSTOMER_CANCELLED");
                 orders.move(order, OrderState.CANCELLING_PAYMENT, Instant.now().plus(timeout));
@@ -148,6 +159,8 @@ public class OrderService {
 
     private OrderRepository.Row owned(UUID customer, UUID id, boolean lock) {
         var order = orders.required(id, lock);
+        // Use the same not-found response for missing and foreign-owned IDs to avoid disclosing another
+        // order.
         if (!order.customerId().equals(customer))
             throw new BusinessException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Order not found");
         return order;

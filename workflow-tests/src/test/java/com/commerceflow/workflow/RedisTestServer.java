@@ -1,3 +1,7 @@
+/*
+ * Starts a real native Redis or explicit Testcontainers instance and releases only test-owned
+ * resources.
+ */
 package com.commerceflow.workflow;
 
 import org.testcontainers.containers.GenericContainer;
@@ -83,6 +87,7 @@ final class RedisTestServer implements AutoCloseable {
     void pause() throws Exception {
         if (process == null)
             throw new IllegalStateException("Fault evaluation requires the documented native Redis fixture");
+        // Stop only this fixture-owned process, then force termination if its graceful shutdown stalls.
         process.destroy();
         if (!process.waitFor(5, TimeUnit.SECONDS)) process.destroyForcibly().waitFor();
     }

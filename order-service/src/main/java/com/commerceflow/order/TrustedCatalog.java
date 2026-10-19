@@ -1,3 +1,7 @@
+/*
+ * Fetches current product quotes through an authenticated catalog call so checkout never trusts
+ * client-supplied prices.
+ */
 package com.commerceflow.order;
 
 import com.commerceflow.support.BusinessException;
@@ -41,9 +45,13 @@ public class TrustedCatalog {
                             .get()
                             .uri("/api/v1/products/{id}", productId)
                             .header("X-Correlation-ID", correlation)
+                            // The quote is authoritative for checkout, so a stale detail-cache value
+                            // cannot set the order total.
                             .header("Cache-Control", "no-cache")
                             .retrieve()
                             .body(Quote.class);
+            // Validate the service response too; a successful HTTP status is not sufficient evidence of
+            // a usable price.
             if (quote == null
                     || !productId.equals(quote.id())
                     || !quote.active()

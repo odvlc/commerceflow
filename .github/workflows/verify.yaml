@@ -1,14 +1,19 @@
+# Keeps routine verification separate from opt-in real-model/local deployment checks; upload only
+# sanitized evidence.
 name: CommerceFlow verification
 on:
   push:
   pull_request:
   workflow_dispatch:
     inputs:
+      # Real inference is opt-in because it needs explicitly prepared weights and a dedicated
+      # resource-bounded runner.
       real_model:
         description: Run pinned local models and the frozen corpus on a dedicated commerceflow-ai runner
         type: boolean
         default: false
 permissions:
+  # Verification needs repository read access, not permission to publish source changes.
   contents: read
 jobs:
   verify:

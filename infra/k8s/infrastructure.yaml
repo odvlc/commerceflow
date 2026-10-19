@@ -1,3 +1,5 @@
+# Provides stateful local infrastructure with retained PVCs; service-owned databases still share
+# only the PostgreSQL server process.
 {
   "apiVersion": "v1",
   "kind": "Service",
@@ -195,6 +197,8 @@
     "updateStrategy": {
       "type": "RollingUpdate"
     },
+    # Stateful data survives Pod replacement; deleting claims or the cluster is a separate destructive
+    # operation.
     "volumeClaimTemplates": [
       {
         "metadata": {
@@ -258,6 +262,8 @@
       }
     ],
     "clusterIP": "None",
+    # Kafka controller peers need bootstrap DNS before readiness, otherwise quorum startup can
+    # deadlock.
     "publishNotReadyAddresses": true
   }
 }

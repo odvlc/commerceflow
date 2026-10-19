@@ -1,5 +1,10 @@
 # Measured local load results
 
+<!--
+Maintenance: Records measured load runs and their limits; scripts and thresholds alone are not
+benchmark evidence.
+-->
+
 Executed on 2026-10-17 on this ARM64 Mac using Java 25.0.4.1, Boot 4.1.1, k6 2.3.0, real PostgreSQL 18.6, Kafka 4.2.1,
 Redis 8.10.2 and Elasticsearch 9.4.5. Seven applications and the test broker share one Java process in the ephemeral
 browser harness; Keycloak and Elasticsearch use separate JVMs. These results are not container/Kubernetes capacity

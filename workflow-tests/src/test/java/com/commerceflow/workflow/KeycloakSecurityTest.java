@@ -1,3 +1,7 @@
+/*
+ * Verifies real Keycloak identity/role/scope and ownership behavior across service HTTP
+ * boundaries.
+ */
 package com.commerceflow.workflow;
 
 import com.commerceflow.catalog.CatalogApplication;
@@ -238,6 +242,8 @@ class KeycloakSecurityTest {
 
     @Test
     void keycloakPkceTokensFlowThroughGatewayAndBackendRoleAndOwnershipChecks() throws Exception {
+        // Use real realm-issued browser tokens; a locally signed JWT fixture cannot verify
+        // PKCE/client/realm integration.
         var input =
                 Map.of(
                         "sku",
@@ -328,6 +334,8 @@ class KeycloakSecurityTest {
 
     @Test
     void publicClientRejectsPasswordGrantAndMissingPkce() throws Exception {
+        // The browser public client must not acquire broader authentication flows just to simplify
+        // test login.
         var response =
                 post(
                         HttpClient.newHttpClient(),

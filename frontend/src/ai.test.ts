@@ -1,3 +1,5 @@
+// Exercises authenticated SSE framing, split transport chunks and replay cursors without requiring
+// a live model.
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {streamRun} from "./ai";
 
@@ -16,6 +18,8 @@ describe("authenticated copilot stream", () => {
                 new Response(
                     new ReadableStream({
                         start(controller) {
+                            // Deliberately cut through multibyte UTF-8 and SSE separators; real network
+                            // chunks do not align with events.
                             for (let i = 0; i < encoded.length; i += 3)
                                 controller.enqueue(encoded.slice(i, i + 3));
                             controller.close();
@@ -41,6 +45,7 @@ describe("authenticated copilot stream", () => {
             Authorization: "Bearer test-header-token",
             "Last-Event-ID": "3",
         });
+        // Bearer credentials belong in headers, never in a reconnect URL that proxies might log.
         expect(fetcher.mock.calls[0]?.[0]).not.toContain("test-header-token");
     });
     it("rejects oversized events instead of buffering without a bound", async () => {

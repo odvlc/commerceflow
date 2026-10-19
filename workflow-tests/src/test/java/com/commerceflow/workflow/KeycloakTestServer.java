@@ -1,3 +1,7 @@
+/*
+ * Owns the real test Keycloak lifecycle and realm setup so application tests do not implement an
+ * identity provider.
+ */
 package com.commerceflow.workflow;
 
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
@@ -128,6 +132,7 @@ final class KeycloakTestServer implements AutoCloseable {
     @Override
     public void close() throws Exception {
         if (process != null) {
+            // Stop only this fixture-owned process, then force termination if its graceful shutdown stalls.
             process.destroy();
             if (!process.waitFor(10, TimeUnit.SECONDS)) process.destroyForcibly().waitFor();
         }

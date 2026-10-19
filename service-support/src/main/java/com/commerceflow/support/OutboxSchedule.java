@@ -1,3 +1,7 @@
+/*
+ * Invokes the transactional outbox publisher through a separate Spring bean so scheduled calls
+ * retain transaction interception.
+ */
 package com.commerceflow.support;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -17,6 +21,8 @@ public class OutboxSchedule {
 
     @Scheduled(fixedDelayString = "${commerceflow.outbox.poll-delay:1000}")
     public void publish() {
+        // Call a separate proxied bean so Spring opens the publisher transaction on each scheduled
+        // batch.
         publisher.publishBatch();
     }
 }

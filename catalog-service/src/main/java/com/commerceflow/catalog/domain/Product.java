@@ -1,3 +1,7 @@
+/*
+ * Keeps product identity, decimal prices and optimistic versioning inside the catalog persistence
+ * boundary.
+ */
 package com.commerceflow.catalog.domain;
 
 import jakarta.persistence.Column;
@@ -30,6 +34,8 @@ public class Product {
     private String currency;
     private boolean active;
 
+    // Hibernate increments this on flush and rejects a competing update against the same previous
+    // version.
     @Version
     private Long version;
     private Instant createdAt;
@@ -62,6 +68,8 @@ public class Product {
         this.price = price;
         this.currency = currency;
         this.active = active;
+        // A revision changes the update timestamp while the constructor-owned creation timestamp stays
+        // fixed.
         this.updatedAt = Instant.now();
     }
 

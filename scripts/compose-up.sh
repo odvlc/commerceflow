@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Validates and starts the chosen local profiles without resetting volumes; model preparation is
+# an explicit prerequisite.
 set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -19,6 +21,8 @@ export AI_ENABLED=false
 profiles=(--profile full)
 if [ "$mode" != off ]; then
   export AI_ENABLED=true
+  # Enabling AI adds its application profile; the model profile is separate because host mode reuses
+  # native Ollama.
   profiles+=(--profile ai)
   if [ "$mode" = host ]; then
     # Read only the configured endpoint; do not source arbitrary shell from dotenv.

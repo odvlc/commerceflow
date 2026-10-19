@@ -1,5 +1,10 @@
 # Architecture
 
+<!--
+Maintenance: Explains service responsibilities and distributed consistency boundaries; caches/search
+remain derived state.
+-->
+
 ```mermaid
 flowchart LR
     Browser[React storefront] -->|Authorization Code + PKCE| Keycloak

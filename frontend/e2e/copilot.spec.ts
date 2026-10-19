@@ -1,9 +1,13 @@
+// Exercises real local model, identity, citations and explicit cart confirmation through the
+// browser against deployed services.
 import type {Page} from "@playwright/test";
 import {expect, test} from "@playwright/test";
 
 test.describe("real local Llama copilot", () => {
     // Test-only credentials observed from actual authenticated browser requests stay in memory.
     // This works against built nginx/Ingress as well as Vite without a production debug export.
+    // Tie the observed token to the real page lifetime; do not expose a production token/debug API for
+    // tests.
     const observedTokens = new WeakMap<Page, string>();
     test.beforeEach(async ({page}) => {
         page.on("request", request => {

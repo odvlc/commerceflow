@@ -1,3 +1,5 @@
+// Keeps AI DTOs and authenticated SSE replay separate from storefront APIs; event cursors refer to
+// persisted public progress.
 import {accessToken} from "./auth";
 import {ApiError, mutation, request} from "./api";
 
@@ -141,6 +143,8 @@ export async function streamRun(
                 /\r\n/g,
                 "\n",
             );
+            // Enforce the frame bound before JSON parsing so an unterminated server frame cannot grow
+            // memory indefinitely.
             if (buffer.length > 128000)
                 throw new Error("Copilot event exceeds the supported size.");
             let boundary: number;
@@ -164,6 +168,8 @@ export async function streamRun(
             if (done) break;
         }
     } finally {
+        // Release the fetch stream on errors/abort as well as normal completion; server run state
+        // remains independent.
         await reader.cancel().catch(() => undefined);
         reader.releaseLock();
     }

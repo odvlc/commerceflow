@@ -1,3 +1,7 @@
+/*
+ * Exercises real broker delivery, retry/outbox recovery and deduplication rather than treating a
+ * mocked send as acknowledgment.
+ */
 package com.commerceflow.inventory;
 
 import com.commerceflow.contracts.CheckoutEvents.Command;
@@ -121,6 +125,8 @@ class KafkaDeliveryIntegrationTest {
 
     @Test
     void actualKafkaReplaysHaveOneTransactionalBusinessEffect() throws Exception {
+        // Replay the same envelope through the broker; transport redelivery must not repeat the
+        // stock decrement.
         var product = UUID.randomUUID();
         var order = UUID.randomUUID();
         inventory.setStock(product, 10, null);
@@ -151,6 +157,8 @@ class KafkaDeliveryIntegrationTest {
 
     @Test
     void failedBusinessEffectRollsBackDedupMarker() {
+        // A marker committed without its business effect would make later retries silently drop
+        // legitimate work.
         var event = UUID.randomUUID();
         assertThatThrownBy(
                 () ->
@@ -173,6 +181,8 @@ class KafkaDeliveryIntegrationTest {
 
     @Test
     void brokerOutageRetainsOutboxAndRecoveryPreservesAggregateOrder() {
+        // Publish failure must leave durable work pending and block later events for that aggregate
+        // until the earlier one is delivered.
         var order = UUID.randomUUID();
         new TransactionTemplate(transactions)
                 .executeWithoutResult(

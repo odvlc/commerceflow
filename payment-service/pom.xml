@@ -1,4 +1,8 @@
 <?xml version="1.0" ?>
+<!--
+Builds payment-service with inherited BOM versions; the executable jar is separate from the plain
+dependency artifact.
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0">
     <modelVersion>4.0.0</modelVersion>
     <parent>
@@ -7,6 +11,8 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
     <artifactId>payment-service</artifactId>
+    <!-- Unversioned Spring dependencies inherit the Boot BOM; test-scoped infrastructure is excluded
+         from production runtime. -->
     <dependencies>
         <dependency>
             <groupId>org.springframework.kafka</groupId>
@@ -89,6 +95,8 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <!-- Keep a plain jar for reactor/test dependencies and a separate executable jar for
+                         independent deployment. -->
                     <classifier>exec</classifier>
                 </configuration>
             </plugin>

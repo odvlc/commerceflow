@@ -1,8 +1,15 @@
 # CommerceFlow
 
+<!--
+Maintenance: Entry point for setup commands and recorded verification scope; detailed operations and
+acceptance evidence live in the linked guides.
+-->
+
 A Java 25 / Spring Boot event-driven commerce application with a React storefront, Keycloak login, PostgreSQL-owned
 service data, Kafka checkout orchestration, Redis carts/cache and Elasticsearch search.
 
+<!-- Verification counts describe the recorded runs linked below. Update them only with fresh execution evidence;
+     source changes or successful compilation alone do not establish runtime acceptance. -->
 The latest regression passes **82 Java tests**, **5 frontend unit tests**, lint/build and **8 real-browser cases**.
 The optional local Llama copilot adds cited retrieval, authorized tools, durable investigations and explicitly confirmed
 cart changes. Its frozen 80-case hybrid corpus ran three times: 240 scenario checks passed with zero observed unsafe
@@ -29,6 +36,7 @@ No commits, remote deployment or volume deletion were performed.
 ## Build and verify
 
 ```bash
+# Install native test dependencies; these are separate from persistent Compose infrastructure.
 bash scripts/bootstrap-test-tools.sh
 ./mvnw -B verify dependency:build-classpath -Dmdep.outputFile=target/test-classpath.txt -Dmdep.includeScope=test
 npm ci --prefix frontend
@@ -45,6 +53,7 @@ Redis/Elasticsearch/Keycloak executables. That fallback compiles but has not run
 For the browser-tested, **ephemeral** local stack, run the following in separate terminals after the build above:
 
 ```bash
+# Test harness only: stopping this stack ends its temporary database lifetime.
 bash scripts/browser-stack.sh
 npm run --prefix frontend dev
 ```
@@ -66,6 +75,7 @@ product creation and stock administration.
 
 ```bash
 cp infra/.env.example infra/.env   # only if the file does not already exist
+# Starts the full commerce stack with AI disabled; model-enabled startup is shown below.
 bash scripts/compose-up.sh
 ```
 
@@ -102,6 +112,7 @@ its owned role/database for existing volumes without changing existing passwords
 ## Kubernetes
 
 ```bash
+# Choose Compose or kind for these localhost endpoints; their published ports overlap.
 bash scripts/kind-up.sh
 bash scripts/kind-diagnostics.sh
 ```
@@ -121,9 +132,13 @@ connections were verified. It refuses to erase or silently migrate an existing d
 ## Optional local Llama copilot
 
 ```bash
+# Host mode requires Ollama already running locally. Generation and retrieval use separate pinned models:
+# llama3.1:8b for chat/tool proposals and nomic-embed-text:latest for embeddings.
 python3 scripts/prepare-ai-models.py --warmup  # explicit download/digest/inference checks
+# Startup checks prepared models; it does not silently download them or fall back to a cloud provider.
 bash scripts/compose-up.sh --ai=host
 python3 scripts/demo.py seed                # synthetic demo stock only; no pending reservations
+# Imports curated policy documents through the AI API; indexing then proceeds asynchronously.
 python3 scripts/import-ai-knowledge.py
 ```
 
@@ -132,6 +147,8 @@ Workspace products, or explain an owned order. Cart changes require the exact ty
 No checkout, payment, refund or inventory write tool exists. SUPPORT can investigate through its scoped read route.
 Use `--ai=off` to withdraw AI routes and stop optional workers while retaining all data.
 
+<!-- Keep host-mode verification separate from CPU co-location: they have different memory/network requirements.
+     A passing host deployment does not close the CPU-profile or 32 GiB hardware acceptance gates. -->
 For native-model kind, use `bash scripts/kind-up.sh --ai=host`; `--skip-build` reuses already-built local images.
 The host runtime stays on localhost. A fixed inference-only proxy on the private kind Docker network handles Docker
 Desktop routing, publishes no host port and is allowed by an exact endpoint policy. CPU mode uses explicit model
@@ -164,6 +181,9 @@ authenticated metrics and checks both dashboards. Compose uses its own documente
 demonstration and recovery evidence for Compose/kind are recorded in the dated verification supplement.
 
 ## Documentation
+
+- [Project file guide](docs/file-guide.md) — responsibilities and maintenance notes for every maintained file,
+  including JSON, migrations and model inputs whose contents must remain unchanged during comment-only edits.
 
 - [Authoritative specification](CODEX_PROMPT.md), [engineering rules](AGENTS.md), [phase plan](PLAN.md)
 - [AI copilot implementation plan](AI_PLAN.md) — implementation, verified progress and explicit remaining release gates.

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Imports curated versioned fixtures through the ADMIN API and waits for indexing; it does not
+# write Elasticsearch or foreign databases directly.
 """Import versioned synthetic local knowledge through the ADMIN API; never access another service database."""
 import json
 import os
@@ -29,12 +31,16 @@ def call(path, body=None, key=None):
 for entry in json.loads(root.joinpath("knowledge/manifest.json").read_text()):
     relative = entry.pop("file")
     path = (root / "knowledge" / relative).resolve()
+    # Resolve fixture paths before reading so the manifest cannot import arbitrary files outside curated
+    # knowledge.
     if not path.is_relative_to((root / "knowledge").resolve()):
         raise ValueError("Knowledge fixture escaped its directory")
     entry["content"] = path.read_text()
     result = call("/imports", entry, "ai-knowledge-" + entry["sourceId"] + "-v" + str(entry["version"]))
     for attempt in range(90):
         job = call("/jobs/" + result["jobId"])
+        # Import acceptance alone does not prove retrievability; wait for the durable projection job to
+        # finish.
         if job["state"] == "SUCCEEDED":
             print("Indexed", entry["sourceId"], "version", entry["version"])
             break

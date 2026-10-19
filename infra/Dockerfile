@@ -1,3 +1,5 @@
+# Build the selected Maven module and run its executable jar as a nonroot user; full verification
+# belongs to the test workflow.
 FROM maven:3.10.0-eclipse-temurin-25-noble AS build
 WORKDIR /workspace
 COPY . .
@@ -12,6 +14,7 @@ WORKDIR /app
 COPY --from=build --chown=10001:10001 /tmp/app.jar /app/app.jar
 COPY --from=build /tmp/health /opt/health
 USER 10001:10001
+# Leave memory headroom outside the heap for threads/native buffers within the container memory limit.
 ENV PORT=8080 BIND_ADDRESS=0.0.0.0 JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=65 -Duser.timezone=UTC"
 EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=10 CMD ["java","-cp","/opt/health","HealthCheck","http://localhost:8080/actuator/health/readiness"]

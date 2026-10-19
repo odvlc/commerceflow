@@ -1,3 +1,7 @@
+/*
+ * Exposes service payment operations and inspection of synthetic outcomes, without integrating a
+ * real payment provider.
+ */
 package com.commerceflow.payment;
 
 import com.commerceflow.contracts.CheckoutEvents.AuthorizePayment;
@@ -29,6 +33,8 @@ public class PaymentController {
             @PathVariable UUID orderId,
             @RequestBody AuthorizePayment request,
             @RequestAttribute("correlationId") String correlation) {
+        // The service persists the order-keyed outcome and request fingerprint before exposing a
+        // successful result.
         return payments.authorize(orderId, request, correlation);
     }
 

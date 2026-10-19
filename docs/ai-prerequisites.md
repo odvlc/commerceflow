@@ -1,5 +1,10 @@
 # AI task prerequisite assessment
 
+<!--
+Maintenance: Lists environment and capacity prerequisites; a satisfied source dependency is not
+proof of runtime readiness.
+-->
+
 **Historical prerequisite audit.** Its missing-model/deployment observations below preceded implementation on the same
 date. Both pinned models now work; native-model Compose/kind deployments and recovery are verified. Current results,
 including the actual CPU-memory blocker, are in [AI_PLAN.md](../AI_PLAN.md), [verification](verification.md) and

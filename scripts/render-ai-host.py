@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Generates the discovered private inference endpoint and exact egress rule; address validation is
+# distinct from a network probe.
 """Resolve the inference-only proxy on the kind Docker network and generate an exact Service endpoint/policy."""
 import argparse
 import ipaddress
@@ -18,6 +20,8 @@ if not address:
 ip = ipaddress.IPv4Address(address)
 if ip.is_loopback or ip.is_multicast or ip.is_unspecified or ip.is_link_local:
     raise ValueError('Host endpoint must be an actual routable Docker Desktop IPv4 address')
+# A selectorless Service and matching EndpointSlice route to the fixed private proxy, not arbitrary host
+# services.
 service = {'apiVersion': 'v1', 'kind': 'Service', 'metadata': {'name': 'ollama'},
            'spec': {'ports': [{'name': 'http', 'port': 11434, 'targetPort': 11434}]}}
 endpoint = {'apiVersion': 'discovery.k8s.io/v1', 'kind': 'EndpointSlice',

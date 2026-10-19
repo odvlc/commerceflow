@@ -1,3 +1,7 @@
+/*
+ * Commits curated document versions, chunks and outgoing changes together in the AI-owned
+ * database.
+ */
 package com.commerceflow.ai.retrieval;
 
 import com.commerceflow.ai.persistence.AiStore;
@@ -81,6 +85,8 @@ public class KnowledgeStore {
                         .optional();
         UUID id = existing.map(Document::id).orElseGet(UUID::randomUUID);
         ImportResult result;
+        // Reject stale source revisions; importing an identical version is allowed only when its
+        // content fingerprint matches.
         if (existing.isPresent() && existing.get().version() >= input.version()) {
             String previous =
                     jdbc.sql("SELECT content_hash FROM knowledge_documents WHERE id=:id")
@@ -121,6 +127,8 @@ public class KnowledgeStore {
             String heading = input.title();
             var paragraphs = input.content().split("\\n\\s*\\n");
             for (String paragraph : paragraphs) {
+                // Chunk whole nonempty paragraphs so evidence boundaries remain readable and
+                // reproducible across imports.
                 if (paragraph.isBlank()) continue;
                 String text = paragraph.strip();
                 if (text.startsWith("#")) heading = text.replaceFirst("^#+\\s*", "").split("\n")[0];

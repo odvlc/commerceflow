@@ -1,3 +1,7 @@
+/*
+ * Checks that generated answers cannot invent citation IDs outside the evidence collected for
+ * their run.
+ */
 package com.commerceflow.ai;
 
 import com.commerceflow.ai.application.GroundedAnswer;
@@ -21,6 +25,8 @@ class GroundedAnswerTest {
 
     @Test
     void citationsCannotBeForgedReusedAcrossRunsOrDuplicated() {
+        // Supply plausible-looking but unauthorized IDs directly; provenance must be enforced
+        // without trusting the model prompt.
         for (var ids :
                 List.of(
                         List.of("another-run-source"),
@@ -36,6 +42,8 @@ class GroundedAnswerTest {
 
     @Test
     void answerCannotSmuggleAnActionOrAuthorityField() {
+        // A final answer is data only; accepting extra action fields would bypass the explicit
+        // proposal/confirmation boundary.
         assertThatThrownBy(
                 () ->
                         GroundedAnswer.validate(

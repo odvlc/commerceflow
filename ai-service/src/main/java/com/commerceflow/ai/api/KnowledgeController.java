@@ -1,3 +1,6 @@
+/*
+ * Keeps curated imports and index rebuild administration separate from conversational retrieval.
+ */
 package com.commerceflow.ai.api;
 
 import com.commerceflow.ai.retrieval.KnowledgeModels.ImportDocument;
@@ -38,6 +41,8 @@ public class KnowledgeController {
             @RequestHeader("Idempotency-Key") @Pattern(regexp = "[A-Za-z0-9_-]{8,128}") String key,
             @Valid @RequestBody ImportDocument input,
             @RequestAttribute("correlationId") String correlation) {
+        // Import acceptance persists work; indexing is asynchronous and the returned job reports
+        // projection readiness.
         return ResponseEntity.accepted()
                 .body(store.ingest(UUID.fromString(jwt.getSubject()), key, input, correlation));
     }

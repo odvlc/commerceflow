@@ -1,3 +1,7 @@
+/*
+ * Maps authenticated conversation/run requests to durable state; opening or replaying an event
+ * stream does not dispatch work.
+ */
 package com.commerceflow.ai.api;
 
 import com.commerceflow.ai.application.Credentials;
@@ -128,6 +132,8 @@ public class AiController {
     public RunView resume(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         var a = Actor.from(jwt);
         // A committed proposal resumes through Cart reconciliation, which does not require generation.
+        // An existing approval continues with deterministic service calls; only fresh investigation
+        // requires available inference.
         if (store.run(id, a).proposals().isEmpty()) models.requireReady();
         var run = store.resume(id, a);
         credentials.attach(id, a);
@@ -139,6 +145,7 @@ public class AiController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID id,
             @RequestHeader(value = "Last-Event-ID", defaultValue = "0") @Min(0) long after) {
+        // Streaming reads persisted events and must not create another run or implicitly resume one.
         return streams.open(id, Actor.from(jwt), after);
     }
 

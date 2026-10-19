@@ -1,3 +1,5 @@
+// Coordinates storefront, checkout and administration views; server authorization remains
+// authoritative for every role-dependent action.
 import type {FormEvent} from "react";
 import {useEffect, useRef, useState} from "react";
 import {identity, login, logout, roles} from "./auth";
@@ -31,6 +33,8 @@ export default function App({initialError = ""}: { initialError?: string }) {
     const [, setSessionVersion] = useState(0);
     useEffect(() => {
         const changed = () => setSessionVersion(v => v + 1);
+        // Keycloak callbacks trigger a render so logout/account changes can withdraw private UI
+        // immediately.
         window.addEventListener("commerceflow-session", changed);
         return () => window.removeEventListener("commerceflow-session", changed);
     }, []);
@@ -112,6 +116,8 @@ export default function App({initialError = ""}: { initialError?: string }) {
                 items,
                 scenario,
             });
+            // Keep the same key for this exact customer/cart/scenario after an ambiguous checkout
+            // response.
             const key = checkoutKey(intent);
             const order = await mutation<Order>(
                 "/orders",
@@ -404,6 +410,8 @@ function Products({
     const rememberRef = useRef(remember);
     rememberRef.current = remember;
     useEffect(() => {
+        // A changed filter or unmounted product view invalidates its in-flight request to avoid stale
+        // list updates.
         const abort = new AbortController();
         setLoading(true);
         setError("");
@@ -805,6 +813,8 @@ function Admin({
             if (editing)
                 await request(`/admin/products/${editing.id}`, {
                     method: "PUT",
+                    // Administrative edits carry the version that was loaded; a conflict requires
+                    // reloading rather than overwriting.
                     headers: {"If-Match": `"${editing.version}"`},
                     body: JSON.stringify(form),
                 });

@@ -1,3 +1,5 @@
+# Deploys independently configured commerce services; disable service-link environment injection
+# and keep owned database settings separate.
 {
   "apiVersion": "apps/v1",
   "kind": "Deployment",
@@ -183,6 +185,8 @@
             }
           }
         ],
+        # Avoid Kubernetes-injected service variables such as REDIS_PORT colliding with explicit
+        # application configuration.
         "enableServiceLinks": false
       }
     }

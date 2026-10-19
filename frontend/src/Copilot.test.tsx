@@ -1,7 +1,10 @@
+// Checks client retry/proposal behavior with isolated API fixtures; real model and service
+// behavior is covered separately.
 import {fireEvent, render, screen, waitFor} from "@testing-library/react";
 import {expect, it, vi} from "vitest";
 import {Copilot} from "./Copilot";
 
+// Hoist shared spies before module imports so the component uses these same test-owned API functions.
 const mocks = vi.hoisted(() => ({
     request: vi.fn(),
     mutation: vi.fn(),

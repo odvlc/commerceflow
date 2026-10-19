@@ -1,3 +1,7 @@
+/*
+ * Carries verified caller identity and expiry through tool calls; its diagnostic representation
+ * must not disclose the bearer token.
+ */
 package com.commerceflow.ai.domain;
 
 import com.commerceflow.support.BusinessException;
@@ -35,11 +39,15 @@ public record Actor(UUID subject, String token, Set<String> roles, java.time.Ins
     }
 
     public boolean valid() {
+        // Leave a small expiry margin before dispatch so a token that is about to expire is not treated
+        // as usable.
         return expiresAt != null && expiresAt.isAfter(java.time.Instant.now().plusSeconds(5));
     }
 
     @Override
     public String toString() {
+        // Override record diagnostics explicitly: the generated record toString would also print the
+        // bearer token.
         return "Actor[subject=" + subject + ",roles=" + roles + "]";
     }
 }

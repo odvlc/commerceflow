@@ -1,3 +1,7 @@
+/*
+ * Explicit real-model integration checks require prepared local model digests; a mocked chat
+ * response cannot establish this acceptance.
+ */
 package com.commerceflow.ai;
 
 import com.commerceflow.ai.indexing.KnowledgeIndexer;
@@ -132,6 +136,8 @@ class LocalModelIT {
 
     @Test
     void realLlamaGenerationToolRequestAndNomicEmbedding() {
+        // Require both actual generation and separate embedding inference rather than accepting tag
+        // metadata as model readiness.
         var reply =
                 models.chat(
                         List.of(
@@ -267,6 +273,8 @@ class LocalModelIT {
 
     @Test
     void embeddingOutageFallsBackAndChangedEmbeddingMetadataRequiresRebuild() {
+        // A temporary embedding outage permits lexical fallback; an incompatible stored vector
+        // mapping needs a rebuild instead.
         var broken =
                 new LocalModels(
                         "http://127.0.0.1:1",

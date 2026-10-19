@@ -1,3 +1,7 @@
+/*
+ * Calls fixed commerce endpoints with the current caller token; model arguments never choose
+ * arbitrary hosts or credentials.
+ */
 package com.commerceflow.ai.tools;
 
 import com.commerceflow.ai.domain.Actor;
@@ -75,6 +79,8 @@ public class CommerceClient {
                 body,
                 actor,
                 correlation,
+                // Send the original approval precondition and execution key together so ambiguous
+                // retries are replay-safe.
                 Map.of("If-Match", revision, "Idempotency-Key", key));
     }
 
@@ -119,6 +125,8 @@ public class CommerceClient {
                         HttpStatus.UNAUTHORIZED,
                         "AI_AUTHENTICATION_REQUIRED",
                         "A fresh access token is required");
+            // Normalize inaccessible/missing resources to a controlled tool error instead of exposing
+            // downstream response bodies.
             if (status == 404)
                 throw new BusinessException(
                         HttpStatus.NOT_FOUND, "AI_TOOL_RESOURCE_NOT_FOUND", "Resource not found");

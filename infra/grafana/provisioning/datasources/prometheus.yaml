@@ -1,8 +1,12 @@
+# Uses cluster/container DNS for server-side metric queries; the browser does not need direct
+# application management ports.
 apiVersion: 1
 datasources:
   - name: CommerceFlow Prometheus
     uid: commerceflow-prometheus
     type: prometheus
+    # Grafana queries Prometheus server-side so browser users do not need access to internal scrape
+    # endpoints.
     access: proxy
     url: http://prometheus:9090
     isDefault: true

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Collects authenticated metrics through the chosen native or Compose path without exposing
+# internal management ports.
 """Collect authenticated Prometheus snapshots from the local application ports."""
 import json
 import os
@@ -28,6 +30,8 @@ if os.environ.get("METRICS_MODE", "native") == "compose":
 
     targets = query('up{job="commerceflow"}')
     expected = 8 if os.environ.get("AI_ENABLED", "false").lower() == "true" else 7
+    # Require real healthy scrape samples for every enabled service; an empty successful query is not
+    # verification.
     if len(targets) != expected or any(item["value"][1] != "1" for item in targets):
         raise RuntimeError("Expected all authenticated CommerceFlow scrape targets to be healthy")
     output.joinpath("compose-targets.json").write_text(json.dumps(targets, indent=2))

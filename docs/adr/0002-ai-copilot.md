@@ -1,5 +1,10 @@
 # Local Spring AI copilot with application-owned orchestration
 
+<!--
+Maintenance: Records local model, retrieval and constrained tool execution decisions for the
+optional copilot.
+-->
+
 Status: accepted for implementation, 2026-10-18. User preference: Llama 3.1 local inference.
 
 Use Java 25 / Boot 4.1.1 with Spring AI 2.0.1, preserving the Boot BOM. The isolated dependency probe compiled and

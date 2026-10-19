@@ -1,5 +1,10 @@
 # HTTP contracts
 
+<!--
+Maintenance: Describes commerce endpoint contracts and public errors; service ownership checks
+remain mandatory behind the gateway.
+-->
+
 All paths are relative to `/api/v1`. OpenAPI for each application is generated at `/v3/api-docs`; Swagger UI is `/docs`
 on catalog and the other configured service UIs. Customer identity comes from the JWT UUID subject. Pagination is
 zero-based, `size` 1–100. Errors use `application/problem+json` with `code` and correlation ID; clients may provide a

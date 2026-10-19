@@ -1,3 +1,7 @@
+/*
+ * Deduplicates inventory commands transactionally and signals expiry to the saga rather than
+ * independently releasing uncertain stock.
+ */
 package com.commerceflow.inventory;
 
 import com.commerceflow.contracts.CheckoutEvents.ReserveInventory;
@@ -34,6 +38,8 @@ public class InventoryConsumer {
         var event = codec.decode(record);
         try (var ignored = MDC.putCloseable("correlationId", event.correlationId())) {
             switch (event.eventType()) {
+                // The dedup marker and reservation effect commit together; listener acknowledgment
+                // happens after the handler returns.
                 case "ReserveInventory" -> processed.once(
                         event.eventId(),
                         () ->

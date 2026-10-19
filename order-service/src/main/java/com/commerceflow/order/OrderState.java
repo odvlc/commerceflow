@@ -1,3 +1,7 @@
+/*
+ * Lists legal persisted saga transitions; timeout and compensation must follow the same transition
+ * rules as successful events.
+ */
 package com.commerceflow.order;
 
 import com.commerceflow.support.BusinessException;
@@ -19,6 +23,8 @@ public enum OrderState {
                 switch (this) {
                     case PENDING_INVENTORY -> Set.of(AWAITING_PAYMENT, CANCELLING_INVENTORY, CANCELLED);
                     case AWAITING_PAYMENT -> Set.of(COMMITTING_INVENTORY, CANCELLING_PAYMENT, CANCELLING_INVENTORY);
+                    // After payment authorization, uncertainty is resolved by retrying commit; there is
+                    // no direct cancellation edge.
                     case COMMITTING_INVENTORY -> Set.of(CONFIRMED);
                     case CANCELLING_PAYMENT -> Set.of(CANCELLING_INVENTORY);
                     case CANCELLING_INVENTORY -> Set.of(CANCELLED);

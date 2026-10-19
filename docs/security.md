@@ -1,5 +1,10 @@
 # Local identity and authorization
 
+<!--
+Maintenance: Documents Keycloak identity, role/scope and resource ownership boundaries across
+services.
+-->
+
 Keycloak owns passwords, login sessions and token signing. The local realm fixture is
 `infra/keycloak/commerceflow-realm.json`. Its public development users are alice/bob (CUSTOMER), admin (ADMIN), and
 support (SUPPORT); passwords are `local-<username>-only`. These are synthetic local fixtures, never deployment

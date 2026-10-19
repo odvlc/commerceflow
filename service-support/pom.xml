@@ -1,4 +1,8 @@
 <?xml version="1.0" ?>
+<!--
+Packages reusable infrastructure helpers; importing services still supply their own database and
+transaction boundary.
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0">
     <modelVersion>4.0.0</modelVersion>
     <parent>
@@ -7,6 +11,8 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
     <artifactId>service-support</artifactId>
+    <!-- These helpers run inside the importing service; dependencies do not authorize shared database
+         access. -->
     <dependencies>
         <dependency>
             <groupId>org.springframework.kafka</groupId>

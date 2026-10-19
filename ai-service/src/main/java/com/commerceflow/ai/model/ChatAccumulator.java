@@ -1,3 +1,7 @@
+/*
+ * Combines bounded model transport chunks; incomplete or hidden thinking output is never presented
+ * as a completed answer.
+ */
 package com.commerceflow.ai.model;
 
 import org.springframework.ai.ollama.api.OllamaApi.ChatResponse;
@@ -47,12 +51,16 @@ final class ChatAccumulator {
                 String key =
                         call.function().index() != null ? Integer.toString(call.function().index()) : call.id();
                 if (key == null) throw new IllegalStateException("Missing tool request identity");
+                // A streamed update for the same structured call replaces its earlier snapshot instead
+                // of dispatching another call.
                 calls.put(key, call);
                 if (calls.size() > 8) throw new IllegalStateException("Model requested too many tools");
             }
     }
 
     synchronized ChatResponse finish() {
+        // A disconnected transport is not a completed response, even if it already emitted plausible
+        // answer text.
         if (last == null || !Boolean.TRUE.equals(last.done()))
             throw new IllegalStateException("Model stream ended before completion");
         return new ChatResponse(

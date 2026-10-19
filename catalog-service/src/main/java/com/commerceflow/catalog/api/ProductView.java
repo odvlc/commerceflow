@@ -1,3 +1,6 @@
+/*
+ * Projects catalog state into a stable HTTP DTO rather than exposing the mutable JPA entity.
+ */
 package com.commerceflow.catalog.api;
 
 import com.commerceflow.catalog.domain.Product;
@@ -20,6 +23,8 @@ public record ProductView(
         Instant updatedAt) {
 
     public static ProductView from(Product p) {
+        // Copy values while the entity is available; callers receive a DTO without JPA lifecycle
+        // behavior.
         return new ProductView(
                 p.getId(),
                 p.getSku(),

@@ -1,3 +1,7 @@
+/*
+ * Validates or creates a correlation ID, propagates it to responses and clears thread logging
+ * context after the request.
+ */
 package com.commerceflow.support;
 
 import jakarta.servlet.FilterChain;
@@ -20,9 +24,12 @@ public class CorrelationFilter extends OncePerRequestFilter {
             HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String id = request.getHeader("X-Correlation-ID");
+        // Restrict caller-controlled IDs before putting them in logs/headers to prevent multiline or
+        // oversized values.
         if (id == null || !id.matches("[A-Za-z0-9._-]{1,128}")) id = UUID.randomUUID().toString();
         request.setAttribute("correlationId", id);
         response.setHeader("X-Correlation-ID", id);
+        // Close the MDC scope on both success and failure so request context cannot leak to later work.
         try (var ignored = MDC.putCloseable("correlationId", id)) {
             chain.doFilter(request, response);
         }

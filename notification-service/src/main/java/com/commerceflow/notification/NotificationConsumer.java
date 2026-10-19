@@ -1,3 +1,7 @@
+/*
+ * Deduplicates order status events before storing customer-visible notifications in the
+ * notification database.
+ */
 package com.commerceflow.notification;
 
 import com.commerceflow.contracts.CheckoutEvents.OrderStatus;
@@ -31,6 +35,8 @@ public class NotificationConsumer {
     public void handle(ConsumerRecord<String, String> record) {
         var event = codec.decode(record);
         if (event.eventType().equals("OrderStatusChanged"))
+            // Use the incoming event identity for transport replay, in addition to notification-level
+            // status uniqueness.
             processed.once(
                     event.eventId(),
                     () ->

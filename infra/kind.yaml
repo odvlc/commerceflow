@@ -1,7 +1,11 @@
+# Uses Calico instead of kindnet so NetworkPolicy is enforced; host port mappings are for this
+# local single-node cluster.
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: commerceflow
 networking:
+  # Calico supplies the CNI so the repository NetworkPolicy resources are enforced rather than merely
+  # accepted by the API.
   disableDefaultCNI: true
   podSubnet: 192.168.0.0/16
 nodes:

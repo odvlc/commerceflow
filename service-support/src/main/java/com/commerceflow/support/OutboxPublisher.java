@@ -1,3 +1,7 @@
+/*
+ * Publishes committed local events and marks delivery only after broker acknowledgment; the
+ * acknowledgment/SQL gap permits replay.
+ */
 package com.commerceflow.support;
 
 import com.commerceflow.contracts.Topics;
@@ -37,6 +41,7 @@ public class OutboxPublisher {
 
     @Transactional
     public int publishBatch() {
+        // Only the earliest unpublished event per aggregate is eligible, even during retry backoff.
         var batch =
                 jdbc.sql(
                                 """
@@ -60,6 +65,8 @@ public class OutboxPublisher {
             try {
                 kafka
                         .send(topic(event.type()), event.aggregateId().toString(), event.payload())
+                        // Wait for the broker result before writing published_at; producer idempotence
+                        // does not make the SQL/Kafka gap atomic.
                         .get(8, TimeUnit.SECONDS);
                 // A crash before this commit causes replay, never a lost event. Consumers must deduplicate.
                 jdbc.sql(
@@ -71,6 +78,8 @@ public class OutboxPublisher {
                 delivered++;
             } catch (Exception failure) {
                 if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
+                // Bound exponential retry delay while leaving the durable unpublished event available
+                // for later recovery.
                 long delay = Math.min(60_000, 250L * (1L << Math.min(8, event.attempts())));
                 jdbc.sql(
                                 "UPDATE outbox_events SET"

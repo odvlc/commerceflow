@@ -1,3 +1,6 @@
+/*
+ * Checks wire-envelope identity/version invariants independently of any service database.
+ */
 package com.commerceflow.contracts;
 
 import org.junit.jupiter.api.Test;
@@ -12,6 +15,8 @@ class EventEnvelopeTest {
 
     @Test
     void createsVersionedIdentifiableEvents() {
+        // Keep aggregate identity distinct from event identity so the same order can have multiple
+        // deduplicated messages.
         var aggregate = UUID.randomUUID();
         var event = EventEnvelope.create("ProductChanged", aggregate, "test-correlation", "payload");
         assertThat(event.schemaVersion()).isEqualTo(1);
@@ -22,6 +27,8 @@ class EventEnvelopeTest {
 
     @Test
     void refusesUnknownSchemaAndInvalidCorrelation() {
+        // Reject unsupported wire contracts at decoding boundaries instead of sending malformed
+        // envelopes into business handlers.
         assertThatIllegalArgumentException()
                 .isThrownBy(
                         () -> new EventEnvelope<>(

@@ -1,3 +1,5 @@
+# Authenticates synthetic local users with PKCE; credentials and tokens stay in process memory
+# rather than logs or artifact files.
 """Loopback-only synthetic demo client. Tokens/passwords stay in memory and are never printed."""
 import base64
 import hashlib
@@ -48,6 +50,8 @@ def login(user="alice", password=None):
         if response.code != 302:
             raise RuntimeError("Local Keycloak login failed") from None
         parameters = parse_qs(urlparse(response.headers["Location"]).query)
+        # Bind the returned authorization code to this login attempt before exchanging it with the
+        # original PKCE verifier.
         if parameters.get("state") != [state] or "code" not in parameters:
             raise RuntimeError("Authorization state/code did not match")
         code = parameters["code"][0]

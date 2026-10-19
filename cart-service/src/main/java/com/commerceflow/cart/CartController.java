@@ -1,3 +1,7 @@
+/*
+ * Uses the authenticated subject as cart owner and accepts revision preconditions for confirmed AI
+ * mutations.
+ */
 package com.commerceflow.cart;
 
 import jakarta.validation.Valid;
@@ -41,7 +45,10 @@ public class CartController {
 
     @GetMapping
     public org.springframework.http.ResponseEntity<CartService.CartView> get(@AuthenticationPrincipal Jwt jwt) {
+        // The subject comes from the validated JWT; clients cannot select another customer cart.
         var cart = carts.get(UUID.fromString(jwt.getSubject()));
+        // Expose the same revision in ETag and the body so approval clients can submit an exact If-
+        // Match.
         return org.springframework.http.ResponseEntity.ok().eTag(cart.revision()).body(cart);
     }
 

@@ -1,3 +1,7 @@
+/*
+ * Combines lexical/vector rankings and rechecks source permission/version in PostgreSQL before
+ * returning evidence.
+ */
 package com.commerceflow.ai.retrieval;
 
 import com.commerceflow.ai.retrieval.KnowledgeModels.Evidence;
@@ -45,6 +49,8 @@ public class KnowledgeSearch {
             var lexical = index.query(query, mode, 20);
             var hits = lexical;
             boolean semantic = false, degraded = false;
+            // Only embedding failure degrades to lexical hits; an unavailable lexical/search backend
+            // remains an explicit retrieval failure.
             if (index.semanticEnabled())
                 try {
                     var vectors = index.vector(text, mode, 20);

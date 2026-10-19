@@ -1,9 +1,12 @@
+# Runs one bounded AI worker with Recreate rollout; model capacity is shared rather than increased
+# by adding HTTP replicas.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ai-service
 spec:
   replicas: 1
+  # Avoid overlapping workers during local rollout because they share one bounded model runtime.
   strategy: { type: Recreate }
   selector:
     matchLabels: { app: ai-service }
@@ -12,6 +15,8 @@ spec:
       labels: { app: ai-service }
     spec:
       enableServiceLinks: false
+      # AI tools use the current caller token and fixed APIs, not Kubernetes control-plane
+      # credentials.
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 60
       initContainers:

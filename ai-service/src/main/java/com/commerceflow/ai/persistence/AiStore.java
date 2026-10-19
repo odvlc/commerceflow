@@ -1,3 +1,7 @@
+/*
+ * Owns conversation access checks, idempotent submission, admission and public event persistence
+ * in the AI database.
+ */
 package com.commerceflow.ai.persistence;
 
 import com.commerceflow.ai.domain.Actor;
@@ -90,6 +94,8 @@ public class AiStore {
                         .param("key", key)
                         .query(this::conversation)
                         .optional();
+        // A reused creation key must preserve its original mode, not silently switch the authority of
+        // the conversation.
         if (existing.isPresent()) {
             if (!existing.get().mode().equals(mode))
                 throw conflict("IDEMPOTENCY_CONFLICT", "Key has different contents");
@@ -126,6 +132,8 @@ public class AiStore {
     }
 
     @Transactional
+    // Serialize capacity decisions in the same transaction as enqueueing so concurrent requests cannot
+    // all pass a stale count.
     public void admit() {
         lock("ai-admission");
         if (jdbc.sql("SELECT count(*) FROM ai_runs WHERE state IN ('QUEUED','RUNNING','RETRY_WAIT')")
@@ -318,6 +326,7 @@ public class AiStore {
 
     @Transactional
     public RunView resume(UUID id, Actor actor) {
+        // Re-authentication rechecks admission; a paused run must not bypass the durable queue bound.
         if (run(id, actor).state().equals("AUTHENTICATION_REQUIRED")) admit();
         jdbc.sql(
                         "UPDATE ai_runs SET state='QUEUED',error_code=NULL,updated_at=now() WHERE id=:id AND"

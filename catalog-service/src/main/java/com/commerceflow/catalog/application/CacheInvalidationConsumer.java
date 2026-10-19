@@ -1,3 +1,7 @@
+/*
+ * Applies source-version cache invalidations so delayed catalog events cannot make an older value
+ * authoritative.
+ */
 package com.commerceflow.catalog.application;
 
 import com.commerceflow.contracts.CheckoutEvents.ProductChanged;
@@ -25,6 +29,8 @@ public class CacheInvalidationConsumer {
 
     @KafkaListener(topics = Topics.CATALOG, groupId = "catalog-cache-v1")
     public void handle(ConsumerRecord<String, String> record) {
+        // Decode the wire envelope before applying its source-version invalidation; malformed delivery
+        // follows Kafka retry policy.
         var event = codec.decode(record);
         if (!event.eventType().equals("ProductChanged"))
             throw new IllegalArgumentException("Unexpected catalog event");

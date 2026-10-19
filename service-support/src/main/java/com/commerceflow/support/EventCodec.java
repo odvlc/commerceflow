@@ -1,3 +1,7 @@
+/*
+ * Validates event envelopes and converts payloads to the expected wire type before business
+ * handlers run.
+ */
 package com.commerceflow.support;
 
 import com.commerceflow.contracts.EventEnvelope;
@@ -14,6 +18,7 @@ public class EventCodec {
 
     public EventEnvelope<?> decode(ConsumerRecord<String, String> record) {
         var event = json.readValue(record.value(), EventEnvelope.class);
+        // The Kafka key controls partition ordering; reject an envelope claiming a different aggregate.
         if (!event.aggregateId().toString().equals(record.key()))
             throw new IllegalArgumentException("Event key must equal aggregateId");
         return event;

@@ -1,5 +1,10 @@
 # Search consistency and recovery
 
+<!--
+Maintenance: Documents eventual search synchronization and rebuild behavior; current checkout prices
+still come from the catalog API.
+-->
+
 PostgreSQL owns catalog data. Kafka ProductChanged events build the Elasticsearch projection. `cf-products-read` and
 `cf-products-write` resolve to versioned indices; explicit mappings live in
 `catalog-service/src/main/resources/search/product-index.json`.

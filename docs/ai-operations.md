@@ -1,5 +1,10 @@
 # Local Copilot operations
 
+<!--
+Maintenance: Documents explicit model preparation, deployment modes and recovery while preserving
+local data.
+-->
+
 Use native Ollama on Apple Silicon for the normal development path. CommerceFlow uses pinned local `llama3.1:8b`
 Q4_K_M for generation/tools and separate `nomic-embed-text:latest` F16, 768-dimensional embeddings. Models and license
 hashes are in `infra/ai/models.lock.json`. There is no paid or cloud inference fallback. Keep one AI application

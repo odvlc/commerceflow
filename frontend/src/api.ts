@@ -1,3 +1,5 @@
+// Centralizes bearer headers, correlation and ProblemDetail handling; mutation keys identify
+// retryable client intents.
 import {accessToken} from "./auth";
 
 export type Money = string | number;
@@ -86,6 +88,8 @@ export async function request<T>(
     options: RequestInit = {},
 ): Promise<T> {
     const token = await accessToken();
+    // Clone caller headers before adding authentication so the request does not mutate a shared Headers
+    // instance.
     const headers = new Headers(options.headers);
     headers.set("Content-Type", "application/json");
     headers.set("X-Correlation-ID", crypto.randomUUID());
@@ -113,6 +117,8 @@ export function mutation<T>(
     return request(path, {
         method,
         body: body === undefined ? undefined : JSON.stringify(body),
+        // Callers recovering an ambiguous write must retain this key; the default is appropriate only
+        // for a new intent.
         headers: {"Idempotency-Key": key},
     });
 }

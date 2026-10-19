@@ -1,3 +1,7 @@
+/*
+ * Separates stock administration from service reservation/commit/release commands, with bounded
+ * quantities.
+ */
 package com.commerceflow.inventory;
 
 import com.commerceflow.contracts.CheckoutEvents.ReserveInventory;
@@ -45,6 +49,8 @@ public class InventoryController {
             @PathVariable UUID orderId,
             @RequestBody ReserveInventory input,
             @RequestAttribute("correlationId") String correlation) {
+        // These internal commands are protected by service scope; accepting an order UUID is not
+        // customer authorization.
         return inventory.reserve(orderId, input, correlation);
     }
 

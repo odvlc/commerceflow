@@ -1,3 +1,7 @@
+/*
+ * Validates model-proposed calls against fixed schemas, role allowlists and timeouts before
+ * dispatching to commerce APIs.
+ */
 package com.commerceflow.ai.tools;
 
 import com.commerceflow.ai.domain.Actor;
@@ -95,6 +99,8 @@ public class ToolRegistry implements AutoCloseable {
         if (!actor.valid())
             throw new BusinessException(
                     HttpStatus.UNAUTHORIZED, "AI_AUTHENTICATION_REQUIRED", "Fresh authentication required");
+        // Recheck the role-specific allowlist at execution time; a model-advertised or invented tool
+        // name grants no authority.
         if (!allowed(mode).contains(name))
             throw new BusinessException(
                     HttpStatus.FORBIDDEN,
@@ -168,6 +174,8 @@ public class ToolRegistry implements AutoCloseable {
                         throw invalid();
                     }
             } else if (spec.path("type").asText().equals("integer")) {
+                // Reject out-of-range integers before conversion; a huge JSON integer must not wrap
+                // into a permitted cart quantity.
                 if (!value.isIntegralNumber()
                         || !value.canConvertToInt()
                         || value.asLong() < spec.path("minimum").asLong()
@@ -349,6 +357,8 @@ public class ToolRegistry implements AutoCloseable {
                                     Map.of(),
                                     actor,
                                     correlation);
+                    // Search is a derived projection; revalidate current currency/price against Catalog
+                    // before returning candidates.
                     if (!product.path("currency").asText().equals("USD")) continue;
                     if (args.has("maxPrice")
                             && new BigDecimal(product.path("price").asText())

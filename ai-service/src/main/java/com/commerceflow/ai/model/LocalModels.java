@@ -1,3 +1,7 @@
+/*
+ * Uses the explicitly prepared local chat/embedding model digests and bounds shared inference
+ * concurrency.
+ */
 package com.commerceflow.ai.model;
 
 import com.commerceflow.support.BusinessException;
@@ -110,6 +114,8 @@ public class LocalModels {
                 if (embedding.equals(m.path("name").asText())
                         && embeddingDigest.equals(m.path("digest").asText())) embeddingFound = true;
             }
+            // Both pinned digests are required; a tag with different weights is not silently accepted
+            // as the same model.
             available = chatFound && embeddingFound;
         } catch (RuntimeException e) {
             available = false;
@@ -216,6 +222,8 @@ public class LocalModels {
 
     private void acquire() {
         try {
+            // Use a bounded wait for shared inference capacity so requests fail explicitly instead of
+            // building an unbounded queue.
             if (!slots.tryAcquire(5, java.util.concurrent.TimeUnit.SECONDS))
                 throw new BusinessException(
                         HttpStatus.TOO_MANY_REQUESTS,

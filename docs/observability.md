@@ -1,5 +1,10 @@
 # Observability
 
+<!--
+Maintenance: Explains authenticated metric collection and dashboards without putting caller
+identities or secrets into metric labels.
+-->
+
 All applications expose health/liveness/readiness and authenticated Prometheus metrics. Metric scraping requires the
 service-account `commerceflow.internal` scope. Prometheus obtains and refreshes a Keycloak client-credentials token; it
 does not scrape with a customer token. `scripts/render-monitoring.py` keeps the ignored scrape configuration consistent

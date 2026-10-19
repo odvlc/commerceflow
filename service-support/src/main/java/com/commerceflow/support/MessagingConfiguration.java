@@ -1,3 +1,7 @@
+/*
+ * Configures acknowledged Kafka publishing, explicit consumer commits, bounded retries and dead-
+ * letter routing.
+ */
 package com.commerceflow.support;
 
 import com.commerceflow.contracts.Topics;
@@ -103,6 +107,8 @@ public class MessagingConfiguration {
                 new DeadLetterPublishingRecoverer(
                         producer,
                         (record, error) -> new TopicPartition(Topics.DEAD_LETTER, record.partition()));
+        // A failed dead-letter publish must remain a failed consume; do not commit an offset that loses
+        // the record.
         recoverer.setFailIfSendResultIsError(true);
         recoverer.setWaitForSendResultTimeout(Duration.ofSeconds(8));
         var backoff = new ExponentialBackOffWithMaxRetries(5);
@@ -111,6 +117,8 @@ public class MessagingConfiguration {
         backoff.setMaxInterval(2000);
         var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
         factory.setConsumerFactory(consumers);
+        // Commit offsets per successful record after the local business/dedup transaction has
+        // completed.
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
         factory.getContainerProperties().setObservationEnabled(true);
         factory.setCommonErrorHandler(new DefaultErrorHandler(recoverer, backoff));
@@ -136,6 +144,8 @@ public class MessagingConfiguration {
                                 Topics.AI_KNOWLEDGE,
                                 Topics.NOTIFICATION,
                                 Topics.DEAD_LETTER)
+                        // One replica is a local-development capacity choice, not a production
+                        // durability guarantee.
                         .map(name -> TopicBuilder.name(name).partitions(3).replicas(1).build())
                         .toArray(org.apache.kafka.clients.admin.NewTopic[]::new));
     }

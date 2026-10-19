@@ -1,5 +1,10 @@
 # Owned data models
 
+<!--
+Maintenance: Documents service-owned persistence and invariants; it does not authorize cross-service
+SQL access.
+-->
+
 | Owner        | Tables / keys / integrity                                                                                                                                                                                                                                                                                                                        |
 |--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Catalog      | `products` UUID PK; unique SKU and idempotency key; price numeric(19,2), currency, active, JPA version and UTC timestamps. `categories` name PK/FK. `outbox_events`.                                                                                                                                                                             |

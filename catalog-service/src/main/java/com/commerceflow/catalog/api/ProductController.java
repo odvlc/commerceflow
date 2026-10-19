@@ -1,3 +1,7 @@
+/*
+ * Maps catalog reads and administrative writes to validated DTOs with bounded pagination and
+ * version-aware updates.
+ */
 package com.commerceflow.catalog.api;
 
 import com.commerceflow.catalog.application.CatalogService;
@@ -53,6 +57,8 @@ public class ProductController {
     public ProductView get(
             @PathVariable UUID id,
             @RequestHeader(value = "Cache-Control", defaultValue = "") String cacheControl) {
+        // Trusted price callers request no-cache; ordinary catalog reads may use the bounded Redis
+        // cache.
         return catalog.get(id, cacheControl.toLowerCase(java.util.Locale.ROOT).contains("no-cache"));
     }
 
@@ -83,6 +89,8 @@ public class ProductController {
             @Valid @RequestBody ProductInput input,
             @RequestAttribute("correlationId") String correlationId) {
         var result =
+                // Strip the quoted HTTP ETag only after validation; the service checks the expected
+                // database version.
                 catalog.update(id, Long.parseLong(version.replace("\"", "")), input, correlationId);
         return ResponseEntity.ok().eTag(Long.toString(result.version())).body(result);
     }

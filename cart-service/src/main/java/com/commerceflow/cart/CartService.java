@@ -1,3 +1,7 @@
+/*
+ * Keeps cart mutations and replay memos atomic in Redis; incarnation/version revisions distinguish
+ * expired and recreated carts.
+ */
 package com.commerceflow.cart;
 
 import com.commerceflow.support.BusinessException;
@@ -116,6 +120,8 @@ public class CartService {
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST, "INVALID_CART_OPERATION", "Invalid cart operation");
         try {
+            // Hash the operation contents separately from the key so a reused key cannot approve a
+            // different write.
             String hash = RequestHash.sha256(operation + ":" + product + ":" + quantity);
             var raw =
                     redis.execute(
@@ -128,6 +134,8 @@ public class CartService {
                             hash,
                             Long.toString(ttl), UUID.randomUUID().toString(), revision);
             if (raw == null) throw unavailable();
+            // Lua returns a domain conflict without partially updating the cart; infrastructure errors
+            // take the outage path.
             if (raw.startsWith("ERROR:"))
                 throw new BusinessException(
                         HttpStatus.CONFLICT,

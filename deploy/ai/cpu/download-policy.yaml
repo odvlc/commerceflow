@@ -1,3 +1,5 @@
+# Temporary model-download egress is applied only for explicit preparation and withdrawn
+# afterward.
 # Applied only during explicit model preparation and removed afterward.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -8,5 +10,7 @@ spec:
   podSelector:
     matchLabels: { app: ollama }
   policyTypes: [ Egress ]
+  # HTTPS download access exists only while the explicit preparation script applies this temporary
+  # policy.
   egress:
     - ports: [ { protocol: TCP, port: 443 } ]

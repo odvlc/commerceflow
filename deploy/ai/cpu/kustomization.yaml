@@ -1,6 +1,10 @@
+# Selects the in-cluster CPU model runtime with retained storage; scheduling still requires the
+# declared memory capacity.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: commerceflow
+# The CPU runtime is an explicit overlay; the commerce base and host-model mode do not allocate these
+# model resources.
 resources:
   - ../base
   - model.yaml

@@ -1,3 +1,7 @@
+/*
+ * Executes bounded model/tool rounds under a durable lease and fence; a model can propose tools
+ * but cannot bypass their authorization.
+ */
 package com.commerceflow.ai.application;
 
 import com.commerceflow.ai.domain.Actor;
@@ -88,6 +92,8 @@ public class RunWorker implements AutoCloseable {
         var c = active;
         if (c == null || closed) return;
         try {
+            // Account for active time before and after recovery; restarting a worker must not reset the
+            // run deadline.
             if (elapsed() + c.activeMillis() >= 120000) {
                 store.stop(c, "FAILED", "AI_DEADLINE_EXCEEDED", elapsed());
                 task.cancel(true);
@@ -162,6 +168,8 @@ public class RunWorker implements AutoCloseable {
                             credentials.remove(c.id());
                             return;
                         }
+                        // Only successful, validated tool results become observations for the next
+                        // reasoning round.
                         observations.add(json.valueToTree(Map.of("tool", name, "data", result.data())));
                         for (var item : result.evidence())
                             if (evidence.size() < 4)
@@ -197,6 +205,7 @@ public class RunWorker implements AutoCloseable {
                 if (evidence.size() >= 4) break;
             }
             check(c, actor);
+            // Abstain before asking for a final answer when no authorized tool produced evidence.
             if (evidence.isEmpty()) {
                 store.finish(
                         c,

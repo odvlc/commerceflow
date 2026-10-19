@@ -420,3 +420,78 @@ successfully. No remote deployment, Git initialization/commit or persisted user-
 - Prometheus acquired all seven authenticated service targets; Grafana provisioned all three dashboards. Added
   `METRICS_MODE=compose` to collect these samples without publishing internal application management ports. Its initial
   native-port collector failure was fixed and reran successfully. Original pod restart/remote CI gates remain open.
+
+### Clarifying comments (2026-10-18)
+
+- [x] Add explanatory comments to the AI worker, persistence, retrieval, Cart replay, frontend streaming/retry,
+  startup and evidence-export paths. Explain ordering and failure recovery without changing executable behavior.
+- [x] Annotate README command examples and maintenance notes for ephemeral versus persistent state, optional AI
+  startup, separate pinned models, asynchronous knowledge indexing and the limits of recorded verification.
+- [x] Verify `./mvnw -B -pl ai-service,cart-service -am test-compile -DskipTests` (BUILD SUCCESS), frontend lint,
+  all 5 frontend tests and production build; `bash -n scripts/compose-up.sh`, Python AST parsing of
+  `scripts/collect-safe-evidence.py` and `git diff --check` pass. The initial sandboxed Maven attempt could not open
+  its existing cache lock; the approved rerun passed. Java tests, model evaluations and deployment recovery were
+  not rerun for these comments-only edits; existing runtime acceptance gates remain unchanged.
+
+### Project-wide clarifying comments (2026-10-18)
+
+- [x] Review all 293 maintained files and add responsibility/invariant comments to 232 editable source,
+  test, configuration, script and documentation files. Explain stock lock ordering, atomic deduplication,
+  outbox retry ordering, cache version watermarks and issuer/JWKS separation beside the relevant logic.
+- [x] Add `docs/file-guide.md` and link it from README. Document strict JSON, applied SQL migrations,
+  model prompts, retrieval fixtures, retained results and upstream launchers without changing their data.
+  Generated builds/dependencies, caches, local credentials and IDE metadata are outside this inventory.
+- [x] Verify exact pre-edit contents are recovered when the newly added comments are removed, allowing
+  only the README guide link and this progress record as separate documentation updates. Protected artifacts
+  remain byte-identical. All 32 YAML files parse to the same data before/after annotation.
+- [x] 
+  `./mvnw -B -pl workflow-tests -am -Dtest=EventEnvelopeTest,OrderStateTest,GroundedAnswerTest,ChatAccumulatorTest,ToolArgumentsTest,ModelAdmissionTest -Dsurefire.failIfNoSpecifiedTests=false test`
+  passes across the reactor: 15 selected Java tests, zero failures/errors/skips. This compiles all Java modules;
+  the full infrastructure/model/recovery suites were not rerun for a comments-only change.
+- [x] Frontend lint, all 5 unit tests and production build pass. Python AST parsing (18 files), Bash syntax (12 files),
+  XML parsing (12 files) and JSON parsing (33 files) pass. Compose configuration validation with
+  full/AI/model profiles and Kustomize builds for base, host AI and CPU AI pass. `git diff --check` passes.
+  Local byte-comparison audit and verification logs are retained under ignored `.cache/comment-review`
+  and `/private/tmp/commerceflow-project-comments-maven.log`; existing runtime acceptance gates are unchanged.
+
+### Inline explanations beside executable code (2026-10-18)
+
+- [x] Add 340 inline comments across 211 files, including every one of the 156 maintained Java,
+  TypeScript/JavaScript, Python and shell files. Explain decisions inside methods/control flow and
+  beside DTO fields, annotations, test setup/assertions and configuration settings rather than relying
+  on file headers. Cover transaction boundaries, replay/idempotency, stock ordering, pricing authority,
+  payment uncertainty, worker fencing, credentials, SSE reconnects and explicit local provisioning.
+- [x] Verify that removing these exact comment insertions reproduces the pre-edit contents of all
+  211 files. All 18 Python ASTs and all 12 parsed XML trees are unchanged (ignoring XML formatting
+  whitespace); all 32 YAML documents retain their values. Strict JSON, applied Flyway SQL, model
+  prompts, frozen evaluation inputs, retrieval fixtures and retained results remain byte-identical.
+  Progress recording is the only separate documentation change in this pass.
+- [x] Rerun
+  `./mvnw -B -pl workflow-tests -am -Dtest=EventEnvelopeTest,OrderStateTest,GroundedAnswerTest,ChatAccumulatorTest,ToolArgumentsTest,ModelAdmissionTest -Dsurefire.failIfNoSpecifiedTests=false test`:
+  BUILD SUCCESS, all reactor modules compile and all 15 selected Java tests pass without skips.
+  Compile `infra/HealthCheck.java` separately with `javac`; frontend lint, all 5 unit tests and
+  production build pass. Bash syntax (12 scripts), JSON parsing (33 files), Compose full/AI/model
+  configuration, base/host-AI/CPU-AI Kustomize builds and `git diff --check` pass.
+- Full infrastructure, browser, real-model and crash-recovery suites were not rerun for comment-only
+  edits. Existing acceptance gates remain open. Audit snapshots/insertion metadata are retained in
+  ignored `.cache/inline-comment-review`; Maven output is in
+  `/private/tmp/commerceflow-inline-comments-maven.log`.
+
+### Standalone run-and-demo guide (2026-10-18)
+
+- [x] Create `docs/run-and-demo.md` with ordered prerequisites, native Ollama/model preparation,
+  full Compose startup, seeding/indexing, URLs/accounts, commerce and AI demonstrations, monitoring,
+  automated browser/recovery commands, troubleshooting and data-preserving shutdown. Include the
+  alternative native-model kind workflow and retain the documented CPU/hardware/CI acceptance limits.
+- [x] Link the guide near the top of README and add it to the project file guide.
+- [x] Validate all 17 Bash examples with `bash -n`, all 8 local document links and 9 script references,
+  README/file-guide navigation, startup/demo help options and `git diff --check`. No application
+  startup, process interruption, model download or runtime suites were executed for this documentation change.
+
+### Clarify native browser-harness shutdown (2026-10-18)
+
+- [x] Explain when to skip the native-stack shutdown step, the conflicting gateway/Keycloak ports,
+  the exact marker-file commands, shutdown order and terminal completion signal. Distinguish the
+  harness from separately launched Vite, IntelliJ, Docker, kind and Ollama processes.
+- [x] Verify the description against `BrowserTestStack` stop-file polling, startup marker removal
+  and cleanup order; validate guide Bash examples and `git diff --check`. No processes were stopped.

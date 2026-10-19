@@ -1,3 +1,7 @@
+/*
+ * Attaches caller credentials only in process memory; durable recovery requires fresh
+ * authentication after that attachment is lost.
+ */
 package com.commerceflow.ai.application;
 
 import com.commerceflow.ai.domain.Actor;
@@ -21,6 +25,8 @@ public class Credentials {
     public Optional<Actor> get(UUID run) {
         var actor = values.get(run);
         if (actor == null || !actor.valid()) {
+            // Remove expired credentials on read as well as on the sweeper so a queued worker never
+            // reuses an expired attachment.
             values.remove(run);
             return Optional.empty();
         }
@@ -33,6 +39,8 @@ public class Credentials {
 
     @Scheduled(fixedDelay = 30000)
     void expire() {
+        // Evict unused expired attachments too; do not persist tokens merely to make restart recovery
+        // automatic.
         values.entrySet().removeIf(e -> !e.getValue().valid());
     }
 }

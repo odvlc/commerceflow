@@ -1,3 +1,4 @@
+# Exclude local credentials, downloaded tools and build output from the Docker build context.
 .git
 .idea
 .cache
@@ -6,6 +7,8 @@ frontend/node_modules
 frontend/dist
 frontend/test-results
 **/.env
+# Generated local configuration may contain credentials and must not enter an application image build
+# context.
 infra/.generated*
 .aws
 .codex

@@ -1,5 +1,10 @@
 # Dependency compatibility
 
+<!--
+Maintenance: Records pinned compatibility choices and official sources; use the Boot BOM rather than
+independently overriding Spring components.
+-->
+
 Verified against official sources on 2026-10-17. Maven resolves the Boot BOM and exact transitive versions; do not
 override managed Spring libraries.
 

@@ -1,3 +1,5 @@
+// Measures bounded loopback AI scenarios with credentials supplied at runtime; model generation
+// and commerce requests are separate scenarios.
 import http from 'k6/http';
 import {check, sleep} from 'k6';
 import {Rate, Trend} from 'k6/metrics';
@@ -23,6 +25,8 @@ export const options = {
             maxDuration: '30m'
         }
     },
+    // Exclude dynamic URLs from metric dimensions so per-run identifiers do not create unbounded label
+    // cardinality.
     systemTags: ['status', 'method', 'name', 'scenario', 'error_code', 'check'],
     thresholds: scenario === 'investigation' ? {copilot_completed: ['rate==1']} : {checks: ['rate==1']},
     summaryTrendStats: ['avg', 'med', 'p(95)', 'p(99)', 'max']
@@ -62,6 +66,8 @@ export function generation() {
 export default function () {
     if (scenario === 'commerce') return commerce();
     if (scenario === 'generation') return generation();
+    // This scenario measures the authorized tool target directly; it does not claim to measure model
+    // orchestration.
     if (scenario === 'tool') {
         const response = http.get(`${base}/api/v1/cart`, {
             headers: headers(),

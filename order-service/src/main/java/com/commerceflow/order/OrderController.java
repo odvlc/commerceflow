@@ -1,3 +1,7 @@
+/*
+ * Separates customer-owned order access from administrative/support routes; supplied order IDs
+ * never grant ownership.
+ */
 package com.commerceflow.order;
 
 import com.commerceflow.order.OrderModels.CreateOrder;
@@ -48,6 +52,8 @@ public class OrderController {
 
     @GetMapping("/orders/{id}")
     public OrderView get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        // Customer routes always pass the signed subject; the service conceals orders owned by another
+        // user.
         return orders.get(customer(jwt), id);
     }
 
@@ -71,6 +77,7 @@ public class OrderController {
 
     @GetMapping("/admin/orders/{id}/explanation")
     public OrderExplanation supportExplanation(@PathVariable UUID id) {
+        // The separate support/admin route is role-checked before this unscoped read is permitted.
         return orders.adminExplanation(id);
     }
 

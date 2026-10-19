@@ -1,3 +1,7 @@
+/*
+ * Consumes catalog changes into the derived search index; source versions make replay and out-of-
+ * order delivery safe.
+ */
 package com.commerceflow.catalog.search;
 
 import com.commerceflow.contracts.CheckoutEvents.ProductChanged;
@@ -25,6 +29,8 @@ public class SearchConsumer {
 
     @KafkaListener(topics = Topics.CATALOG, groupId = "catalog-search-v1")
     public void handle(ConsumerRecord<String, String> record) {
+        // Version checks in the index write make repeated or delayed catalog events safe without a
+        // shared service database.
         var event = codec.decode(record);
         if (!event.eventType().equals("ProductChanged"))
             throw new IllegalArgumentException("Unexpected catalog event");

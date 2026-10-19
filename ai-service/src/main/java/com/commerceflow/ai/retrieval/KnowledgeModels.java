@@ -1,3 +1,7 @@
+/*
+ * Keeps import, indexing and citation DTOs explicit; evidence carries source versions so stale
+ * projections can be rejected.
+ */
 package com.commerceflow.ai.retrieval;
 
 import jakarta.validation.constraints.Max;
@@ -56,6 +60,8 @@ public final class KnowledgeModels {
 
     }
 
+    // Carry source/version identity with quoted content so callers can trace evidence back to a
+    // permitted current source.
     public record Evidence(
             String id,
             String sourceId,

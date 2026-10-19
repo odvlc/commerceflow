@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Seeds/verifies synthetic loopback commerce data through authenticated APIs instead of writing
+# foreign service databases.
 """Seed/verify synthetic loopback-only demonstration data using real Keycloak PKCE login."""
 import base64
 import hashlib
@@ -85,6 +87,8 @@ if len(sys.argv) < 2 or sys.argv[1] == "seed":
                            {"Idempotency-Key": "commerceflow-demo-" + sku})
         try:
             stock = call("/admin/inventory/" + product["id"])
+            # Never overwrite demo stock while an outstanding order owns a reservation; finish those
+            # workflows first.
             if stock["reservedQuantity"]:
                 raise RuntimeError("Finish pending demo orders before reseeding stock")
             quantity = {"availableQuantity": 25, "version": stock["version"]}

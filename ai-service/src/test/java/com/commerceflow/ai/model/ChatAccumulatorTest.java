@@ -1,3 +1,7 @@
+/*
+ * Exercises chunk aggregation and transport bounds so incomplete or oversized model output fails
+ * explicitly.
+ */
 package com.commerceflow.ai.model;
 
 import org.junit.jupiter.api.Test;
@@ -37,6 +41,8 @@ class ChatAccumulatorTest {
 
     @Test
     void onlyCompletedObservableOutputCanBecomeAnAnswer() {
+        // Try completion before the done marker to prove partial text cannot be mistaken for an
+        // accepted final result.
         var first = new ArrayList<String>();
         var accumulator = new ChatAccumulator(first::add);
         accumulator.accept(part("Hello ", false, List.of()));
@@ -51,6 +57,8 @@ class ChatAccumulatorTest {
 
     @Test
     void toolRequestsStayStructuredAndHaveSeparateFirstOutputTiming() {
+        // Structured tool output is observable work but is not text-token latency; record the two
+        // paths separately.
         var first = new ArrayList<String>();
         var accumulator = new ChatAccumulator(first::add);
         var call =

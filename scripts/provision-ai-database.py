@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Adds missing AI database ownership to an existing Compose volume and refuses ownership
+# mismatches instead of resetting state.
 """Add the AI-owned PostgreSQL role/database to an existing local Compose volume without recreating it."""
 import os
 import subprocess
@@ -12,6 +14,8 @@ if local.exists():
         if line.startswith("AI_DB_PASSWORD="):
             password = line.split("=", 1)[1].strip().strip("\"'")
 password = os.environ.get("AI_DB_PASSWORD", password)
+# Validate single-line configuration before passing it as a psql variable; never interpolate it into
+# shell commands.
 if not password or any(ord(char) < 32 or ord(char) == 127 for char in password):
     raise ValueError("AI_DB_PASSWORD must be a nonempty single-line value")
 literal = password.replace("'", "''")

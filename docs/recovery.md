@@ -1,5 +1,10 @@
 # Failure recovery for the implemented slice
 
+<!--
+Maintenance: Explains replay, reconciliation and compensation after interruption while preserving
+authoritative state.
+-->
+
 **Kafka down:** business transactions can still commit outbox intent. Inspect
 `SELECT id,event_type,attempts,last_error,next_attempt_at FROM outbox_events WHERE published_at IS NULL ORDER BY sequence`
 using the owning service's connection. Restore Kafka, check listener health and wait for capped backoff. `published_at`

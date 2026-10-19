@@ -1,4 +1,8 @@
 <?xml version="1.0" ?>
+<!--
+Aggregates independently deployable modules and centralizes Java, Boot BOM and test plugin versions;
+service dependencies inherit these choices.
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
@@ -31,6 +35,8 @@
         <springdoc.version>3.1.1</springdoc.version>
         <postgres.binaries.version>18.6.0</postgres.binaries.version>
     </properties>
+    <!-- Pin shared module/test dependencies here; Spring versions come from the inherited Boot
+         dependency management. -->
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -85,6 +91,8 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
+                    <!-- Integration-test execution and verification belong to the verify lifecycle;
+                         compilation alone does not run these tests. -->
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <executions>
                         <execution>

@@ -1,3 +1,5 @@
+# Profiles make infrastructure/apps/AI opt-in; named volumes retain service data and published
+# development ports stay on loopback.
 name: commerceflow
 services:
   postgres:
@@ -23,6 +25,8 @@ services:
     mem_limit: 1g
   kafka:
     image: apache/kafka:4.2.2
+    # Profiles add only requested dependencies/workloads; the plain invocation should not implicitly
+    # start every optional service.
     profiles: [ events, apps, full ]
     ports: [ "127.0.0.1:9092:9092" ]
     environment:

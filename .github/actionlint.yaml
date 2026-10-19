@@ -1,3 +1,7 @@
+# Registers the explicitly provisioned AI runner label for workflow linting; it does not provision
+# that runner.
 self-hosted-runner:
   labels:
+    # This label must match the opt-in dedicated runner in the workflow; normal hosted jobs do not
+    # provide local models.
     - commerceflow-ai

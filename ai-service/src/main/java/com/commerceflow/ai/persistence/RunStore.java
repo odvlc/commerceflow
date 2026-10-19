@@ -1,3 +1,7 @@
+/*
+ * Checkpoints leased work in short transactions; fence checks prevent an expired worker from
+ * overwriting newer recovery decisions.
+ */
 package com.commerceflow.ai.persistence;
 
 import com.commerceflow.ai.domain.AiModels.Claimed;
@@ -181,6 +185,7 @@ public class RunStore {
     }
 
     @Transactional
+    // The assistant message, citations and public completion event commit with the terminal run state.
     public void finish(Claimed c, String answer, List<Evidence> citations, long elapsed) {
         lock(c);
         jdbc.sql(
@@ -250,6 +255,8 @@ public class RunStore {
     }
 
     @Transactional
+    // Heartbeat accounting checkpoints consumed time so a crash cannot repeatedly recover a full fresh
+    // budget.
     public boolean renew(Claimed c) {
         return jdbc.sql(
                         "UPDATE ai_runs SET active_millis=active_millis+GREATEST(0,(extract(epoch FROM"

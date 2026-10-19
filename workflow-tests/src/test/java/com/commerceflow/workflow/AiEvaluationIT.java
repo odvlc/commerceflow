@@ -1,3 +1,7 @@
+/*
+ * Runs frozen labeled scenarios across real model/service boundaries; procedural checks do not
+ * certify every generated factual assertion.
+ */
 package com.commerceflow.workflow;
 
 import com.commerceflow.ai.AiApplication;
@@ -275,6 +279,8 @@ class AiEvaluationIT {
 
     @Test
     void evaluateFrozenCorpusWithRepeatedRealInference() throws Exception {
+        // Read the frozen labels unchanged; scenario success is procedural evidence and must not be
+        // relabeled as a model-judged factual score.
         var corpus =
                 JSON.readTree(
                         Files.readString(root.resolve("ai-service/src/test/resources/evaluation-cases.json")));

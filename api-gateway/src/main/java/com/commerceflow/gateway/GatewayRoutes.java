@@ -1,3 +1,7 @@
+/*
+ * Defines explicit service routes and optional AI routing; downstream services still validate
+ * identity and ownership.
+ */
 package com.commerceflow.gateway;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +24,8 @@ public class GatewayRoutes {
     @Bean
     @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "AI_ENABLED", havingValue = "true")
     RouterFunction<ServerResponse> aiRoutes(@Value("${AI_URL:http://localhost:8087}") String target) {
+        // With the feature flag absent, no AI route is registered; the commerce routes remain
+        // available.
         return proxy("ai", target, "/api/v1/ai/**", "/api/v1/admin/ai/**");
     }
 
@@ -65,6 +71,8 @@ public class GatewayRoutes {
     }
 
     private RouterFunction<ServerResponse> proxy(String name, String target, String... paths) {
+        // Combine only declared path patterns; service selection never comes from a caller-supplied
+        // URL.
         var predicate =
                 Arrays.stream(paths)
                         .map(RequestPredicates::path)

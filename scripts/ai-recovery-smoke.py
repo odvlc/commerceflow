@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Interrupts real AI execution and withholds a real Cart response; cleanup restores temporary
+# fault routing while preserving volumes.
 """Exercise real local Compose AI process loss and an acknowledged-but-lost Cart response. Preserves volumes."""
 import argparse
 import json
@@ -21,6 +23,8 @@ args = parser.parse_args()
 base = local_url(
     os.environ.get('BASE_URL', 'http://localhost:3000' if args.target == 'kind' else 'http://localhost:8080'))
 token = login('alice')
+# Keep completion false until every required recovery assertion passes; partial evidence must not look
+# fully accepted.
 report = {'target': 'local ' + args.target, 'realProcessKill': False, 'complete': False, 'checks': []}
 
 
@@ -99,6 +103,8 @@ def compose(*arguments, **overrides):
                     'items'][
                     0]
             report['lastKilledPodUid'] = pod['metadata']['uid']
+            # Stop the actual container before replacing its Pod; graceful shutdown alone would not
+            # exercise crash recovery.
             container_id = pod['status']['containerStatuses'][0]['containerID'].split('://', 1)[1]
             subprocess.run(
                 ['docker', 'exec', 'commerceflow-control-plane', 'crictl', 'stop', '--timeout=0', container_id],

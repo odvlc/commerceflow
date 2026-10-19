@@ -1,5 +1,10 @@
 # ADR 0001: service-owned state and shared infrastructure helpers
 
+<!--
+Maintenance: Records service data ownership and event-driven coordination decisions; changes should
+explain the architectural tradeoff.
+-->
+
 Accepted: 2026-10-17.
 
 Each application owns a PostgreSQL database, credentials, Flyway history, repositories and business transactions.

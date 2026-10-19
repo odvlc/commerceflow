@@ -1,3 +1,7 @@
+/*
+ * Serializes live indexing and rebuilds with a session lock while keeping external model/search
+ * calls out of SQL transactions.
+ */
 package com.commerceflow.ai.indexing;
 
 import com.commerceflow.ai.retrieval.KnowledgeIndex;
@@ -52,6 +56,8 @@ public class KnowledgeIndexer {
                 for (var job : store.pending())
                     try {
                         var doc = store.required(job.documentId());
+                        // A superseded source job must not project old text over the current document
+                        // version.
                         if (doc.version() == job.version()) {
                             index.ensure();
                             index.write(
@@ -103,6 +109,7 @@ public class KnowledgeIndexer {
                 }
                 if (documents.size() < 100) break;
             }
+            // Publish the completed generation through one alias change before marking rebuild success.
             index.swap(job.indexName());
             store.rebuildState(job.id(), "SUCCEEDED", count, null);
         } catch (RuntimeException error) {

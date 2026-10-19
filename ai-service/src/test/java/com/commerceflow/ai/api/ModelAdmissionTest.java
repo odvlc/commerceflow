@@ -1,3 +1,7 @@
+/*
+ * Checks which requests require model readiness, including recovery of already approved actions
+ * without new generation.
+ */
 package com.commerceflow.ai.api;
 
 import com.commerceflow.ai.application.Credentials;
@@ -31,6 +35,8 @@ class ModelAdmissionTest {
 
     @Test
     void unavailableInferenceRejectsNewWorkWithoutPersistingMessagesOrCredentials() {
+        // Admission failure must happen before durable/message side effects, leaving no unreachable
+        // work or attached caller token.
         var models = mock(LocalModels.class);
         when(models.chatName()).thenReturn("llama3.1:8b");
         var store = mock(AiStore.class);
@@ -81,6 +87,8 @@ class ModelAdmissionTest {
 
     @Test
     void persistedCartIntentCanResumeWhenInferenceIsUnavailable() {
+        // An already approved deterministic Cart intent needs no new model decision, even when
+        // generation is unavailable.
         var models = mock(LocalModels.class);
         var store = mock(AiStore.class);
         var credentials = mock(Credentials.class);

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Builds/loads local images and assembles the selected overlay; existing cluster networking and
+# persisted data are not silently replaced.
 set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -33,6 +35,8 @@ if ! kind get clusters | grep -qx commerceflow; then
   kind create cluster --config infra/kind.yaml
 fi
 # An existing default-kindnet cluster does not establish policy enforcement. Never delete it implicitly.
+# An existing cluster with a different CNI needs an explicit migration; silently replacing it would
+# invalidate policy evidence.
 if kubectl --context kind-commerceflow -n kube-system get daemonset kindnet >/dev/null 2>&1; then
   echo 'Existing cluster uses kindnet; use a separately reviewed migration to Calico. No cluster/data erased.' >&2
   exit 1
@@ -48,6 +52,8 @@ modules=(catalog-service cart-service order-service inventory-service payment-se
 if [ "$mode" != off ]; then modules+=(ai-service); fi
 for module in "${modules[@]}"; do
   if [ "$build" = true ]; then docker build -f infra/Dockerfile --build-arg APP_MODULE="$module" -t "commerceflow/$module:local" .; fi
+  # Verify the image exists even when build is skipped; never deploy a missing local tag and assume a
+  # registry fallback.
   docker image inspect "commerceflow/$module:local" >/dev/null
   kind load docker-image "commerceflow/$module:local" --name commerceflow
 done
@@ -97,6 +103,7 @@ done
 if [ "$mode" != off ]; then
   kubectl --context kind-commerceflow -n commerceflow wait --for=condition=complete job/ai-db-provision-v1 --timeout=180s
 fi
+# CPU startup checks existing prepared models; installing weights is a separate explicit job.
 if [ "$mode" = container ]; then
   kubectl --context kind-commerceflow -n commerceflow rollout status statefulset/ollama --timeout=300s
   python3 scripts/kind-ai-models.py --check

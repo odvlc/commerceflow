@@ -1,3 +1,7 @@
+/*
+ * Tests concurrent stock reservations and replay/compensation against PostgreSQL so overselling is
+ * observable.
+ */
 package com.commerceflow.inventory;
 
 import com.commerceflow.contracts.CheckoutEvents.ReserveInventory;
@@ -83,6 +87,8 @@ class InventoryIntegrationTest {
 
     @Test
     void oneHundredConcurrentRequestsReserveExactlyTenWithoutOverselling() throws Exception {
+        // Release competing requests through one gate so all 100 contend for the same stock of 10
+        // rather than run serially.
         var product = UUID.randomUUID();
         inventory.setStock(product, 10, null);
         var gate = new CountDownLatch(1);
@@ -153,6 +159,8 @@ class InventoryIntegrationTest {
 
     @Test
     void expirySignalsReconciliationWithoutReleasingUncertainPayments() {
+        // Expired stock can still correspond to a successful delayed payment; only the saga decides
+        // when release is safe.
         var product = UUID.randomUUID();
         var order = UUID.randomUUID();
         inventory.setStock(product, 2, null);

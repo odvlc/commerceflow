@@ -1,8 +1,12 @@
+// Exercises real PKCE login, purchase/decline compensation and administration through the public
+// storefront.
 import {expect, test} from "@playwright/test";
 
 test("a real customer logs in with PKCE, purchases, observes confirmation, and sees decline compensation", async ({
                                                                                                                       page,
                                                                                                                   }) => {
+    // Use the public storefront entry point so the flow includes actual browser routing and PKCE
+    // authentication.
     await page.goto("/");
     await expect(
         page.getByRole("heading", {name: "The collection"}),

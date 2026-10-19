@@ -1,3 +1,5 @@
+# Environment-driven notification-service defaults bind locally; deployment overrides supply
+# service DNS, identity endpoints and owned infrastructure credentials.
 server:
   port: ${PORT:8086}
   address: ${BIND_ADDRESS:127.0.0.1}
@@ -6,6 +8,8 @@ spring:
   application:
     name: notification-service
   threads:
+    # Virtual threads reduce blocked-thread overhead; database connections and downstream capacity
+    # remain independently bounded.
     virtual:
       enabled: ${VIRTUAL_THREADS:true}
   datasource:
@@ -13,6 +17,8 @@ spring:
     username: ${DB_USERNAME:notification}
     password: ${DB_PASSWORD}
     hikari:
+      # Bound database concurrency explicitly instead of sizing it from the number of virtual request
+      # threads.
       maximum-pool-size: ${DB_POOL_SIZE:10}
       connection-timeout: 3000
   flyway:
@@ -20,6 +26,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
+      # Flyway owns schema changes; Hibernate validates mappings without creating or modifying tables.
       ddl-auto: validate
     properties:
       hibernate.jdbc.time_zone: UTC

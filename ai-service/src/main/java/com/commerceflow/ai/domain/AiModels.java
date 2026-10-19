@@ -1,3 +1,7 @@
+/*
+ * Defines AI API/checkpoint boundary records without sharing persistence entities with commerce
+ * services.
+ */
 package com.commerceflow.ai.domain;
 
 import jakarta.validation.constraints.Min;
@@ -24,6 +28,8 @@ public final class AiModels {
 
     }
 
+    // Approval binds to the exact preview hash and version; a proposal UUID alone does not authorize
+    // execution.
     public record Confirmation(
             @Min(0) long version, @NotNull @Pattern(regexp = "[a-f0-9]{64}") String argumentsHash) {
 

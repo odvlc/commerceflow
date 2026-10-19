@@ -1,3 +1,7 @@
+/*
+ * Owns order rows, saga checkpoints and public history; row locks serialize concurrent state
+ * transitions.
+ */
 package com.commerceflow.order;
 
 import com.commerceflow.contracts.CheckoutEvents.PaymentScenario;
@@ -169,6 +173,7 @@ public class OrderRepository {
     }
 
     public void move(Row order, OrderState target, Instant deadline) {
+        // Check the legal transition before issuing the optimistic update or recording public history.
         order.status().requireTransition(target);
         int changed =
                 jdbc.sql(
@@ -198,6 +203,8 @@ public class OrderRepository {
                 .update();
     }
 
+    // Keep the first known cause during compensation; later cleanup must not erase the original failure
+    // reason.
     public void recordReason(UUID id, String reason) {
         jdbc.sql("UPDATE orders SET public_reason_code=:reason WHERE id=:id AND public_reason_code IS NULL")
                 .param("id", id).param("reason", reason).update();

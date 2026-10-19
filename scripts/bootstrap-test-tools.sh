@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
+# Prepares pinned native test dependencies under the ignored cache; these processes are separate
+# from persistent runtime infrastructure.
 set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TOOLS="$PROJECT_ROOT/.cache/tools"
 REDIS_VERSION=8.10.2
 REDIS_SHA256=b9ffee226b5eecdba98a679260dad764b2a4ebd90dce4ad5ac9e9f3eef9c02b3
+# All downloaded/native build outputs stay in the ignored cache rather than modifying application
+# source.
 mkdir -p "$TOOLS"
 if [ ! -x "$TOOLS/redis-$REDIS_VERSION/src/redis-server" ]; then
   curl --fail --location --retry 3 "https://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz" -o "$TOOLS/redis-$REDIS_VERSION.tar.gz"

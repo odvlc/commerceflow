@@ -1,28 +1,32 @@
 # Local Llama copilot architecture
 
+<!--
+Maintenance: Explains local inference, durable runs and evidence flow across service boundaries.
+-->
+
 CommerceFlow's independently deployable `ai-service` uses Spring AI's low-level Ollama API with pinned
 `llama3.1:8b` and a separate `nomic-embed-text:latest` embedding model. There is no cloud inference fallback.
 The existing Java 25 / Spring Boot 4.1.1 BOM remains authoritative; the AI BOM is scoped to the AI module.
 
 ```mermaid
 flowchart LR
-  UI[React copilot] -->|Keycloak JWT / command / SSE| GW[Gateway optional AI routes]
-  GW --> AI[AI HTTP API]
-  AI --> PG[(Owned AI PostgreSQL)]
-  PG --> O[Transactional outbox]
-  O --> K[Kafka knowledge event]
-  K --> IDX[Replay-safe index worker]
-  IDX --> ES[(AI-owned Elasticsearch aliases)]
-  AI --> W[Leased fenced worker]
-  W --> L[Local Ollama Llama / Nomic]
-  W --> T[Fixed typed tool registry]
-  T --> ES
-  T --> C[Catalog / Cart / Order HTTP APIs]
-  T --> P[Prepare exact cart proposal]
-  UI -->|Explicit hash/version confirmation| AI
-  AI --> E[Durable execution intent / stable key]
-  E --> W
-  W -->|Original revision and key| C
+    UI[React copilot] -->|Keycloak JWT / command / SSE| GW[Gateway optional AI routes]
+    GW --> AI[AI HTTP API]
+    AI --> PG[(Owned AI PostgreSQL)]
+    PG --> O[Transactional outbox]
+    O --> K[Kafka knowledge event]
+    K --> IDX[Replay-safe index worker]
+    IDX --> ES[(AI-owned Elasticsearch aliases)]
+    AI --> W[Leased fenced worker]
+    W --> L[Local Ollama Llama / Nomic]
+    W --> T[Fixed typed tool registry]
+    T --> ES
+    T --> C[Catalog / Cart / Order HTTP APIs]
+    T --> P[Prepare exact cart proposal]
+    UI -->|Explicit hash/version confirmation| AI
+    AI --> E[Durable execution intent / stable key]
+    E --> W
+    W -->|Original revision and key| C
 ```
 
 `api` owns validation, caller identity and HTTP/SSE. `application` owns the bounded worker, expiring process-local

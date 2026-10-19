@@ -1,5 +1,10 @@
 # Copilot security boundaries
 
+<!--
+Maintenance: Defines caller authority, prompt/data trust boundaries and explicit confirmation rules
+for AI tools.
+-->
+
 Keycloak is the identity provider. Services independently validate issuer, audience, expiry and UUID subject. The AI
 service verifies ownership and current mode on commands, history, run status, event replay and proposals. SUPPORT
 allows the exact Order explanation GET route, not administrative payment or stock access. Caller tokens are held only

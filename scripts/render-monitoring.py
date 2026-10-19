@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Renders ignored local monitoring/identity configuration from one set of overrides; generated
+# credentials must not be committed.
 """Render local monitoring configuration without committing credentials."""
 import json
 import os
@@ -14,9 +16,13 @@ if dotenv.exists():
         if "=" in line and not line.lstrip().startswith("#"):
             key, value = line.split("=", 1)
             settings[key.strip()] = value.strip().strip('"').strip("'")
+# Environment overrides take precedence over dotenv so Compose/native invocations share one explicit
+# source of settings.
 settings.update(os.environ)
 secret = settings.get("SERVICE_CLIENT_SECRET", "local-service-only")
 source = (root / "infra/prometheus/prometheus.yaml").read_text()
+# JSON quoting makes a credential a YAML scalar rather than allowing it to introduce configuration
+# syntax.
 source = source.replace("client_secret: local-service-only", "client_secret: " + json.dumps(secret))
 if settings.get("AI_ENABLED", "false").lower() == "true":
     source = source.replace('"api-gateway:8080" ]', '"api-gateway:8080","ai-service:8080" ]')

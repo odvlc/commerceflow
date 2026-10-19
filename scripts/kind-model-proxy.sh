@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Creates/reuses a restricted inference-only container on the private kind network without
+# publishing a host port.
 set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -15,6 +17,8 @@ else
 fi
 for attempt in $(seq 1 30); do
   if docker exec commerceflow-kind-model-proxy wget -q -O /dev/null http://127.0.0.1:11434/api/tags; then
+    # Reload the fixed inference allowlist after reachability succeeds so an existing container uses the
+    # current proxy rules.
     docker exec commerceflow-kind-model-proxy nginx -s reload
     exit 0
   fi

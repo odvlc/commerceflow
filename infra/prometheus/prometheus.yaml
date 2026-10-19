@@ -1,7 +1,11 @@
+# Scrapes authenticated service metrics; render local overrides when the development service-
+# client secret changes.
 # Public local-development credential; update alongside SERVICE_CLIENT_SECRET if overridden.
 global:
   scrape_interval: 15s
 rule_files: [ /etc/prometheus/alerts.yaml ]
+# Scrape applications with the configured service identity; health probes remain separate from
+# authenticated metric collection.
 scrape_configs:
   - job_name: commerceflow
     metrics_path: /actuator/prometheus

@@ -1,3 +1,7 @@
+/*
+ * Routes deduplicated inventory/payment results to the persisted saga and schedules deadline
+ * reconciliation.
+ */
 package com.commerceflow.order;
 
 import com.commerceflow.contracts.CheckoutEvents.InventoryResult;
@@ -36,6 +40,7 @@ public class OrderConsumer {
         var event = codec.decode(record);
         try (var ignored = MDC.putCloseable("correlationId", event.correlationId())) {
             switch (event.eventType()) {
+                // Run the saga transition and its incoming-event marker inside one local transaction.
                 case "InventoryResult" -> processed.once(
                         event.eventId(),
                         () ->

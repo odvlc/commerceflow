@@ -1,3 +1,7 @@
+/*
+ * Persists synthetic customer notifications and their outgoing events together; no external
+ * message delivery occurs here.
+ */
 package com.commerceflow.notification;
 
 import com.commerceflow.contracts.CheckoutEvents.NotificationCreated;
@@ -56,6 +60,8 @@ public class NotificationService {
                         .param("status", result.status())
                         .param("message", message)
                         .update();
+        // Only a newly stored order/status notification emits an outgoing event; replay produces no
+        // second notification.
         if (inserted == 1)
             outbox.append(
                     "NotificationCreated",
@@ -78,6 +84,8 @@ public class NotificationService {
                                         + " customer_id=:id ORDER BY created_at DESC,id LIMIT :size OFFSET :offset")
                         .param("id", customer)
                         .param("size", size)
+                        // Promote before multiplication so a large validated page number cannot
+                        // overflow a 32-bit offset.
                         .param("offset", (long) page * size)
                         .query(
                                 (rs, n) ->

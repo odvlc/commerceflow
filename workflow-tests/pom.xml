@@ -1,4 +1,8 @@
 <?xml version="1.0" ?>
+<!--
+Assembles real cross-service test fixtures and opt-in AI evaluation without becoming a deployed
+commerce service.
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0">
     <modelVersion>4.0.0</modelVersion>
     <parent>
@@ -7,6 +11,8 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
     <artifactId>workflow-tests</artifactId>
+    <!-- The test harness depends on real service modules so integration checks cross their actual
+         boundaries. -->
     <dependencies>
         <dependency>
             <groupId>com.commerceflow</groupId>

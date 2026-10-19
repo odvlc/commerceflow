@@ -1,5 +1,10 @@
 # Local Copilot API
 
+<!--
+Maintenance: Describes AI HTTP/SSE contracts and explicit proposal approval; use committed run state
+as the replay authority.
+-->
+
 All endpoints use the existing Keycloak issuer/audience and bearer access token. Tokens are never stored in PostgreSQL,
 passed to the model, or placed in stream URLs. The gateway exposes these paths only when `AI_ENABLED=true`.
 

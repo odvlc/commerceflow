@@ -1,3 +1,7 @@
+/*
+ * Validates JWT issuer, audience and UUID subject, then applies role/scope rules; resource
+ * ownership remains an application check.
+ */
 package com.commerceflow.support;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +40,7 @@ public class SecurityConfiguration {
                     "${security.jwk-set-uri:http://localhost:8180/realms/commerceflow/protocol/openid-connect/certs}")
             String jwks,
             @Value("${security.audience:commerceflow-api}") String audience) {
+        // Internal JWKS routing can differ from the browser issuer URL; validate the public issuer anyway.
         var decoder = NimbusJwtDecoder.withJwkSetUri(jwks).build();
         OAuth2TokenValidator<Jwt> audienceValidator =
                 token ->
@@ -46,6 +51,8 @@ public class SecurityConfiguration {
         OAuth2TokenValidator<Jwt> subjectValidator =
                 token -> {
                     try {
+                        // Reject non-UUID subjects before controllers convert them into resource-owner
+                        // IDs.
                         UUID.fromString(token.getSubject());
                         return OAuth2TokenValidatorResult.success();
                     } catch (RuntimeException error) {
@@ -73,6 +80,8 @@ public class SecurityConfiguration {
                                 .filter(Set.of("ADMIN", "CUSTOMER", "SUPPORT")::contains)
                                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                                 .forEach(roles::add);
+                    // Service scopes and realm roles are distinct authorities; possessing a customer
+                    // role does not grant internal write access.
                     String scope = jwt.getClaimAsString("scope");
                     if (scope != null)
                         Arrays.stream(scope.split(" "))

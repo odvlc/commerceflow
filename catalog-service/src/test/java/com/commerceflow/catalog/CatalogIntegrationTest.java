@@ -1,3 +1,7 @@
+/*
+ * Verifies catalog persistence, optimistic conflicts, search/cache behavior and replay using real
+ * infrastructure.
+ */
 package com.commerceflow.catalog;
 
 import com.commerceflow.catalog.api.ProductInput;
@@ -95,6 +99,8 @@ class CatalogIntegrationTest {
 
     @Test
     void createsListsReadsAndGeneratesOpenApi() throws Exception {
+        // Exercise the MVC boundary and persisted result together; a valid DTO alone does not prove
+        // the endpoint contract.
         var response =
                 http.perform(
                                 post("/api/v1/admin/products")
@@ -153,6 +159,7 @@ class CatalogIntegrationTest {
 
     @Test
     void conflictingWriteRollsBackCategoryAndOutbox() throws Exception {
+        // A conflict must roll back auxiliary rows and outgoing events as well as the product edit.
         catalog.create("original-key", input("KEY-1"), "test");
         var duplicate =
                 new ProductInput(

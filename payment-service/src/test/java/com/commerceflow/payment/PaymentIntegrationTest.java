@@ -1,3 +1,7 @@
+/*
+ * Exercises persisted simulated authorization, cancellation, delayed results and idempotent
+ * outcomes.
+ */
 package com.commerceflow.payment;
 
 import com.commerceflow.contracts.CheckoutEvents.AuthorizePayment;
@@ -67,6 +71,8 @@ class PaymentIntegrationTest {
     @Test
     void twentyConcurrentAuthorizationsAndRepeatedRefundsHaveOneChargeAndRefundAttempt()
             throws Exception {
+        // Race requests against the same order identity, then inspect attempt history to detect
+        // duplicate simulated financial effects.
         var order = UUID.randomUUID();
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var tasks = new ArrayList<Callable<PaymentService.PaymentView>>();
@@ -107,6 +113,8 @@ class PaymentIntegrationTest {
     @Test
     void cancellationRacingWithDelayedSettlementNeverLeavesAuthorizationUnrefunded()
             throws Exception {
+        // Either side can acquire the lock first; the final payment state must still reconcile
+        // cancellation safely.
         for (int i = 0; i < 20; i++) {
             var order = UUID.randomUUID();
             payments.authorize(order, request(PaymentScenario.DELAY), "race");

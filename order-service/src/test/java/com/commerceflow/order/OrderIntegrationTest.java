@@ -1,3 +1,6 @@
+/*
+ * Verifies persisted order state, ownership, idempotency and saga compensation against PostgreSQL.
+ */
 package com.commerceflow.order;
 
 import com.commerceflow.contracts.CheckoutEvents.PaymentScenario;
@@ -101,6 +104,8 @@ class OrderIntegrationTest {
 
     @Test
     void trustedPriceAndConcurrentIdempotencyPersistExactlyOneOrderAndEvent() throws Exception {
+        // All callers race the same request key; verify persistence and outbox cardinality rather
+        // than only comparing HTTP results.
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var tasks = new ArrayList<Callable<OrderView>>();
             for (int i = 0; i < 20; i++)
@@ -246,6 +251,8 @@ class OrderIntegrationTest {
 
     @Test
     void historyAndReasonRollBackWithBusinessTransactionAndLegacyIsUnknown() {
+        // Public explanations are committed business facts; rollback and legacy gaps must not turn
+        // into invented historical causes.
         var order = orders.create(customer, "rollback-history", request(), "explanation");
         assertThatThrownBy(() -> new org.springframework.transaction.support.TransactionTemplate(transactions).executeWithoutResult(tx -> {
             orders.cancel(customer, order.id());

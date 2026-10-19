@@ -1,8 +1,11 @@
+# Keep generated builds, local credentials and downloaded test tools out of source control;
+# example configuration remains reviewable.
 .idea/
 *.iml
 **/target/
 .cache/
 .env
+# Keep live local credential overrides ignored while preserving the documented example file.
 infra/.env
 node_modules/
 dist/

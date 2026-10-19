@@ -1,3 +1,7 @@
+/*
+ * Persists the exact approval hash and a single recoverable execution; successful external
+ * acknowledgments remain auditable after cancellation.
+ */
 package com.commerceflow.ai.persistence;
 
 import com.commerceflow.ai.domain.Actor;
@@ -69,6 +73,8 @@ public class ActionStore {
                                         product.toString(),
                                         quantity,
                                         revision,
+                                        // Sort preview keys before hashing; unspecified map iteration
+                                        // order must not change an approval fingerprint.
                                         json.convertValue(preview, TreeMap.class))));
         var existing = views.proposals(run);
         if (!existing.isEmpty()) {
@@ -120,6 +126,8 @@ public class ActionStore {
         if (!proposal.argumentsHash().equals(input.argumentsHash()))
             throw AiStore.conflict("AI_APPROVAL_CHANGED", "Proposal arguments do not match");
         var existing = execution(id);
+        // A repeated confirmation recovers the original request key instead of creating another
+        // execution.
         if (existing.isPresent()) return existing.get();
         if (!proposal.state().equals("PROPOSED")
                 || proposal.version() != input.version()
@@ -185,6 +193,8 @@ public class ActionStore {
         if (run.isEmpty()) throw new RunStore.LostLease();
         var value = execution(proposal).orElseThrow();
         if (value.state().equals("SUCCEEDED") || value.state().equals("FAILED")) return value;
+        // Do not replay after the guaranteed Cart memo window; an expired memo could turn a retry into
+        // a fresh mutation.
         if (!value.recoveryUntil().isAfter(Instant.now()) || value.attempts() >= 3) {
             record(proposal, "OUTCOME_UNKNOWN", null, "AI_RECOVERY_WINDOW_EXPIRED");
             return execution(proposal).orElseThrow();

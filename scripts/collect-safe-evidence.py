@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Exports only explicitly allowed synthetic artifacts; raw authenticated traces/logs and rendered
+# Secrets must not be uploaded.
 """Export an allowlist of synthetic evidence; never upload raw traces, logs, credentials or rendered Secrets."""
 import json
 import os
@@ -21,6 +23,8 @@ if existing:
         raise ValueError('Unexpected files in generated evidence directory; refusing to touch/upload it')
     for name in owned:
         path = (output / name).resolve()
+        # Validate ownership-manifest paths before deletion so a malformed manifest cannot escape the
+        # export directory.
         if not path.is_relative_to(output.resolve()):
             raise ValueError('Invalid prior evidence manifest path')
         if path.is_file():
@@ -32,6 +36,8 @@ manifest = []
 
 
 def export_text(source, destination, content):
+    # Fail the whole export on suspected credentials; silent redaction could hide unsafe artifact
+    # selection.
     if credential.search(content):
         raise ValueError(
             'Potential credential in allowlisted evidence; refusing export: ' + str(source.relative_to(root)))

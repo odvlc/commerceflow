@@ -1,3 +1,7 @@
+/*
+ * Applies deduplicated authorization/cancellation commands and settles due simulated delayed
+ * authorizations.
+ */
 package com.commerceflow.payment;
 
 import com.commerceflow.contracts.CheckoutEvents.AuthorizePayment;
@@ -33,6 +37,8 @@ public class PaymentConsumer {
         var event = codec.decode(record);
         try (var ignored = MDC.putCloseable("correlationId", event.correlationId())) {
             switch (event.eventType()) {
+                // Command replay must reuse persisted payment identity rather than authorize another
+                // simulated charge.
                 case "AuthorizePayment" -> processed.once(
                         event.eventId(),
                         () ->

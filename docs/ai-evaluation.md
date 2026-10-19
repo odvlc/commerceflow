@@ -1,5 +1,10 @@
 # Local AI evaluation protocol
 
+<!--
+Maintenance: Distinguishes scenario assertions from factual answer review; retained procedural
+results do not close independent wording gates.
+-->
+
 The immutable `ai-service/src/test/resources/evaluation-cases.json` defines 80 labeled scenarios: 20 retrieval/citation,
 20 investigation, 20 action/recovery and 20 adversarial. Each group has 15 development and five held-out scenarios.
 Reports include the corpus, prompt and model hashes. No external paid model judge or scripted runtime model is used.

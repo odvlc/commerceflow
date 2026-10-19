@@ -1,3 +1,7 @@
+/*
+ * Maintains the derived lexical/vector projection with source versions and alias-based rebuilds;
+ * PostgreSQL remains authoritative.
+ */
 package com.commerceflow.ai.retrieval;
 
 import com.commerceflow.ai.retrieval.KnowledgeModels.Chunk;
@@ -143,6 +147,7 @@ public class KnowledgeIndex {
         }
     }
 
+    // Readers and writers switch generations together; do not expose a partially rebuilt index.
     public void swap(String index) {
         var actions = new ArrayList<Map<String, Object>>();
         for (String alias : List.of(READ, WRITE))
@@ -198,6 +203,8 @@ public class KnowledgeIndex {
         return embeddings;
     }
 
+    // This bounded retrieval path is for the curated local corpus, not an unbounded full-index vector
+    // scan.
     public List<JsonNode> vector(String query, String mode, int size) {
         if (!embeddings) return List.of();
         verifyEmbeddingMapping();

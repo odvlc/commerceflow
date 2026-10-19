@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Starts the ephemeral real-service browser harness after test classpaths exist; use the stop
+# sentinel for ordered shutdown.
 set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -7,4 +9,6 @@ if [ ! -f workflow-tests/target/test-classpath.txt ]; then
   exit 1
 fi
 BROWSER_CLASSPATH="$(cat workflow-tests/target/test-classpath.txt)"
+# Replace the shell with the harness so signals reach its ordered application/infrastructure shutdown
+# handler.
 exec java -Duser.timezone=UTC -cp "workflow-tests/target/test-classes:$BROWSER_CLASSPATH" com.commerceflow.workflow.BrowserTestStack

@@ -1,3 +1,7 @@
+/*
+ * Persists idempotent simulated payment outcomes, cancellation tombstones and attempt history
+ * alongside outgoing events.
+ */
 package com.commerceflow.payment;
 
 import com.commerceflow.contracts.CheckoutEvents.AuthorizePayment;
@@ -133,6 +137,8 @@ public class PaymentService {
             var id = (UUID) row.get("id");
             String status = row.get("status").toString();
             if (status.equals("PENDING") || status.equals("AUTHORIZED")) {
+                // A completed authorization needs a refund; a still-pending one can be cancelled before
+                // settlement.
                 String target = status.equals("AUTHORIZED") ? "REFUNDED" : "CANCELLED";
                 jdbc.sql("UPDATE payments SET status=:status,updated_at=now() WHERE id=:id")
                         .param("id", id)
@@ -161,6 +167,8 @@ public class PaymentService {
         for (var order : candidates) {
             lock(order);
             var payment = required(order);
+            // Recheck under the payment lock so a concurrent cancellation cannot be overwritten by
+            // delayed settlement.
             if (!payment.status().equals("PENDING")) continue;
             jdbc.sql(
                             "UPDATE payments SET status='AUTHORIZED',updated_at=now() WHERE order_id=:id AND"

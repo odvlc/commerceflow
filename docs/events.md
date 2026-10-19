@@ -1,5 +1,10 @@
 # Kafka contracts and delivery
 
+<!--
+Maintenance: Describes versioned wire messages and replay expectations; broker delivery is at least
+once.
+-->
+
 `contracts` contains wire DTOs only. Envelope v1 fields: `eventId` (UUID), `eventType`, `schemaVersion` (1),
 `aggregateId` (UUID), `correlationId`, `occurredAt` (UTC ISO instant), and typed `payload`. Kafka keys must equal
 aggregate IDs. Order workflows use order IDs; catalog uses product IDs.

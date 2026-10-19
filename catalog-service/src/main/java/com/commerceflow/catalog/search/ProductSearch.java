@@ -1,3 +1,7 @@
+/*
+ * Maintains versioned Elasticsearch projections and rebuild aliases; search results do not replace
+ * authoritative checkout price reads.
+ */
 package com.commerceflow.catalog.search;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
@@ -262,7 +266,11 @@ public class ProductSearch {
                     r ->
                             r.index(index)
                                     .id(product.id().toString())
+                                    // Elasticsearch external versions start above zero; offset the
+                                    // zero-based product version consistently.
                                     .version(product.version() + 1)
+                                    // Reject older or duplicate snapshots instead of letting delayed
+                                    // events overwrite newer indexed state.
                                     .versionType(VersionType.External)
                                     .document(ProductDocument.from(product)));
         } catch (ElasticsearchException error) {

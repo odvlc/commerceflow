@@ -1,3 +1,6 @@
+/*
+ * Deduplicates knowledge-change delivery before advancing the AI-owned indexing work.
+ */
 package com.commerceflow.ai.indexing;
 
 import com.commerceflow.ai.retrieval.KnowledgeStore;
@@ -35,6 +38,7 @@ public class KnowledgeConsumer {
         var payload = codec.payload(event, KnowledgeChanged.class);
         if (!payload.documentId().equals(event.aggregateId()))
             throw new IllegalArgumentException("Document mismatch");
+        // Commit delivery deduplication with making the versioned index job ready for processing.
         processed.once(event.eventId(), () -> store.delivered(payload.documentId(), payload.version()));
     }
 }

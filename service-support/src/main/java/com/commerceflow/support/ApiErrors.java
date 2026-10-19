@@ -1,3 +1,7 @@
+/*
+ * Converts validation, conflict and business failures into consistent ProblemDetail responses with
+ * request correlation.
+ */
 package com.commerceflow.support;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -53,6 +57,8 @@ public class ApiErrors {
 
     private ProblemDetail problem(
             HttpStatus status, String code, String detail, HttpServletRequest request) {
+        // Build the public problem response from a controlled message rather than exposing an
+        // infrastructure stack trace.
         var problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setTitle(code);
         problem.setProperty("code", code);

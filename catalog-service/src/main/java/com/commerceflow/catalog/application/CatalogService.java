@@ -1,3 +1,7 @@
+/*
+ * Owns product writes and their outbox events; optional cache reads can be bypassed for trusted
+ * checkout prices.
+ */
 package com.commerceflow.catalog.application;
 
 import com.commerceflow.catalog.api.ProductInput;
@@ -70,6 +74,8 @@ public class CatalogService {
     @Transactional(readOnly = true)
     public ProductView get(UUID id, boolean fresh) {
         var storage = cache.getIfAvailable();
+        // Fresh reads bypass both cache lookup and refill so checkout validates current authoritative
+        // prices.
         if (!fresh && storage != null) {
             var hit = storage.get(id);
             if (hit.isPresent()) return hit.get();
@@ -101,6 +107,7 @@ public class CatalogService {
         }
         var product = new Product(UUID.randomUUID(), key, hash);
         revise(product, input);
+        // Flush first so the outgoing snapshot contains the database-assigned optimistic version.
         products.saveAndFlush(product);
         emit(product, correlationId);
         return ProductView.from(product);
@@ -114,6 +121,7 @@ public class CatalogService {
             throw new BusinessException(
                     HttpStatus.CONFLICT, "VERSION_CONFLICT", "Product changed; reload before editing");
         revise(product, input);
+        // Detect optimistic write failure before appending the event for the revised product.
         products.flush();
         emit(product, correlationId);
         return ProductView.from(product);
@@ -152,6 +160,8 @@ public class CatalogService {
         var id = product.getId();
         var version = product.getVersion();
         org.springframework.transaction.support.TransactionSynchronizationManager
+                // Invalidate after commit; invalidating before commit would let a reader refill from
+                // old database state.
                 .registerSynchronization(
                         new org.springframework.transaction.support.TransactionSynchronization() {
                             @Override

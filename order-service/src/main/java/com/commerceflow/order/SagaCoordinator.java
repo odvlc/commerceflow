@@ -1,3 +1,7 @@
+/*
+ * Advances the persisted checkout saga and emits local outbox commands; payment uncertainty is
+ * reconciled before stock release.
+ */
 package com.commerceflow.order;
 
 import com.commerceflow.contracts.CheckoutEvents.AuthorizePayment;
@@ -85,6 +89,8 @@ public class SagaCoordinator {
         var order = orders.required(id, true);
         switch (result.status()) {
             case "AUTHORIZED" -> {
+                // Late authorization cannot revive a cancellation; payment reconciliation handles the
+                // already-issued operation.
                 if (order.status() != AWAITING_PAYMENT) return;
                 orders.step(id, "AUTHORIZE_PAYMENT", "SUCCEEDED", null);
                 move(order, COMMITTING_INVENTORY);
@@ -135,8 +141,11 @@ public class SagaCoordinator {
                 move(order, CANCELLING_INVENTORY);
                 command(order, "RELEASE_INVENTORY", "ReleaseInventory", new Command(reason));
             }
+            // A timeout does not prove payment failed; cancel/reconcile it before releasing inventory.
             case AWAITING_PAYMENT -> {
                 orders.recordReason(order.id(), "RESERVATION_EXPIRED".equals(reason) ? "RESERVATION_EXPIRED" : "PAYMENT_TIMEOUT");
+                // Record the timeout, then request cancellation; elapsed time alone does not prove no
+                // charge occurred.
                 orders.step(order.id(), "AUTHORIZE_PAYMENT", "FAILED", reason);
                 move(order, CANCELLING_PAYMENT);
                 command(order, "CANCEL_PAYMENT", "CancelPayment", new Command(reason));
@@ -178,6 +187,7 @@ public class SagaCoordinator {
     }
 
     private void command(OrderRepository.Row order, String step, String event, Object payload) {
+        // Count a step attempt when issuing its command, not when a duplicate result is received.
         orders.step(order.id(), step, "PENDING", null);
         outbox.append(event, order.id(), order.correlation(), payload);
     }

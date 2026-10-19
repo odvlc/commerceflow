@@ -1,3 +1,7 @@
+/*
+ * Creates deterministic request fingerprints for idempotency comparisons; hashes are not a
+ * substitute for authorization.
+ */
 package com.commerceflow.support;
 
 import java.nio.charset.StandardCharsets;
@@ -14,6 +18,8 @@ public final class RequestHash {
         try {
             return HexFormat.of()
                     .formatHex(
+                            // Use explicit UTF-8 so idempotency fingerprints do not vary with the
+                            // machine default charset.
                             MessageDigest.getInstance("SHA-256").digest(input.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);

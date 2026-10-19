@@ -1,3 +1,7 @@
+/*
+ * Uses atomic value/version operations to resist stale refills; cache failure falls back to the
+ * catalog database.
+ */
 package com.commerceflow.catalog.application;
 
 import com.commerceflow.catalog.api.ProductView;
@@ -18,6 +22,7 @@ import java.util.UUID;
 @ConditionalOnProperty(name = "catalog.cache.enabled", havingValue = "true", matchIfMissing = true)
 public class ProductCache {
 
+    // The longer-lived version watermark rejects an old read that finishes after invalidation.
     private static final DefaultRedisScript<Long> STORE =
             new DefaultRedisScript<>(
                     """
@@ -93,6 +98,8 @@ public class ProductCache {
     }
 
     private List<String> keys(UUID id) {
+        // Redis hash tags co-locate value and version keys so each Lua script remains a single-slot
+        // operation.
         return List.of("cf:product:{" + id + "}:value", "cf:product:{" + id + "}:version");
     }
 

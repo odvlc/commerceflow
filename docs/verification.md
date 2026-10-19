@@ -1,5 +1,10 @@
 # Executed verification
 
+<!--
+Maintenance: Retains actual verification commands, results and limitations; keep unexecuted
+deployment gates explicit.
+-->
+
 Date: 2026-10-17, ARM64 macOS, Java 25.0.4.1. This document records observed results, not future CI/deployment claims.
 
 | Check                                                   | Observed result                                                                                                                                                                                                                                                                                               |

@@ -1,7 +1,11 @@
+# Scopes local workloads and their policies to commerceflow; deleting this namespace is not a
+# routine restart.
 {
   "apiVersion": "v1",
   "kind": "Namespace",
   "metadata": {
+    # Scripts target this namespace explicitly; renaming it also requires updating their fixed local-
+    # context commands.
     "name": "commerceflow"
   }
 }

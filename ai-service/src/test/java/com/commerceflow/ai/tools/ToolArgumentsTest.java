@@ -1,3 +1,7 @@
+/*
+ * Checks strict tool argument validation, including quantities that must not overflow or silently
+ * coerce into valid writes.
+ */
 package com.commerceflow.ai.tools;
 
 import com.commerceflow.ai.application.CartActions;
@@ -27,6 +31,8 @@ class ToolArgumentsTest {
 
     @Test
     void onlyAnAbsentOptionalReadPriceCanBeCanonicalized() throws Exception {
+        // Only the published optional read filter may be normalized; do not coerce invalid write
+        // arguments into authority.
         var commerce = mock(CommerceClient.class);
         var knowledge = mock(KnowledgeSearch.class);
         var actions = mock(CartActions.class);
@@ -72,6 +78,8 @@ class ToolArgumentsTest {
 
     @Test
     void integralOverflowCannotWrapIntoAnAllowedCartQuantity() throws Exception {
+        // Use values beyond the integer range so conversion cannot silently wrap a forbidden
+        // quantity into a valid small number.
         var commerce = mock(CommerceClient.class);
         var actions = mock(CartActions.class);
         try (var registry =

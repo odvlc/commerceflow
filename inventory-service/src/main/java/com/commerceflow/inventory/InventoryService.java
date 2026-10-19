@@ -1,3 +1,7 @@
+/*
+ * Reserves stock with conditional SQL and deterministic product locks; replayed commands reuse the
+ * order reservation outcome.
+ */
 package com.commerceflow.inventory;
 
 import com.commerceflow.contracts.CheckoutEvents.Command;
@@ -99,6 +103,7 @@ public class InventoryService {
     @Transactional
     public Reservation reserve(UUID orderId, ReserveInventory request, String correlation) {
         lockOrder(orderId);
+        // Canonical UUID text order matches PostgreSQL UUID ordering; signed Java UUID order differs.
         var items =
                 request.items().stream()
                         .sorted(Comparator.comparing(item -> item.productId().toString()))
@@ -112,6 +117,8 @@ public class InventoryService {
                         .listOfRows()
                         .stream()
                         .findFirst();
+        // An order retry reuses its stored reservation outcome; a different item set with that order ID
+        // is a conflict.
         if (existing.isPresent()) {
             var oldHash = existing.get().get("request_hash");
             if (oldHash != null && !hash.equals(oldHash))
@@ -132,6 +139,8 @@ public class InventoryService {
         String status = sufficient ? "RESERVED" : "REJECTED";
         BusinessMetrics.afterCommit(
                 () -> metrics.counter("commerceflow.inventory.reservations", "result", status).increment());
+        // Expiry requests reconciliation; it does not authorize this service to release potentially
+        // paid stock.
         Instant expiry = Instant.now().plus(ttl);
         jdbc.sql(
                         "INSERT INTO reservation_orders(order_id,request_hash,status,expires_at,correlation_id)"
@@ -154,6 +163,8 @@ public class InventoryService {
                                 .param("id", item.productId())
                                 .param("quantity", item.quantity())
                                 .update();
+                // The guarded decrement is the final no-oversell check; any failure rolls back the
+                // whole multi-item reservation.
                 if (changed != 1) throw new IllegalStateException("Inventory invariant violated");
                 jdbc.sql(
                                 "INSERT INTO reservations(id,order_id,product_id,quantity,status,expires_at) VALUES"

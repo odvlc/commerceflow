@@ -1,3 +1,5 @@
+// Exercises checkout with explicit load settings and synthetic products; it changes local
+// order/payment state.
 import http from 'k6/http';
 import {check, sleep} from 'k6';
 
@@ -16,6 +18,8 @@ export default function () {
     const headers = {
         Authorization: `Bearer ${__ENV.ACCESS_TOKEN}`,
         'Content-Type': 'application/json',
+        // Each iteration creates a new order intent; reusing one key would benchmark replays rather
+        // than checkout throughput.
         'Idempotency-Key': `k6-${Date.now()}-${__VU}-${__ITER}`
     };
     const scenario = __ENV.SCENARIO || 'APPROVE';
@@ -28,6 +32,8 @@ export default function () {
     if (!check(result, {'order accepted': r => r.status === 201})) return;
     const id = result.json('id');
     let status = result.json('status');
+    // HTTP acceptance starts the saga; measure its terminal outcome instead of treating order creation
+    // as fulfillment.
     for (let attempt = 0; attempt < 40 && status !== 'CONFIRMED' && status !== 'CANCELLED'; attempt++) {
         sleep(0.5);
         const response = http.get(`${base}/api/v1/orders/${id}`, {headers});

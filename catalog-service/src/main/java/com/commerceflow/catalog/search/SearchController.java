@@ -1,3 +1,7 @@
+/*
+ * Exposes bounded search and administrative rebuild operations without exposing Elasticsearch
+ * directly to clients.
+ */
 package com.commerceflow.catalog.search;
 
 import jakarta.validation.constraints.DecimalMax;
@@ -52,6 +56,8 @@ public class SearchController {
 
     @PostMapping("/api/v1/admin/search/rebuild")
     public ProductSearch.RebuildResult rebuild() {
+        // Rebuild through the service alias workflow instead of letting callers choose an arbitrary
+        // index.
         return search.rebuild();
     }
 }

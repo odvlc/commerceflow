@@ -1,3 +1,7 @@
+/*
+ * Exercises AI persistence and recovery against real PostgreSQL, including ownership, admission
+ * and approval state.
+ */
 package com.commerceflow.ai;
 
 import com.commerceflow.ai.domain.Actor;
@@ -91,6 +95,8 @@ class AiFoundationTest {
 
     @Test
     void twentyConcurrentRetriesCreateOneConversationAndOneRun() throws Exception {
+        // Submit the same intent concurrently; collect every returned ID so a duplicate insert or
+        // failed caller cannot hide behind one success.
         try (var pool = Executors.newFixedThreadPool(10)) {
             List<Callable<UUID>> calls = new ArrayList<>();
             for (int i = 0; i < 20; i++)
@@ -250,6 +256,8 @@ class AiFoundationTest {
 
     @Test
     void competingClaimsFencesCancellationAndExpiredLeases() throws Exception {
+        // Exercise durable claim ownership independently of the in-memory worker so an old fence
+        // cannot win after cancellation/recovery.
         var c = store.create(alice, "lease-conversation", "CUSTOMER");
         var r = store.send(c.id(), alice, "lease-message", "Explain returns");
         try (var pool = Executors.newFixedThreadPool(8)) {
@@ -382,6 +390,8 @@ class AiFoundationTest {
 
     @Test
     void proposalVersionOwnershipRejectionExpiryAndRecoveryDeadlineAreEnforced() {
+        // Approval must still be valid when executed; a previously visible preview is not perpetual
+        // authority to mutate the cart.
         JsonMapper mapper = JsonMapper.builder().build();
         var c = store.create(alice, "proposal-conversation", "CUSTOMER");
         var r = store.send(c.id(), alice, "proposal-message", "prepare only");

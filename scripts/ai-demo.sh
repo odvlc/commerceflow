@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Runs the selected local deployment demonstration and evidence checks; restarts reset in-process
+# metric timers.
 set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -21,6 +23,8 @@ with urlopen(Request(os.environ['BASE_URL']+'/api/v1/ai/capabilities',headers={'
 with urlopen(os.environ['BASE_URL']+'/api/v1/products?size=100',timeout=10) as response:
     assert any(item['sku']=='BAG-01' for item in json.load(response)['items']), 'Run documented demo.py seed on synthetic local data first'
 PY
+# Wait for the curated index before testing citations so a missing import is not mistaken for a model
+# failure.
 python3 scripts/import-ai-knowledge.py
 AI_ENABLED=true E2E_BASE_URL=http://localhost:3000 npm run --prefix frontend test:e2e -- e2e/copilot.spec.ts
 python3 scripts/ai-recovery-smoke.py --target="$target"

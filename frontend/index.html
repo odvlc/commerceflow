@@ -1,4 +1,8 @@
 <!doctype html>
+<!--
+Provides the React mount point; authentication and API access are initialized by the module entry
+point.
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8"/>
@@ -6,6 +10,8 @@
     <meta name="theme-color" content="#123d36"/>
     <title>CommerceFlow — Everyday, considered.</title></head>
 <body>
+<!-- React owns this mount; authenticated state is initialized before the entry module renders private
+     views. -->
 <div id="root"></div>
 <script type="module" src="/src/main.tsx"></script>
 </body>

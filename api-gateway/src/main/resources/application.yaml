@@ -1,3 +1,5 @@
+# Environment-driven api-gateway defaults bind locally; deployment overrides supply service DNS,
+# identity endpoints and owned infrastructure credentials.
 server:
   port: ${PORT:8080}
   address: ${BIND_ADDRESS:127.0.0.1}
@@ -5,6 +7,8 @@ spring:
   application:
     name: api-gateway
   threads:
+    # Virtual threads reduce blocked-thread overhead; database connections and downstream capacity
+    # remain independently bounded.
     virtual:
       enabled: ${VIRTUAL_THREADS:true}
 management:

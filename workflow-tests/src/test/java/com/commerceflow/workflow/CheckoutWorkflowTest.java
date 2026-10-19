@@ -1,3 +1,7 @@
+/*
+ * Exercises the checkout vertical slice across independently owned databases and real messaging
+ * with signed HTTP authentication.
+ */
 package com.commerceflow.workflow;
 
 import com.commerceflow.cart.CartApplication;
@@ -342,6 +346,8 @@ class CheckoutWorkflowTest {
     @Test
     @org.junit.jupiter.api.Order(1)
     void successfulPurchaseUsesActualCatalogHttpKafkaAndSeparateDatabases() throws Exception {
+        // Cross the real HTTP and broker boundaries so private database access cannot accidentally
+        // make the workflow pass.
         var product = product(5);
         String key = UUID.randomUUID().toString();
         var placed = create(product, 2, "APPROVE", key);
@@ -395,6 +401,8 @@ class CheckoutWorkflowTest {
     @Test
     @org.junit.jupiter.api.Order(4)
     void timeoutReconcilesPaymentBeforeReleasingStockAndSurvivesOrderRestart() throws Exception {
+        // Interrupt the orchestrator during uncertainty; persisted steps must preserve compensation
+        // order across restart.
         var product = product(5);
         String key = UUID.randomUUID().toString();
         var placed = create(product, 2, "TIMEOUT", key);
@@ -675,6 +683,8 @@ class CheckoutWorkflowTest {
     @Test
     @org.junit.jupiter.api.Order(11)
     void redisOutageFailsCartClearlyWhileCatalogAndAuthoritativeCheckoutContinue() throws Exception {
+        // Redis is authoritative for carts but only a cache for catalog details, so the two outage
+        // behaviors deliberately differ.
         var product = product(3);
         redis.close();
         elasticsearch.close();
@@ -913,6 +923,8 @@ class CheckoutWorkflowTest {
     @Test
     @org.junit.jupiter.api.Order(9)
     void aiReadToolsUseActualScopedHttpAndNeverElevateCallerAuthority() throws Exception {
+        // Forward the real caller token through tool dispatch; a broader service credential would
+        // mask ownership/role bugs.
         var product = product(4);
         var declined = create(product, 1, "DECLINE", UUID.randomUUID().toString());
         terminal(declined.id(), OrderState.CANCELLED);

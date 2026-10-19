@@ -1,3 +1,6 @@
+/*
+ * Scopes notification reads to the authenticated customer with bounded pagination.
+ */
 package com.commerceflow.notification;
 
 import jakarta.validation.constraints.Max;
@@ -26,6 +29,8 @@ public class NotificationController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        // Resolve ownership from the signed subject rather than accepting a customer ID query
+        // parameter.
         return notifications.list(UUID.fromString(jwt.getSubject()), page, size);
     }
 }

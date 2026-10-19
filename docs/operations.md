@@ -1,5 +1,10 @@
 # Deployment and recovery operations
 
+<!--
+Maintenance: Provides local startup/maintenance procedures; distinguish restart/recovery from
+destructive teardown.
+-->
+
 Compose's `full` profile declares all required infrastructure, seven Java applications, frontend, Prometheus and
 Grafana. Java images use Maven/Java 25 multi-stage builds and a non-root runtime. A compiled Java health-check program
 avoids requiring curl in the JRE. Frontend uses a Node build and non-root nginx on 8080. Backend ports remain internal

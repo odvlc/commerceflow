@@ -1,3 +1,7 @@
+/*
+ * Replays committed public events using a sequence cursor, with per-owner and global connection
+ * limits.
+ */
 package com.commerceflow.ai.api;
 
 import com.commerceflow.ai.domain.Actor;
@@ -55,6 +59,7 @@ public class RunStreams implements AutoCloseable {
         var emitter = new SseEmitter(Math.max(1, lifetime));
         var released = new AtomicBoolean();
         Runnable release = () -> {
+            // Completion, timeout and disconnect can race; release each capacity permit exactly once.
             if (released.compareAndSet(false, true)) {
                 owners.computeIfPresent(actor.subject(), (id, count) -> count <= 1 ? null : count - 1);
                 total.release();
@@ -74,6 +79,8 @@ public class RunStreams implements AutoCloseable {
                 while (!released.get() && actor.valid() && System.nanoTime() < deadline) {
                     var events = store.events(run, actor, cursor);
                     for (var event : events) {
+                        // Recheck expiry during the connection lifetime so an open stream cannot
+                        // outlive caller authority.
                         if (!actor.valid()) break;
                         emitter.send(SseEmitter.event()
                                 .id(Long.toString(event.sequence()))

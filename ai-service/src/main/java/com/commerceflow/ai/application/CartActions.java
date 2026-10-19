@@ -1,3 +1,7 @@
+/*
+ * Separates preview, user confirmation and external execution; retries recover the original intent
+ * rather than ask the model again.
+ */
 package com.commerceflow.ai.application;
 
 import com.commerceflow.ai.domain.Actor;
@@ -167,6 +171,8 @@ public class CartActions {
                 actions.record(proposal.id(), "SUCCEEDED", result, null);
             } catch (BusinessException error) {
                 if (error.status().value() == 401) throw error;
+                // Once a request may have reached Cart, a later error cannot prove the write did not
+                // happen.
                 boolean uncertain = error.status().is5xxServerError() || execution.attempts() > 1;
                 actions.record(
                         proposal.id(),
@@ -187,6 +193,8 @@ public class CartActions {
                         "Acknowledged Cart API response",
                         proposal.id().toString(),
                         json.writeValueAsString(result));
+        // The execution audit is saved first; a lost fence can prevent run completion without
+        // discarding the real Cart acknowledgment.
         runs.finish(c,
                 "Cart acknowledged your confirmed change. The source below records that response; review"
                         + " the current cart for any subsequent changes.",

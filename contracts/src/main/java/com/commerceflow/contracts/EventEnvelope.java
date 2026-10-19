@@ -1,3 +1,7 @@
+/*
+ * Carries wire identity, schema version and correlation; event identity is independent of the
+ * business aggregate identity.
+ */
 package com.commerceflow.contracts;
 
 import java.time.Instant;
@@ -23,6 +27,8 @@ public record EventEnvelope<T>(
         Objects.requireNonNull(payload, "payload");
         if (eventType == null || eventType.isBlank())
             throw new IllegalArgumentException("eventType required");
+        // Fail unknown schemas explicitly rather than interpreting a newer payload using incompatible
+        // assumptions.
         if (schemaVersion != 1) throw new IllegalArgumentException("Unsupported schema version");
         if (correlationId == null || correlationId.isBlank() || correlationId.length() > 128)
             throw new IllegalArgumentException("Invalid correlationId");
@@ -31,6 +37,8 @@ public record EventEnvelope<T>(
     public static <T> EventEnvelope<T> create(
             String type, UUID aggregateId, String correlationId, T payload) {
         return new EventEnvelope<>(
+                // Create a new delivery identity; retries of this envelope must retain that identity
+                // for deduplication.
                 UUID.randomUUID(), type, 1, aggregateId, correlationId, Instant.now(), payload);
     }
 }

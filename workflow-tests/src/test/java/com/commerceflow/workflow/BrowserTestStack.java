@@ -1,3 +1,7 @@
+/*
+ * Starts isolated real services and synthetic fixtures for browser tests; use Compose or PVCs for
+ * persistent development.
+ */
 package com.commerceflow.workflow;
 
 import com.commerceflow.cart.CartApplication;
@@ -70,6 +74,7 @@ public class BrowserTestStack {
         var stopping = new java.util.concurrent.atomic.AtomicBoolean();
         Runnable cleanup = () -> {
             if (!stopping.compareAndSet(false, true)) return;
+            // Close applications before their infrastructure, in reverse startup order.
             var reversed = new ArrayList<>(APPS);
             Collections.reverse(reversed);
             reversed.forEach(ConfigurableApplicationContext::close);

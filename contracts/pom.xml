@@ -1,4 +1,8 @@
 <?xml version="1.0" ?>
+<!--
+Builds wire DTOs only; keep runtime infrastructure and persistence entities out of this shared
+contract module.
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0">
     <modelVersion>4.0.0</modelVersion>
     <parent>
@@ -11,6 +15,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <!-- Test assertions are not part of the published DTO library runtime dependency surface. -->
             <scope>test</scope>
         </dependency>
     </dependencies>

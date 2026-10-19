@@ -1,3 +1,7 @@
+/*
+ * Defines validated order requests and public views, including persisted status reasons rather
+ * than inferred explanations.
+ */
 package com.commerceflow.order;
 
 import com.commerceflow.contracts.CheckoutEvents.PaymentScenario;
@@ -49,6 +53,7 @@ public final class OrderModels {
 
     }
 
+    // History versions identify committed business transitions, not model-inferred explanations.
     public record StatusHistory(long version, OrderState status, String reason, Instant recordedAt) {
 
     }

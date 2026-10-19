@@ -1,3 +1,7 @@
+/*
+ * Samples durable queue/run state into fixed metric labels so prompts and identities never become
+ * telemetry labels.
+ */
 package com.commerceflow.ai.application;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -40,6 +44,7 @@ public class AiMetrics {
     }
 
     @Scheduled(fixedDelay = 5000)
+    // Sample durable state on a schedule rather than issuing a query for every metrics scrape.
     public void sample() {
         for (var value : runs.entrySet())
             value.getValue()

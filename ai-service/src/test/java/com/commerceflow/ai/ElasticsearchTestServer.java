@@ -1,3 +1,7 @@
+/*
+ * Manages a real isolated Elasticsearch test process; it is test lifecycle infrastructure, not an
+ * in-memory search substitute.
+ */
 package com.commerceflow.ai;
 
 import org.testcontainers.containers.GenericContainer;
@@ -96,6 +100,7 @@ final class ElasticsearchTestServer implements AutoCloseable {
     @Override
     public void close() throws Exception {
         if (process != null) {
+            // Stop only this fixture-owned process, then force termination if its graceful shutdown stalls.
             process.destroy();
             if (!process.waitFor(10, TimeUnit.SECONDS)) process.destroyForcibly().waitFor();
         }

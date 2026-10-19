@@ -1,3 +1,7 @@
+/*
+ * Defers business outcome counters until transaction commit so rolled-back state is not counted as
+ * successful work.
+ */
 package com.commerceflow.support;
 
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -17,6 +21,8 @@ public final class BusinessMetrics {
                             record.run();
                         }
                     });
+            // Outside a transaction there is no future commit callback; record the already completed work
+            // immediately.
         else record.run();
     }
 }

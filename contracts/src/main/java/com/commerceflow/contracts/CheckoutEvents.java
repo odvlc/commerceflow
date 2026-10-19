@@ -1,3 +1,7 @@
+/*
+ * Defines immutable checkout command/result payloads only; consumers must handle replay and late
+ * delivery.
+ */
 package com.commerceflow.contracts;
 
 import java.math.BigDecimal;
@@ -28,6 +32,8 @@ public final class CheckoutEvents {
     public record ReserveInventory(List<StockItem> items) {
 
         public ReserveInventory {
+            // Freeze the list at the wire boundary so later caller mutation cannot change an already
+            // validated command.
             items = List.copyOf(items);
             if (items.isEmpty()
                     || items.size() > 100
@@ -43,6 +49,8 @@ public final class CheckoutEvents {
     public record AuthorizePayment(BigDecimal amount, String currency, PaymentScenario scenario) {
 
         public AuthorizePayment {
+            // Validate message payloads as well as HTTP DTOs; Kafka commands do not pass through MVC
+            // validation.
             if (amount == null
                     || amount.signum() < 0
                     || amount.scale() > 2

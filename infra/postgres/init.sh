@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
+# Creates service-owned roles/databases additively for new volumes or explicit repair; existing
+# owners/passwords are preserved.
 set -euo pipefail
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
 # Invoked by the official image for a new volume; safe to rerun explicitly after interrupted initialization.
 for service in catalog order inventory payment notification keycloak ai; do
   # The AI database is optional in the Kubernetes base; its overlay supplies owned credentials.
+  # The base cluster can omit AI credentials; its overlay provisions the optional owned database
+  # explicitly.
   if [ "$service" = ai ] && [ -z "${AI_DB_PASSWORD:-}" ]; then continue; fi
   password_name="${service^^}_DB_PASSWORD"
   psql --username "$POSTGRES_USER" --dbname postgres --set=ON_ERROR_STOP=1 \

@@ -1,3 +1,7 @@
+/*
+ * Verifies versioned knowledge persistence, retrieval/index synchronization and authorization
+ * against real infrastructure.
+ */
 package com.commerceflow.ai;
 
 import com.commerceflow.ai.indexing.KnowledgeIndexer;
@@ -137,6 +141,8 @@ class KnowledgeIntegrationTest {
 
     @Test
     void concurrentImportsPublishOnceAndRealKafkaElasticsearchProduceCitations() throws Exception {
+        // Exercise the actual delivery/index path so a stored import row alone cannot satisfy
+        // retrieval acceptance.
         var input =
                 doc(
                         "return-policy",
@@ -220,6 +226,8 @@ class KnowledgeIntegrationTest {
     @Test
     void abandonedRebuildResumesOnceSessionLockIsReleasedWithoutWaitingForDiagnosticLease()
             throws Exception {
+        // A released session lock is the recovery authority; the diagnostic lease must not delay a
+        // safe replay.
         var imported =
                 store.ingest(
                         owner,
