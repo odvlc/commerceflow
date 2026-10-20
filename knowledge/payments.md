@@ -1,5 +1,14 @@
 # CommerceFlow simulated payment guide
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [Payment scenarios](#payment-scenarios)
+- [Current order explanations](#current-order-explanations)
+
+<!-- TOC END -->
+
 ## Payment scenarios
 
 - APPROVE authorizes a simulated payment.

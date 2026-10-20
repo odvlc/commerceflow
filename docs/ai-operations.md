@@ -1,5 +1,19 @@
 # Local Copilot operations
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [Compose host mode](#compose-host-mode)
+- [Compose CPU model mode](#compose-cpu-model-mode)
+- [Disable and preserve data](#disable-and-preserve-data)
+- [Recovery and monitoring](#recovery-and-monitoring)
+- [kind with native inference](#kind-with-native-inference)
+- [kind CPU preparation and current capacity blocker](#kind-cpu-preparation-and-current-capacity-blocker)
+- [Ready-stack demonstration and CI evidence](#ready-stack-demonstration-and-ci-evidence)
+
+<!-- TOC END -->
+
 <!--
 Maintenance: Documents explicit model preparation, deployment modes and recovery while preserving
 local data.

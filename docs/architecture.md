@@ -9,34 +9,34 @@ remain derived state.
 flowchart LR
     Browser[React storefront] -->|Authorization Code + PKCE| Keycloak
     Browser --> Gateway[Spring Cloud Gateway MVC]
-    Gateway --> Catalog
-    Gateway --> Cart
-    Gateway --> Order
-    Gateway --> Inventory
-    Gateway --> Payment
-    Gateway --> Notifications
+    Cart --> RedisCart[(Redis user carts)]
     Catalog --> CatalogDB[(Catalog PostgreSQL)]
     Catalog --> Redis[(Redis cache)]
-    Cart --> RedisCart[(Redis user carts)]
-    Order -->|trusted fresh HTTP prices| Catalog
-    Order --> OrderDB[(Order PostgreSQL + durable saga)]
-    Inventory --> StockDB[(Inventory PostgreSQL)]
-    Payment --> PaymentDB[(Payment PostgreSQL)]
-    Notifications --> NoticeDB[(Notification PostgreSQL)]
     Catalog -->|transactional outbox| Kafka
-    Order -->|transactional outbox| Kafka
-    Kafka --> Inventory
-    Inventory -->|transactional outbox| Kafka
-    Kafka --> Payment
-    Payment -->|transactional outbox| Kafka
-    Kafka --> Order
-    Kafka --> Notifications
-    Kafka --> Indexer[Catalog search indexer]
-    Indexer --> Search[(Elasticsearch projection)]
-    Prometheus -->|authenticated metrics| Gateway
-    Prometheus -->|authenticated metrics| Catalog
-    Prometheus -->|all application targets| Order
+    Gateway --> Cart
+    Gateway --> Catalog
+    Gateway --> Inventory
+    Gateway --> Notifications
+    Gateway --> Order
+    Gateway --> Payment
     Grafana --> Prometheus
+    Indexer --> Search[(Elasticsearch projection)]
+    Inventory --> StockDB[(Inventory PostgreSQL)]
+    Inventory -->|transactional outbox| Kafka
+    Kafka --> Indexer[Catalog search indexer]
+    Kafka --> Inventory
+    Kafka --> Notifications
+    Kafka --> Order
+    Kafka --> Payment
+    Notifications --> NoticeDB[(Notification PostgreSQL)]
+    Order --> OrderDB[(Order PostgreSQL + durable saga)]
+    Order -->|transactional outbox| Kafka
+    Order -->|trusted fresh HTTP prices| Catalog
+    Payment --> PaymentDB[(Payment PostgreSQL)]
+    Payment -->|transactional outbox| Kafka
+    Prometheus -->|all application targets| Order
+    Prometheus -->|authenticated metrics| Catalog
+    Prometheus -->|authenticated metrics| Gateway
 ```
 
 One PostgreSQL server hosts independently owned databases. Every business write, outgoing outbox row

@@ -1,10 +1,25 @@
 # CommerceFlow engineering rules
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [Implementation standards](#implementation-standards)
+- [Architecture constraints](#architecture-constraints)
+- [Verification and progress](#verification-and-progress)
+
+<!-- TOC END -->
+
 `CODEX_PROMPT.md` is the authoritative product specification. Read it before changing the
 architecture or scope, follow its 13 phases in order, and preserve existing files and user work.
 
 ## Implementation standards
 
+- Include a linked table of contents immediately after the title only when it has at least two entries.
+  Remove or omit a table of contents containing a single entry; omit it when there are no section headings.
+  Keep retained tables synchronized when headings change, use heading anchors with duplicate-heading
+  suffixes, and exclude fenced code and the table of contents itself. Apply this rule to new files
+  and future edits; exclude generated files and dependencies.
 - Java 25, Maven, Spring Boot 4.1.x where compatible; verify version compatibility in official documentation and record
   sources in `docs/dependencies.md`. Use the Boot BOM; do not independently upgrade Spring components.
 - Use explicit, readable code, records for boundary DTOs, UUID identifiers, `BigDecimal` money, ISO currency codes, and

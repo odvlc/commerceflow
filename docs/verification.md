@@ -1,5 +1,14 @@
 # Executed verification
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [Unverified in the original run](#unverified-in-the-original-run)
+- [AI and deployment supplement (2026-10-18)](#ai-and-deployment-supplement-2026-10-18)
+
+<!-- TOC END -->
+
 <!--
 Maintenance: Retains actual verification commands, results and limitations; keep unexecuted
 deployment gates explicit.

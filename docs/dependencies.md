@@ -1,5 +1,14 @@
 # Dependency compatibility
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [AI candidate compatibility probe (2026-10-18)](#ai-candidate-compatibility-probe-2026-10-18)
+- [Implemented AI module and selected local models (2026-10-18)](#implemented-ai-module-and-selected-local-models-2026-10-18)
+
+<!-- TOC END -->
+
 <!--
 Maintenance: Records pinned compatibility choices and official sources; use the Boot BOM rather than
 independently overriding Spring components.

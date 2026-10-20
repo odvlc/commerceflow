@@ -1,5 +1,57 @@
 # CommerceFlow implementation plan
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [Phase 1: Maven repository and local infrastructure](#phase-1-maven-repository-and-local-infrastructure)
+- [Phase 2: Catalog Service and PostgreSQL](#phase-2-catalog-service-and-postgresql)
+- [Phase 3: Order and Inventory Services](#phase-3-order-and-inventory-services)
+- [Phase 4: Kafka and transactional outbox](#phase-4-kafka-and-transactional-outbox)
+- [Phase 5: Payment Service and saga orchestration](#phase-5-payment-service-and-saga-orchestration)
+- [Phase 6: Redis cache and Cart Service](#phase-6-redis-cache-and-cart-service)
+- [Phase 7: Elasticsearch indexing and search](#phase-7-elasticsearch-indexing-and-search)
+- [Phase 8: Keycloak and security](#phase-8-keycloak-and-security)
+- [Phase 9: Notifications and React frontend](#phase-9-notifications-and-react-frontend)
+- [Phase 10: Observability and load testing](#phase-10-observability-and-load-testing)
+- [Phase 11: Complete Docker Compose stack](#phase-11-complete-docker-compose-stack)
+- [Phase 12: Complete Kubernetes deployment](#phase-12-complete-kubernetes-deployment)
+- [Phase 13: Failure tests, CI, documentation and polish](#phase-13-failure-tests-ci-documentation-and-polish)
+- [Execution log, decisions and blockers](#execution-log-decisions-and-blockers)
+- [Next action](#next-action)
+    - [Phase 1 verification](#phase-1-verification)
+    - [Phase 2 verification](#phase-2-verification)
+    - [Phase 3 verification](#phase-3-verification)
+    - [Phase 4 verification](#phase-4-verification)
+    - [Phase 5 verification](#phase-5-verification)
+    - [Phase 6 verification](#phase-6-verification)
+    - [Phase 7 verification](#phase-7-verification)
+    - [Phase 8 verification](#phase-8-verification)
+    - [Phase 9 verification](#phase-9-verification)
+    - [Phase 10 verification](#phase-10-verification)
+    - [Phase 11 verification](#phase-11-verification)
+    - [Phase 12 verification](#phase-12-verification)
+    - [Phase 13 verification and final audit](#phase-13-verification-and-final-audit)
+    - [IntelliJ cache exclusion follow-up](#intellij-cache-exclusion-follow-up)
+    - [Docker prerequisite reopened and verified (2026-10-18)](#docker-prerequisite-reopened-and-verified-2026-10-18)
+    - [Clarifying comments (2026-10-18)](#clarifying-comments-2026-10-18)
+    - [Project-wide clarifying comments (2026-10-18)](#project-wide-clarifying-comments-2026-10-18)
+    - [Inline explanations beside executable code (2026-10-18)](#inline-explanations-beside-executable-code-2026-10-18)
+    - [Standalone run-and-demo guide (2026-10-18)](#standalone-run-and-demo-guide-2026-10-18)
+    - [Clarify native browser-harness shutdown (2026-10-18)](#clarify-native-browser-harness-shutdown-2026-10-18)
+    - [Recover Compose port allocation and migration validation (2026-10-18)](#recover-compose-port-allocation-and-migration-validation-2026-10-18)
+    - [Persistent SQL formatting preference (2026-10-18)](#persistent-sql-formatting-preference-2026-10-18)
+    - [Retain formatted SQL and realign existing local history (2026-10-18)](#retain-formatted-sql-and-realign-existing-local-history-2026-10-18)
+    - [Recover versioned policy imports after Markdown formatting (2026-10-18)](#recover-versioned-policy-imports-after-markdown-formatting-2026-10-18)
+    - [Humanize the verification report](#humanize-the-verification-report)
+    - [Humanize project Markdown](#humanize-project-markdown)
+    - [Document the technology stack](#document-the-technology-stack)
+    - [Maintain Markdown tables of contents](#maintain-markdown-tables-of-contents)
+
+    - [Omit single-item tables of contents](#omit-single-item-tables-of-contents)
+
+<!-- TOC END -->
+
 The scope and phase order come from `CODEX_PROMPT.md`. Check a box only when the task is implemented
 and verified. Leave partial work unchecked. Each phase depends on the preceding phase; additional
 dependencies appear below. A runtime blocker leaves its validation check incomplete.
@@ -607,3 +659,30 @@ deployment, Git initialization/commit or persisted user-data deletion was perfor
 - The later authenticated retrieval check could not connect to Keycloak. Read-only Docker inspection
   confirmed the Compose containers had stopped during the review. That check remains unverified;
   the stack was left stopped. Snapshots and review checks are in ignored `.cache/humanizer`.
+
+### Document the technology stack
+
+- [x] Add all 35 ranked technology groups to the root README, explaining the approximate usage
+  ranking and linking the build manifests, Compose configuration and dependency notes. Preserve
+  existing README edits. Verify consecutive table ranks and all four source links with Python;
+  run `git diff --check`. Both checks passed. This documentation change required no runtime tests.
+
+### Maintain Markdown tables of contents
+
+- [x] Add linked tables of contents to all 33 maintained Markdown files and record the ongoing
+  requirement in `AGENTS.md`. Include every section heading, handle duplicate anchors, ignore
+  fenced code, and link to the title when no section headings exist. Preserve existing content
+  and user edits. Verify complete anchor coverage and content preservation with Python, and run
+  `git diff --check`; both checks passed.
+- [x] Increment all four changed knowledge fixtures from version 3 to 4 and update the demo
+  guide's current-version statement. Validate the manifest versions. Version 4 imports and
+  retrieval have not been run; publish with `python3 scripts/import-ai-knowledge.py` after starting
+  the AI stack. No application code changed and no runtime test results are claimed.
+
+### Omit single-item tables of contents
+
+- [x] Remove single-item tables of contents from 17 Markdown files; retain the 16 tables with
+  multiple entries. Update `AGENTS.md` to apply this rule to existing and future files.
+  Verify table entry counts and preservation of existing content with Python, and run
+  `git diff --check`; both checks passed. Knowledge fixture contents and versions are unchanged.
+  This documentation change required no runtime tests.

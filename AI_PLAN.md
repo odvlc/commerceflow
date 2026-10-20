@@ -1,5 +1,60 @@
 # CommerceFlow generative AI and agentic systems implementation plan
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [1. Outcome and release scope](#1-outcome-and-release-scope)
+- [2. Decisions and compatibility gates](#2-decisions-and-compatibility-gates)
+- [3. Target architecture and boundaries](#3-target-architecture-and-boundaries)
+- [4. Identity, authority and confirmation contracts](#4-identity-authority-and-confirmation-contracts)
+    - [Roles and modes](#roles-and-modes)
+    - [Model requests versus application actions](#model-requests-versus-application-actions)
+- [5. Proposed persistence, APIs and recovery semantics](#5-proposed-persistence-apis-and-recovery-semantics)
+    - [AI-owned data model](#ai-owned-data-model)
+    - [Proposed HTTP surface](#proposed-http-surface)
+    - [Durable run state machine](#durable-run-state-machine)
+    - [Cart concurrency and ambiguous outcomes](#cart-concurrency-and-ambiguous-outcomes)
+- [6. Implementation phases and dependencies](#6-implementation-phases-and-dependencies)
+    - [A0: Baseline, compatibility, model selection and architecture record](#a0-baseline-compatibility-model-selection-and-architecture-record)
+    - [A1: AI module, persistence, security and command APIs](#a1-ai-module-persistence-security-and-command-apis)
+    - [A2: Authoritative order explanations](#a2-authoritative-order-explanations)
+    - [A3: Curated knowledge ingestion and lexical retrieval](#a3-curated-knowledge-ingestion-and-lexical-retrieval)
+    - [A4: Embeddings, hybrid retrieval and grounded generation](#a4-embeddings-hybrid-retrieval-and-grounded-generation)
+    - [A5: Typed, authorized read tools](#a5-typed-authorized-read-tools)
+    - [A6: Durable bounded orchestration and streaming](#a6-durable-bounded-orchestration-and-streaming)
+    - [A7: Confirmed cart changes and action reconciliation](#a7-confirmed-cart-changes-and-action-reconciliation)
+    - [A8: React copilot experience](#a8-react-copilot-experience)
+    - [A9: Evaluation, security/failure coverage and observability](#a9-evaluation-securityfailure-coverage-and-observability)
+    - [A10: Compose, model profiles and non-destructive startup](#a10-compose-model-profiles-and-non-destructive-startup)
+    - [A11: kind deployment, persistence and recovery](#a11-kind-deployment-persistence-and-recovery)
+    - [A12: CI, documentation, demonstration and final audit](#a12-ci-documentation-demonstration-and-final-audit)
+- [7. Planned file changes](#7-planned-file-changes)
+- [8. Planned validation commands and evidence](#8-planned-validation-commands-and-evidence)
+- [9. Final AI acceptance matrix](#9-final-ai-acceptance-matrix)
+- [10. Current blockers and next action](#10-current-blockers-and-next-action)
+- [Implementation evidence: 2026-10-18](#implementation-evidence-2026-10-18)
+    - [A0 completed](#a0-completed)
+    - [A1 foundation verification](#a1-foundation-verification)
+    - [A2 verified](#a2-verified)
+    - [A3 verified](#a3-verified)
+    - [A4 verified](#a4-verified)
+    - [A5 verified](#a5-verified)
+    - [A6 verification](#a6-verification)
+    - [A7 verified](#a7-verified)
+    - [A8 verified](#a8-verified)
+    - [A9 development evidence (release requirements remain open)](#a9-development-evidence-release-requirements-remain-open)
+    - [A9 follow-up evidence and corrections](#a9-follow-up-evidence-and-corrections)
+    - [Existing-volume provisioning and baseline Compose prerequisite verified](#existing-volume-provisioning-and-baseline-compose-prerequisite-verified)
+    - [A9 completed repeated hybrid run (grounding review remains open)](#a9-completed-repeated-hybrid-run-grounding-review-remains-open)
+    - [A10 host-mode source and runtime verification](#a10-host-mode-source-and-runtime-verification)
+    - [A10 real process recovery, CPU runtime and off transition](#a10-real-process-recovery-cpu-runtime-and-off-transition)
+    - [A11 source validation and runtime attempt](#a11-source-validation-and-runtime-attempt)
+    - [A11 verified native-model deployment and recovery; CPU capacity gate open](#a11-verified-native-model-deployment-and-recovery-cpu-capacity-gate-open)
+    - [A12 implemented and locally verified; final release requirements explicit](#a12-implemented-and-locally-verified-final-release-requirements-explicit)
+
+<!-- TOC END -->
+
 Created/implemented: 2026-10-18. Status: local Llama implementation and native-model Compose/kind
 demonstrations verified; factual-review, full CPU/hardware and remote-CI release requirements remain
 open. See the current blocker section, dated phase evidence and

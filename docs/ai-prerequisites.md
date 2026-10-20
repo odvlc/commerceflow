@@ -1,5 +1,19 @@
 # AI task prerequisite assessment
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [Observed environment](#observed-environment)
+- [Fresh verification results](#fresh-verification-results)
+- [Isolated Spring AI compatibility probe](#isolated-spring-ai-compatibility-probe)
+- [Remaining setup and checks](#remaining-setup-and-checks)
+    - [1. Download and test models](#1-download-and-test-models)
+    - [2. Review Docker memory before full-stack testing](#2-review-docker-memory-before-full-stack-testing)
+    - [3. Execute deployment checks in their phases](#3-execute-deployment-checks-in-their-phases)
+
+<!-- TOC END -->
+
 <!--
 Maintenance: Lists environment and capacity prerequisites; a satisfied source dependency is not
 proof of runtime readiness.

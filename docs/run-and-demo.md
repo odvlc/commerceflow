@@ -1,5 +1,26 @@
 # Run and demonstrate CommerceFlow
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [1. Check prerequisites](#1-check-prerequisites)
+- [2. Start Ollama](#2-start-ollama)
+- [3. Start all application components](#3-start-all-application-components)
+- [4. Seed synthetic products and import policy knowledge](#4-seed-synthetic-products-and-import-policy-knowledge)
+- [5. Open the applications and sign in](#5-open-the-applications-and-sign-in)
+- [6. Demonstrate commerce workflows](#6-demonstrate-commerce-workflows)
+- [7. Demonstrate the local AI copilot](#7-demonstrate-the-local-ai-copilot)
+- [8. Show monitoring](#8-show-monitoring)
+- [9. Optionally run the automated AI demonstration](#9-optionally-run-the-automated-ai-demonstration)
+- [10. Inspect failures and stop safely](#10-inspect-failures-and-stop-safely)
+    - [Port 8180 already allocated](#port-8180-already-allocated)
+    - [Flyway migration checksum mismatch](#flyway-migration-checksum-mismatch)
+    - [Stop Compose while retaining data](#stop-compose-while-retaining-data)
+- [Alternative: Kubernetes with native Ollama](#alternative-kubernetes-with-native-ollama)
+
+<!-- TOC END -->
+
 For a local Mac demo, use Docker Compose with native Ollama. The steps below cover full startup,
 checkout and the Llama copilot, monitoring, and shutdown that preserves data.
 
@@ -147,7 +168,7 @@ local demo accounts.
 
 Re-running imports with unchanged fixtures is safe. If you edit a policy's text or metadata,
 including Markdown formatting, increase that source's `version` in `knowledge/manifest.json` before
-importing again. Keep its `sourceId` unchanged. The current edited fixtures are version 3. HTTP 409
+importing again. Keep its `sourceId` unchanged. The current edited fixtures are version 4. HTTP 409
 with `IDEMPOTENCY_CONFLICT` means the same request key was previously used with different contents;
 `KNOWLEDGE_VERSION_CONFLICT` means the source revision is stale or reuses a published version with
 changed contents. Changing only the request key does not resolve a source-version conflict. Publish

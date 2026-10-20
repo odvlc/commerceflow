@@ -1,5 +1,14 @@
 # Support investigation runbook
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [Investigating a cancellation](#investigating-a-cancellation)
+- [Uncertain stock or payments](#uncertain-stock-or-payments)
+
+<!-- TOC END -->
+
 ## Investigating a cancellation
 
 Read the authorized administrative order explanation. Include its public reason, state and observation timestamp

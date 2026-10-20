@@ -1,5 +1,15 @@
 # Synthetic demonstration return policy
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [Return window](#return-window)
+- [Damaged items](#damaged-items)
+- [Refunds](#refunds)
+
+<!-- TOC END -->
+
 ## Return window
 
 You may request a return for unused items in their original packaging within 30 calendar days of delivery.

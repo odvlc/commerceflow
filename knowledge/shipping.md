@@ -1,5 +1,14 @@
 # Synthetic demonstration shipping guide
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [Delivery estimates](#delivery-estimates)
+- [Order status](#order-status)
+
+<!-- TOC END -->
+
 ## Delivery estimates
 
 For this fictional demo, standard delivery is estimated at 5 to 7 business days after dispatch. CommerceFlow has

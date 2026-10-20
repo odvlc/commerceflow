@@ -1,5 +1,34 @@
 # Project file guide
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [Project root](#project-root)
+- [.github](#github)
+- [.mvn](#mvn)
+- [ai-service](#ai-service)
+- [api-gateway](#api-gateway)
+- [cart-service](#cart-service)
+- [catalog-service](#catalog-service)
+- [contracts](#contracts)
+- [deploy](#deploy)
+- [docs](#docs)
+- [frontend](#frontend)
+- [infra](#infra)
+- [inventory-service](#inventory-service)
+- [knowledge](#knowledge)
+- [load-tests](#load-tests)
+- [notification-service](#notification-service)
+- [order-service](#order-service)
+- [payment-service](#payment-service)
+- [performance](#performance)
+- [scripts](#scripts)
+- [service-support](#service-support)
+- [workflow-tests](#workflow-tests)
+
+<!-- TOC END -->
+
 Each maintained file is listed with its purpose and maintenance notes. Inline comments explain
 responsibilities and non-obvious invariants without changing executable behavior. Formats that
 cannot safely contain comments are documented here.

@@ -1,5 +1,33 @@
 # Codex master prompt: CommerceFlow
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [Role and mission](#role-and-mission)
+- [1. Engineering standards and working rules](#1-engineering-standards-and-working-rules)
+- [2. Technology stack](#2-technology-stack)
+- [3. Microservices architecture](#3-microservices-architecture)
+- [4. Core business workflow](#4-core-business-workflow)
+- [5. PostgreSQL data model](#5-postgresql-data-model)
+- [6. REST endpoints](#6-rest-endpoints)
+- [7. Kafka](#7-kafka)
+- [8. Redis](#8-redis)
+- [9. Elasticsearch](#9-elasticsearch)
+- [10. Spring Security](#10-spring-security)
+- [11. React frontend](#11-react-frontend)
+- [12. Docker Compose](#12-docker-compose)
+- [13. Kubernetes](#13-kubernetes)
+- [14. Virtual threads and performance](#14-virtual-threads-and-performance)
+- [15. Observability](#15-observability)
+- [16. Automated tests](#16-automated-tests)
+- [17. CI and documentation](#17-ci-and-documentation)
+- [18. Implementation phases](#18-implementation-phases)
+- [19. Final acceptance criteria](#19-final-acceptance-criteria)
+- [20. Begin implementation now](#20-begin-implementation-now)
+
+<!-- TOC END -->
+
 ## Role and mission
 
 Act as a Principal Java Backend Engineer, Distributed Systems Architect, DevOps Engineer, Security

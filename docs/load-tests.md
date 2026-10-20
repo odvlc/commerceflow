@@ -1,5 +1,15 @@
 # Measured local load results
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [Reproduction](#reproduction)
+- [Recorded JVM and pool samples](#recorded-jvm-and-pool-samples)
+- [Authenticated checkout smoke](#authenticated-checkout-smoke)
+
+<!-- TOC END -->
+
 <!--
 Maintenance: Records measured load runs and their limits; scripts and thresholds alone are not
 benchmark evidence.

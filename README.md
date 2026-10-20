@@ -1,5 +1,20 @@
 # CommerceFlow
 
+<!-- TOC START -->
+
+## Table of contents
+
+- [Technology stack](#technology-stack)
+- [Prerequisites](#prerequisites)
+- [Build and verify](#build-and-verify)
+- [Docker Compose](#docker-compose)
+- [Kubernetes](#kubernetes)
+- [Optional local Llama copilot](#optional-local-llama-copilot)
+- [Five-minute demonstration](#five-minute-demonstration)
+- [Documentation](#documentation)
+
+<!-- TOC END -->
+
 <!--
 Maintenance: Entry point for setup commands and recorded verification scope; detailed operations and
 acceptance evidence live in the linked guides.
@@ -9,10 +24,7 @@ A Java 25 / Spring Boot event-driven commerce application with a React storefron
 PostgreSQL-owned service data, Kafka checkout orchestration, Redis carts/cache and Elasticsearch
 search.
 
-<!-- Verification counts describe the recorded runs linked below. Update them only with fresh execution evidence;
-     source changes or successful compilation alone do not establish runtime acceptance. -->
-The latest regression passed 82 Java tests, 5 frontend unit tests, lint/build and 8 real-browser
-cases. The optional local Llama copilot adds cited retrieval, authorized tools, durable
+The optional local Llama copilot adds cited retrieval, authorized tools, durable
 investigations and explicitly confirmed cart changes. The frozen 80-case hybrid corpus ran three
 times. All 240 scenario checks passed, with zero observed unsafe business effects. Individual
 factual assertions still need review; see [AI evaluation](docs/ai-evaluation.md).
@@ -24,6 +36,53 @@ model-volume restart pass. The host has 48 GiB, so the original 32 GiB hardware 
 unverified. GitHub Actions definitions are validated but have not run remotely. [PLAN.md](PLAN.md),
 [AI_PLAN.md](AI_PLAN.md) and [verification](docs/verification.md) retain exact scope/results. No
 commits, remote deployment or volume deletion were performed.
+
+## Technology stack
+
+Ordered approximately by usage across source code, modules and configuration, rather than runtime
+traffic or resource consumption. Related technologies are grouped; transitive dependencies are
+excluded. File and line counts are a snapshot of maintained source, including tests and configuration.
+
+| Rank | Technology                                                     | Usage in this repository                                                                                   |
+|-----:|----------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
+|    1 | Java 25                                                        | Backend services, shared contracts, infrastructure helpers and tests: 106 files, about 14,900 lines.       |
+|    2 | Spring Boot 4.1.1 / Spring Framework                           | Foundation for all eight backend applications; Spring imports appear in 84 Java files.                     |
+|    3 | Spring MVC / REST / HTTP / JSON                                | Controllers, service-to-service calls, validation and consistent API errors throughout the backend.        |
+|    4 | PostgreSQL 18.6 / SQL                                          | Durable storage for six application databases, plus Keycloak's database; 14 SQL files.                     |
+|    5 | Maven 3.10 / Maven Wrapper                                     | Multi-module Java builds, dependency management and test execution; 12 POM files.                          |
+|    6 | Spring Security / OAuth 2.0 / OpenID Connect / JWT             | Authentication, roles, ownership checks and service credentials across backend applications.               |
+|    7 | Jackson                                                        | JSON serialization and parsing; imported in 30 Java files.                                                 |
+|    8 | Spring JDBC / Spring Data JPA / Hibernate                      | Database access: JDBC appears in 26 Java files; five service modules declare JPA.                          |
+|    9 | Apache Kafka 4.2.2 / Spring Kafka                              | Business events, transactional outboxes, consumer deduplication and saga coordination across six services. |
+|   10 | Flyway                                                         | Versioned database migrations in six application services.                                                 |
+|   11 | JUnit / AssertJ / Mockito / Spring Boot Test / MockMvc         | Backend unit, HTTP, integration and workflow testing; JUnit and AssertJ each appear in 17 Java files.      |
+|   12 | Micrometer / Spring Boot Actuator / Prometheus 3.15            | Health checks and metrics across all eight backend applications.                                           |
+|   13 | Docker / Docker Compose                                        | Container builds and local deployment of applications and infrastructure.                                  |
+|   14 | Kubernetes / Kustomize / kind                                  | Local cluster deployment, persistent storage, probes, autoscaling and deployment overlays.                 |
+|   15 | TypeScript / React 19.3 / React DOM                            | Storefront and AI Copilot interface; 16 TS/TSX files, about 2,700 lines including tests and configuration. |
+|   16 | Python 3                                                       | Demo, model preparation, knowledge import, evaluation and verification automation; 18 scripts.             |
+|   17 | HTML / CSS                                                     | Frontend page structure and styling; approximately 1,200 lines.                                            |
+|   18 | Bash / shell                                                   | Startup, shutdown, deployment and verification automation; 12 scripts.                                     |
+|   19 | Elasticsearch 9.4.5 / Spring Data Elasticsearch                | Catalog search and AI knowledge retrieval, including vector search.                                        |
+|   20 | Redis 8.10.2 / Spring Data Redis / Lua                         | Product caching, shopping carts, TTLs and atomic Redis operations.                                         |
+|   21 | Keycloak 26.8 / keycloak-js / PKCE                             | Identity provider, browser login and service authentication.                                               |
+|   22 | Spring AI 2.0.1 / Ollama 0.40.6                                | Local model integration in the optional AI service.                                                        |
+|   23 | Llama 3.1 8B / nomic-embed-text                                | AI generation, tool requests and 768-dimensional knowledge embeddings.                                     |
+|   24 | Node.js 26 / npm / Vite 8.3                                    | Frontend dependency installation, development server and production builds.                                |
+|   25 | Vitest / React Testing Library / jest-dom / jsdom              | Frontend unit and component testing.                                                                       |
+|   26 | Playwright                                                     | Browser-based end-to-end testing.                                                                          |
+|   27 | springdoc / OpenAPI / Swagger UI                               | API documentation across the eight backend applications.                                                   |
+|   28 | Nginx 1.30                                                     | Serves the built frontend and supports the local kind inference proxy.                                     |
+|   29 | Grafana 13.2                                                   | Dashboards for application and infrastructure metrics.                                                     |
+|   30 | Testcontainers / Zonky Embedded PostgreSQL / Spring Kafka Test | Real infrastructure and broker support for integration tests.                                              |
+|   31 | ESLint / typescript-eslint / Prettier                          | Frontend linting and formatting tooling.                                                                   |
+|   32 | GitHub Actions                                                 | Automated repository verification pipeline.                                                                |
+|   33 | Traefik 3.7 / Calico 3.33                                      | Kubernetes ingress routing and network-policy enforcement.                                                 |
+|   34 | k6 2.3                                                         | Load testing and performance scenarios.                                                                    |
+|   35 | Server-Sent Events (SSE)                                       | Streams AI run updates from the backend to the browser.                                                    |
+
+Version pins are recorded in the [backend build](pom.xml), [frontend manifest](frontend/package.json),
+[Compose configuration](infra/compose.yaml) and [dependency notes](docs/dependencies.md).
 
 ## Prerequisites
 
