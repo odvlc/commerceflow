@@ -11,11 +11,13 @@ import com.commerceflow.contracts.CheckoutEvents.OrderStatus;
 import com.commerceflow.contracts.CheckoutEvents.PaymentResult;
 import com.commerceflow.support.BusinessMetrics;
 import com.commerceflow.support.OutboxStore;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
@@ -35,14 +37,14 @@ public class SagaCoordinator {
     private final OutboxStore outbox;
     private final JdbcClient jdbc;
     private final Duration timeout;
-    private final io.micrometer.core.instrument.MeterRegistry metrics;
+    private final MeterRegistry metrics;
 
     public SagaCoordinator(
             OrderRepository orders,
             OutboxStore outbox,
             JdbcClient jdbc,
             @Value("${saga.step-timeout:PT60S}") Duration timeout,
-            io.micrometer.core.instrument.MeterRegistry metrics) {
+            MeterRegistry metrics) {
         this.orders = orders;
         this.outbox = outbox;
         this.jdbc = jdbc;
@@ -55,7 +57,8 @@ public class SagaCoordinator {
         var order = orders.required(id, true);
         switch (result.status()) {
             case "RESERVED" -> {
-                if (order.status() != PENDING_INVENTORY) return;
+                if (order.status() != PENDING_INVENTORY)
+                    return;
                 orders.step(id, "RESERVE_INVENTORY", "SUCCEEDED", null);
                 move(order, AWAITING_PAYMENT);
                 command(
@@ -65,18 +68,21 @@ public class SagaCoordinator {
                         new AuthorizePayment(order.total(), order.currency(), order.scenario()));
             }
             case "REJECTED" -> {
-                if (order.status() != PENDING_INVENTORY) return;
+                if (order.status() != PENDING_INVENTORY)
+                    return;
                 orders.recordReason(id, "INSUFFICIENT_STOCK".equals(result.reason()) ? "INSUFFICIENT_STOCK" : "INVENTORY_REJECTED");
                 orders.step(id, "RESERVE_INVENTORY", "FAILED", result.reason());
                 move(order, CANCELLED);
             }
             case "COMMITTED" -> {
-                if (order.status() != COMMITTING_INVENTORY) return;
+                if (order.status() != COMMITTING_INVENTORY)
+                    return;
                 orders.step(id, "COMMIT_INVENTORY", "SUCCEEDED", null);
                 move(order, CONFIRMED);
             }
             case "RELEASED" -> {
-                if (order.status() != CANCELLING_INVENTORY) return;
+                if (order.status() != CANCELLING_INVENTORY)
+                    return;
                 orders.step(id, "RELEASE_INVENTORY", "SUCCEEDED", null);
                 move(order, CANCELLED);
             }
@@ -91,14 +97,17 @@ public class SagaCoordinator {
             case "AUTHORIZED" -> {
                 // Late authorization cannot revive a cancellation; payment reconciliation handles the
                 // already-issued operation.
-                if (order.status() != AWAITING_PAYMENT) return;
+                if (order.status() != AWAITING_PAYMENT)
+                    return;
                 orders.step(id, "AUTHORIZE_PAYMENT", "SUCCEEDED", null);
                 move(order, COMMITTING_INVENTORY);
                 command(order, "COMMIT_INVENTORY", "CommitInventory", new Command("PAYMENT_AUTHORIZED"));
             }
             case "DECLINED", "CANCELLED", "REFUNDED" -> {
-                if (order.status() != AWAITING_PAYMENT && order.status() != CANCELLING_PAYMENT) return;
-                if (result.status().equals("DECLINED")) orders.recordReason(id, "PAYMENT_DECLINED");
+                if (order.status() != AWAITING_PAYMENT && order.status() != CANCELLING_PAYMENT)
+                    return;
+                if (result.status().equals("DECLINED"))
+                    orders.recordReason(id, "PAYMENT_DECLINED");
                 orders.step(
                         id,
                         order.status() == CANCELLING_PAYMENT ? "CANCEL_PAYMENT" : "AUTHORIZE_PAYMENT",
@@ -123,13 +132,13 @@ public class SagaCoordinator {
 
     @Transactional
     public int reconcileDeadlines() {
-        var ids =
-                jdbc.sql(
-                                "SELECT id FROM orders WHERE deadline_at<now() AND status NOT IN"
-                                        + " ('CONFIRMED','CANCELLED') ORDER BY id LIMIT 100 FOR UPDATE SKIP LOCKED")
-                        .query(UUID.class)
-                        .list();
-        for (var id : ids) reconcile(orders.required(id, true), "STEP_TIMEOUT");
+        var ids = jdbc.sql(
+                        "SELECT id FROM orders WHERE deadline_at<now() AND status NOT IN"
+                                + " ('CONFIRMED','CANCELLED') ORDER BY id LIMIT 100 FOR UPDATE SKIP LOCKED")
+                .query(UUID.class)
+                .list();
+        for (var id : ids)
+            reconcile(orders.required(id, true), "STEP_TIMEOUT");
         return ids.size();
     }
 
@@ -180,8 +189,7 @@ public class SagaCoordinator {
             BusinessMetrics.afterCommit(
                     () -> {
                         metrics.counter("commerceflow.orders.completed", "result", target.name()).increment();
-                        metrics
-                                .timer("commerceflow.saga.completion", "result", target.name())
+                        metrics.timer("commerceflow.saga.completion", "result", target.name())
                                 .record(Duration.between(order.created(), Instant.now()));
                     });
     }
@@ -195,7 +203,7 @@ public class SagaCoordinator {
     private void extend(OrderRepository.Row order) {
         jdbc.sql("UPDATE orders SET deadline_at=:deadline,updated_at=now() WHERE id=:id")
                 .param("id", order.id())
-                .param("deadline", java.sql.Timestamp.from(Instant.now().plus(timeout)))
+                .param("deadline", Timestamp.from(Instant.now().plus(timeout)))
                 .update();
     }
 }

@@ -9,7 +9,9 @@ import com.commerceflow.ai.domain.AiModels.Claimed;
 import com.commerceflow.ai.domain.AiModels.Confirmation;
 import com.commerceflow.ai.domain.AiModels.Execution;
 import com.commerceflow.ai.domain.AiModels.Proposal;
+import com.commerceflow.support.BusinessException;
 import com.commerceflow.support.RequestHash;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,8 +43,8 @@ public class ActionStore {
         views.run(id, actor);
         actor.requireMode("CUSTOMER");
         if (!actor.valid())
-            throw new com.commerceflow.support.BusinessException(
-                    org.springframework.http.HttpStatus.UNAUTHORIZED,
+            throw new BusinessException(
+                    HttpStatus.UNAUTHORIZED,
                     "AI_AUTHENTICATION_REQUIRED",
                     "Fresh authentication required");
         jdbc.sql("SELECT id FROM ai_runs WHERE id=:id FOR UPDATE")
@@ -128,7 +130,8 @@ public class ActionStore {
         var existing = execution(id);
         // A repeated confirmation recovers the original request key instead of creating another
         // execution.
-        if (existing.isPresent()) return existing.get();
+        if (existing.isPresent())
+            return existing.get();
         if (!proposal.state().equals("PROPOSED")
                 || proposal.version() != input.version()
                 || !proposal.expiresAt().isAfter(Instant.now())
@@ -190,9 +193,11 @@ public class ActionStore {
                         .param("fence", c.fence())
                         .query(UUID.class)
                         .optional();
-        if (run.isEmpty()) throw new RunStore.LostLease();
+        if (run.isEmpty())
+            throw new RunStore.LostLease();
         var value = execution(proposal).orElseThrow();
-        if (value.state().equals("SUCCEEDED") || value.state().equals("FAILED")) return value;
+        if (value.state().equals("SUCCEEDED") || value.state().equals("FAILED"))
+            return value;
         // Do not replay after the guaranteed Cart memo window; an expired memo could turn a retry into
         // a fresh mutation.
         if (!value.recoveryUntil().isAfter(Instant.now()) || value.attempts() >= 3) {

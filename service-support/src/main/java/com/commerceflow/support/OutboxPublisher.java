@@ -25,8 +25,7 @@ public class OutboxPublisher {
     private final KafkaTemplate<String, String> kafka;
     private final MeterRegistry metrics;
 
-    public OutboxPublisher(
-            JdbcClient jdbc, KafkaTemplate<String, String> kafka, MeterRegistry metrics) {
+    public OutboxPublisher(JdbcClient jdbc, KafkaTemplate<String, String> kafka, MeterRegistry metrics) {
         this.jdbc = jdbc;
         this.kafka = kafka;
         this.metrics = metrics;
@@ -42,48 +41,44 @@ public class OutboxPublisher {
     @Transactional
     public int publishBatch() {
         // Only the earliest unpublished event per aggregate is eligible, even during retry backoff.
-        var batch =
-                jdbc.sql(
-                                """
-                                        SELECT e.* FROM outbox_events e
-                                        WHERE e.published_at IS NULL AND e.next_attempt_at<=now()
-                                        AND NOT EXISTS (SELECT 1 FROM outbox_events earlier WHERE earlier.aggregate_id=e.aggregate_id
-                                          AND earlier.published_at IS NULL AND earlier.sequence<e.sequence)
-                                        ORDER BY e.sequence LIMIT 20 FOR UPDATE OF e SKIP LOCKED
-                                        """)
-                        .query(
-                                (rs, n) ->
-                                        new Pending(
-                                                rs.getObject("id", UUID.class),
-                                                rs.getObject("aggregate_id", UUID.class),
-                                                rs.getString("event_type"),
-                                                rs.getString("payload"),
-                                                rs.getInt("attempts")))
-                        .list();
+        var batch = jdbc.sql("""
+                        SELECT e.* FROM outbox_events e
+                        WHERE e.published_at IS NULL AND e.next_attempt_at<=now()
+                        AND NOT EXISTS (SELECT 1 FROM outbox_events earlier WHERE earlier.aggregate_id=e.aggregate_id
+                          AND earlier.published_at IS NULL AND earlier.sequence<e.sequence)
+                        ORDER BY e.sequence LIMIT 20 FOR UPDATE OF e SKIP LOCKED
+                        """)
+                .query(
+                        (rs, n) ->
+                                new Pending(
+                                        rs.getObject("id", UUID.class),
+                                        rs.getObject("aggregate_id", UUID.class),
+                                        rs.getString("event_type"),
+                                        rs.getString("payload"),
+                                        rs.getInt("attempts")))
+                .list();
         int delivered = 0;
         for (var event : batch) {
             try {
-                kafka
-                        .send(topic(event.type()), event.aggregateId().toString(), event.payload())
+                kafka.send(topic(event.type()), event.aggregateId().toString(), event.payload())
                         // Wait for the broker result before writing published_at; producer idempotence
                         // does not make the SQL/Kafka gap atomic.
                         .get(8, TimeUnit.SECONDS);
                 // A crash before this commit causes replay, never a lost event. Consumers must deduplicate.
-                jdbc.sql(
-                                "UPDATE outbox_events SET published_at=now(),attempts=attempts+1,last_error=NULL"
-                                        + " WHERE id=:id")
+                jdbc.sql("UPDATE outbox_events SET published_at=now(),attempts=attempts+1,last_error=NULL"
+                                + " WHERE id=:id")
                         .param("id", event.id())
                         .update();
                 metrics.counter("commerceflow.outbox.delivered").increment();
                 delivered++;
             } catch (Exception failure) {
-                if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
+                if (failure instanceof InterruptedException)
+                    Thread.currentThread().interrupt();
                 // Bound exponential retry delay while leaving the durable unpublished event available
                 // for later recovery.
                 long delay = Math.min(60_000, 250L * (1L << Math.min(8, event.attempts())));
-                jdbc.sql(
-                                "UPDATE outbox_events SET"
-                                        + " attempts=attempts+1,next_attempt_at=:next,last_error=:error WHERE id=:id")
+                jdbc.sql("UPDATE outbox_events SET"
+                                + " attempts=attempts+1,next_attempt_at=:next,last_error=:error WHERE id=:id")
                         .param("id", event.id())
                         .param("next", Timestamp.from(Instant.now().plusMillis(delay)))
                         .param("error", failure.getClass().getSimpleName())

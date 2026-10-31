@@ -13,6 +13,7 @@ public class HealthCheck {
         var response = client.send(HttpRequest.newBuilder(URI.create(args[0])).timeout(Duration.ofSeconds(3)).GET().build(), HttpResponse.BodyHandlers.discarding());
         // A failed HTTP probe exits nonzero so the container runtime can distinguish unhealthy from
         // merely running.
-        if (response.statusCode() != 200) System.exit(1);
+        if (response.statusCode() != 200)
+            System.exit(1);
     }
 }

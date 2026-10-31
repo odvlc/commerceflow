@@ -101,18 +101,16 @@ class CatalogIntegrationTest {
     void createsListsReadsAndGeneratesOpenApi() throws Exception {
         // Exercise the MVC boundary and persisted result together; a valid DTO alone does not prove
         // the endpoint contract.
-        var response =
-                http.perform(
-                                post("/api/v1/admin/products")
-                                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
-                                        .header("Idempotency-Key", "create-001")
-                                        .header("X-Correlation-ID", "test-catalog")
-                                        .contentType("application/json")
-                                        .content(json.writeValueAsString(input("KEY-1"))))
-                        .andExpect(status().isCreated())
-                        .andExpect(header().string("X-Correlation-ID", "test-catalog"))
-                        .andExpect(header().string("ETag", "\"0\""))
-                        .andReturn();
+        var response = http.perform(post("/api/v1/admin/products")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .header("Idempotency-Key", "create-001")
+                        .header("X-Correlation-ID", "test-catalog")
+                        .contentType("application/json")
+                        .content(json.writeValueAsString(input("KEY-1"))))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("X-Correlation-ID", "test-catalog"))
+                .andExpect(header().string("ETag", "\"0\""))
+                .andReturn();
         var product = json.readValue(response.getResponse().getContentAsString(), ProductView.class);
         http.perform(get("/api/v1/products/{id}", product.id()))
                 .andExpect(status().isOk())
@@ -126,10 +124,9 @@ class CatalogIntegrationTest {
                 .andExpect(jsonPath("$.paths['/api/v1/products']").exists());
         assertThat(jdbc.sql("SELECT count(*) FROM outbox_events").query(Long.class).single())
                 .isEqualTo(1);
-        assertThat(
-                jdbc.sql("SELECT payload->>'correlationId' FROM outbox_events")
-                        .query(String.class)
-                        .single())
+        assertThat(jdbc.sql("SELECT payload->>'correlationId' FROM outbox_events")
+                .query(String.class)
+                .single())
                 .isEqualTo("test-catalog");
     }
 
@@ -141,18 +138,18 @@ class CatalogIntegrationTest {
                 tasks.add(() -> catalog.create("concurrent-key", input("KEY-1"), "retry-test"));
             var results = executor.invokeAll(tasks);
             var ids = new HashSet<UUID>();
-            for (var result : results) ids.add(result.get().id());
+            for (var result : results)
+                ids.add(result.get().id());
             assertThat(ids).hasSize(1);
         }
         assertThat(jdbc.sql("SELECT count(*) FROM products").query(Long.class).single()).isEqualTo(1);
         assertThat(jdbc.sql("SELECT count(*) FROM outbox_events").query(Long.class).single())
                 .isEqualTo(1);
-        http.perform(
-                        post("/api/v1/admin/products")
-                                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
-                                .header("Idempotency-Key", "concurrent-key")
-                                .contentType("application/json")
-                                .content(json.writeValueAsString(input("OTHER"))))
+        http.perform(post("/api/v1/admin/products")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .header("Idempotency-Key", "concurrent-key")
+                        .contentType("application/json")
+                        .content(json.writeValueAsString(input("OTHER"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("IDEMPOTENCY_CONFLICT"));
     }
@@ -161,20 +158,16 @@ class CatalogIntegrationTest {
     void conflictingWriteRollsBackCategoryAndOutbox() throws Exception {
         // A conflict must roll back auxiliary rows and outgoing events as well as the product edit.
         catalog.create("original-key", input("KEY-1"), "test");
-        var duplicate =
-                new ProductInput(
-                        "KEY-1", "Duplicate", "", "New category", new BigDecimal("1.00"), "USD", true);
-        http.perform(
-                        post("/api/v1/admin/products")
-                                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
-                                .header("Idempotency-Key", "duplicate-key")
-                                .contentType("application/json")
-                                .content(json.writeValueAsString(duplicate)))
+        var duplicate = new ProductInput("KEY-1", "Duplicate", "", "New category", new BigDecimal("1.00"), "USD", true);
+        http.perform(post("/api/v1/admin/products")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .header("Idempotency-Key", "duplicate-key")
+                        .contentType("application/json")
+                        .content(json.writeValueAsString(duplicate)))
                 .andExpect(status().isConflict());
-        assertThat(
-                jdbc.sql("SELECT count(*) FROM categories WHERE name = 'New category'")
-                        .query(Long.class)
-                        .single())
+        assertThat(jdbc.sql("SELECT count(*) FROM categories WHERE name = 'New category'")
+                .query(Long.class)
+                .single())
                 .isZero();
         assertThat(jdbc.sql("SELECT count(*) FROM outbox_events").query(Long.class).single())
                 .isEqualTo(1);
@@ -183,23 +176,19 @@ class CatalogIntegrationTest {
     @Test
     void updateRejectsStaleVersionAndHidesDeactivatedProducts() throws Exception {
         var product = catalog.create("original-key", input("KEY-1"), "test");
-        var inactive =
-                new ProductInput(
-                        "KEY-1", "Updated", "", "Accessories", new BigDecimal("99.00"), "USD", false);
-        http.perform(
-                        put("/api/v1/admin/products/{id}", product.id())
-                                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
-                                .header("If-Match", "\"0\"")
-                                .contentType("application/json")
-                                .content(json.writeValueAsString(inactive)))
+        var inactive = new ProductInput("KEY-1", "Updated", "", "Accessories", new BigDecimal("99.00"), "USD", false);
+        http.perform(put("/api/v1/admin/products/{id}", product.id())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .header("If-Match", "\"0\"")
+                        .contentType("application/json")
+                        .content(json.writeValueAsString(inactive)))
                 .andExpect(status().isOk())
                 .andExpect(header().string("ETag", "\"1\""));
-        http.perform(
-                        put("/api/v1/admin/products/{id}", product.id())
-                                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
-                                .header("If-Match", "\"0\"")
-                                .contentType("application/json")
-                                .content(json.writeValueAsString(inactive)))
+        http.perform(put("/api/v1/admin/products/{id}", product.id())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .header("If-Match", "\"0\"")
+                        .contentType("application/json")
+                        .content(json.writeValueAsString(inactive)))
                 .andExpect(status().isConflict());
         http.perform(get("/api/v1/products/{id}", product.id())).andExpect(status().isNotFound());
         http.perform(get("/api/v1/products")).andExpect(jsonPath("$.totalElements").value(0));
@@ -209,12 +198,11 @@ class CatalogIntegrationTest {
 
     @Test
     void rejectsInvalidInputAndBoundsPagination() throws Exception {
-        http.perform(
-                        post("/api/v1/admin/products")
-                                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
-                                .header("Idempotency-Key", "bad-data-key")
-                                .contentType("application/json")
-                                .content("{\"sku\":\"\",\"price\":-1}"))
+        http.perform(post("/api/v1/admin/products")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .header("Idempotency-Key", "bad-data-key")
+                        .contentType("application/json")
+                        .content("{\"sku\":\"\",\"price\":-1}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
         http.perform(get("/api/v1/products").param("size", "101")).andExpect(status().isBadRequest());

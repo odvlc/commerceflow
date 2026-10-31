@@ -29,10 +29,12 @@ final class ChatAccumulator {
     }
 
     synchronized void accept(ChatResponse part) {
-        if (++parts > 2048) throw new IllegalStateException("Model stream exceeds its chunk limit");
+        if (++parts > 2048)
+            throw new IllegalStateException("Model stream exceeds its chunk limit");
         last = part;
         var message = part.message();
-        if (message == null) return;
+        if (message == null)
+            return;
         if (message.content() != null && !message.content().isEmpty()) {
             if (!textSeen) {
                 textSeen = true;
@@ -50,11 +52,13 @@ final class ChatAccumulator {
                 }
                 String key =
                         call.function().index() != null ? Integer.toString(call.function().index()) : call.id();
-                if (key == null) throw new IllegalStateException("Missing tool request identity");
+                if (key == null)
+                    throw new IllegalStateException("Missing tool request identity");
                 // A streamed update for the same structured call replaces its earlier snapshot instead
                 // of dispatching another call.
                 calls.put(key, call);
-                if (calls.size() > 8) throw new IllegalStateException("Model requested too many tools");
+                if (calls.size() > 8)
+                    throw new IllegalStateException("Model requested too many tools");
             }
     }
 

@@ -19,7 +19,8 @@ public class Credentials {
     private final Map<UUID, Actor> values = new ConcurrentHashMap<>();
 
     public void attach(UUID run, Actor actor) {
-        if (actor.valid()) values.put(run, actor);
+        if (actor.valid())
+            values.put(run, actor);
     }
 
     public Optional<Actor> get(UUID run) {

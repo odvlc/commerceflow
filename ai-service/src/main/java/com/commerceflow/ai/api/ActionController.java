@@ -10,6 +10,7 @@ import com.commerceflow.ai.domain.AiModels.Confirmation;
 import com.commerceflow.ai.domain.AiModels.Execution;
 import com.commerceflow.ai.domain.AiModels.Proposal;
 import com.commerceflow.ai.persistence.ActionStore;
+import com.commerceflow.ai.persistence.AiStore;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
@@ -49,7 +50,7 @@ public class ActionController {
     @GetMapping("/{id}/execution")
     public Execution execution(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
         store.owned(id, Actor.from(jwt));
-        return store.execution(id).orElseThrow(com.commerceflow.ai.persistence.AiStore::missing);
+        return store.execution(id).orElseThrow(AiStore::missing);
     }
 
     @PostMapping("/{id}/confirm")

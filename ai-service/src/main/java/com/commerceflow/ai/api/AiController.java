@@ -12,7 +12,10 @@ import com.commerceflow.ai.domain.AiModels.MessageView;
 import com.commerceflow.ai.domain.AiModels.Page;
 import com.commerceflow.ai.domain.AiModels.RunView;
 import com.commerceflow.ai.domain.AiModels.SendMessage;
+import com.commerceflow.ai.model.LocalModels;
 import com.commerceflow.ai.persistence.AiStore;
+import com.commerceflow.ai.retrieval.KnowledgeModels;
+import com.commerceflow.ai.retrieval.KnowledgeSearch;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -30,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.net.URI;
 import java.util.Map;
@@ -40,18 +44,18 @@ import java.util.UUID;
 @Validated
 public class AiController {
 
-    private final com.commerceflow.ai.retrieval.KnowledgeSearch knowledge;
+    private final KnowledgeSearch knowledge;
     private final RunStreams streams;
     private final AiStore store;
     private final Credentials credentials;
-    private final com.commerceflow.ai.model.LocalModels models;
+    private final LocalModels models;
 
     public AiController(
             AiStore store,
             Credentials credentials,
-            com.commerceflow.ai.model.LocalModels models,
+            LocalModels models,
             RunStreams streams,
-            com.commerceflow.ai.retrieval.KnowledgeSearch knowledge) {
+            KnowledgeSearch knowledge) {
         this.knowledge = knowledge;
         this.streams = streams;
         this.store = store;
@@ -63,18 +67,12 @@ public class AiController {
     public Map<String, Object> capabilities(@AuthenticationPrincipal Jwt jwt) {
         var a = Actor.from(jwt);
         return Map.of(
-                "enabled",
-                true,
-                "roles",
-                a.roles(),
-                "chatModel",
-                models.chatName(),
-                "modelReady",
-                models.ready(),
-                "actionsEnabled",
-                a.roles().contains("CUSTOMER") || a.roles().contains("ADMIN"),
-                "maximumMessageCharacters",
-                4000);
+                "enabled", true,
+                "roles", a.roles(),
+                "chatModel", models.chatName(),
+                "modelReady", models.ready(),
+                "actionsEnabled", a.roles().contains("CUSTOMER") || a.roles().contains("ADMIN"),
+                "maximumMessageCharacters", 4000);
     }
 
     @PostMapping("/conversations")
@@ -134,14 +132,15 @@ public class AiController {
         // A committed proposal resumes through Cart reconciliation, which does not require generation.
         // An existing approval continues with deterministic service calls; only fresh investigation
         // requires available inference.
-        if (store.run(id, a).proposals().isEmpty()) models.requireReady();
+        if (store.run(id, a).proposals().isEmpty())
+            models.requireReady();
         var run = store.resume(id, a);
         credentials.attach(id, a);
         return run;
     }
 
     @GetMapping(value = "/runs/{id}/events", produces = "text/event-stream")
-    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter events(
+    public SseEmitter events(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID id,
             @RequestHeader(value = "Last-Event-ID", defaultValue = "0") @Min(0) long after) {
@@ -150,7 +149,7 @@ public class AiController {
     }
 
     @GetMapping("/knowledge/search")
-    public com.commerceflow.ai.retrieval.KnowledgeModels.SearchResult searchKnowledge(
+    public KnowledgeModels.SearchResult searchKnowledge(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam @Size(min = 1, max = 200) String query,
             @RequestParam(defaultValue = "CUSTOMER") @Pattern(regexp = "CUSTOMER|SUPPORT") String mode,

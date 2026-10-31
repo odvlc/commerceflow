@@ -47,7 +47,8 @@ public class RunStreams implements AutoCloseable {
         try {
             owners.compute(actor.subject(),
                     (id, count) -> {
-                        if (count != null && count >= 2) throw capacity();
+                        if (count != null && count >= 2)
+                            throw capacity();
                         return count == null ? 1 : count + 1;
                     });
         } catch (RuntimeException error) {
@@ -81,7 +82,8 @@ public class RunStreams implements AutoCloseable {
                     for (var event : events) {
                         // Recheck expiry during the connection lifetime so an open stream cannot
                         // outlive caller authority.
-                        if (!actor.valid()) break;
+                        if (!actor.valid())
+                            break;
                         emitter.send(SseEmitter.event()
                                 .id(Long.toString(event.sequence()))
                                 .name(event.type())

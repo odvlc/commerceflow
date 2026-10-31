@@ -31,7 +31,7 @@ CREATE TABLE ai_runs
     updated_at      timestamptz  NOT NULL DEFAULT now(),
     UNIQUE (owner_id, request_key)
 );
-CREATE UNIQUE INDEX ai_one_active_run ON ai_runs (conversation_id) WHERE state NOT IN ('SUCCEEDED','FAILED','CANCELLED');
+CREATE UNIQUE INDEX ai_one_active_run ON ai_runs (conversation_id) WHERE state NOT IN ('SUCCEEDED', 'FAILED', 'CANCELLED');
 CREATE INDEX ai_runs_claim ON ai_runs (state, created_at);
 CREATE TABLE ai_messages
 (

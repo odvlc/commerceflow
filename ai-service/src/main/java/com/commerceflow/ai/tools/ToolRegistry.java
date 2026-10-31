@@ -4,11 +4,13 @@
  */
 package com.commerceflow.ai.tools;
 
+import com.commerceflow.ai.application.CartActions;
 import com.commerceflow.ai.domain.Actor;
 import com.commerceflow.ai.retrieval.KnowledgeModels.Evidence;
 import com.commerceflow.ai.retrieval.KnowledgeSearch;
 import com.commerceflow.support.BusinessException;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.ai.ollama.api.OllamaApi.ChatRequest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -39,7 +42,7 @@ public class ToolRegistry implements AutoCloseable {
 
     }
 
-    private final com.commerceflow.ai.application.CartActions actions;
+    private final CartActions actions;
     private final CommerceClient commerce;
     private final KnowledgeSearch knowledge;
     private final JsonMapper json;
@@ -52,15 +55,16 @@ public class ToolRegistry implements AutoCloseable {
             KnowledgeSearch knowledge,
             JsonMapper json,
             MeterRegistry metrics,
-            com.commerceflow.ai.application.CartActions actions)
-            throws java.io.IOException {
+            CartActions actions)
+            throws IOException {
         this.actions = actions;
         this.commerce = commerce;
         this.knowledge = knowledge;
         this.json = json;
         this.metrics = metrics;
         try (var stream = new ClassPathResource("prompts/tools-v1.json").getInputStream()) {
-            for (var entry : json.readTree(stream)) schemas.put(entry.path("name").asText(), entry);
+            for (var entry : json.readTree(stream))
+                schemas.put(entry.path("name").asText(), entry);
         }
     }
 
@@ -79,13 +83,11 @@ public class ToolRegistry implements AutoCloseable {
     public List<ChatRequest.Tool> definitions(String mode) {
         return schemas.entrySet().stream()
                 .filter(e -> allowed(mode).contains(e.getKey()))
-                .map(
-                        e ->
-                                new ChatRequest.Tool(
-                                        new ChatRequest.Tool.Function(
-                                                e.getKey(),
-                                                e.getValue().path("description").asText(),
-                                                json.convertValue(e.getValue().path("parameters"), Map.class))))
+                .map(e -> new ChatRequest.Tool(
+                        new ChatRequest.Tool.Function(
+                                e.getKey(),
+                                e.getValue().path("description").asText(),
+                                json.convertValue(e.getValue().path("parameters"), Map.class))))
                 .toList();
     }
 
@@ -93,8 +95,7 @@ public class ToolRegistry implements AutoCloseable {
         return invoke(run, -1, actor, mode, name, arguments);
     }
 
-    public ToolResult invoke(
-            UUID run, long fence, Actor actor, String mode, String name, JsonNode arguments) {
+    public ToolResult invoke(UUID run, long fence, Actor actor, String mode, String name, JsonNode arguments) {
         actor.requireMode(mode);
         if (!actor.valid())
             throw new BusinessException(
@@ -107,9 +108,8 @@ public class ToolRegistry implements AutoCloseable {
                     "AI_TOOL_NOT_ALLOWED",
                     "Tool is not available in this conversation mode");
         var canonical = validatedArguments(name, arguments);
-        var sample = io.micrometer.core.instrument.Timer.start(metrics);
-        var future =
-                executor.submit(() -> dispatch(run, fence, actor, mode, name, canonical, "ai-" + run));
+        var sample = Timer.start(metrics);
+        var future = executor.submit(() -> dispatch(run, fence, actor, mode, name, canonical, "ai-" + run));
         try {
             var result = future.get(5, TimeUnit.SECONDS);
             if (json.writeValueAsString(result).length() > 8000)
@@ -126,7 +126,8 @@ public class ToolRegistry implements AutoCloseable {
             throw new BusinessException(
                     HttpStatus.SERVICE_UNAVAILABLE, "AI_INTERRUPTED", "Tool execution interrupted");
         } catch (ExecutionException error) {
-            if (error.getCause() instanceof RuntimeException cause) throw cause;
+            if (error.getCause() instanceof RuntimeException cause)
+                throw cause;
             throw new IllegalStateException("Tool execution failed");
         } finally {
             sample.stop(metrics.timer("commerceflow.ai.tool", "name", name));
@@ -134,7 +135,8 @@ public class ToolRegistry implements AutoCloseable {
     }
 
     JsonNode validatedArguments(String name, JsonNode arguments) {
-        if (!schemas.containsKey(name) || arguments == null || !arguments.isObject()) throw invalid();
+        if (!schemas.containsKey(name) || arguments == null || !arguments.isObject())
+            throw invalid();
         var canonical = json.createObjectNode();
         for (var field : arguments.properties()) {
             var value = field.getValue();
@@ -151,22 +153,31 @@ public class ToolRegistry implements AutoCloseable {
     }
 
     private void validate(String name, JsonNode arguments) {
-        if (arguments == null || !arguments.isObject()) throw invalid();
+        if (arguments == null || !arguments.isObject())
+            throw invalid();
         var schema = schemas.get(name).path("parameters");
         var fields = schema.path("properties");
-        for (var field : arguments.properties()) if (!fields.has(field.getKey())) throw invalid();
+        for (var field : arguments.properties())
+            if (!fields.has(field.getKey()))
+                throw invalid();
         for (var required : schema.path("required"))
-            if (!arguments.hasNonNull(required.asText())) throw invalid();
+            if (!arguments.hasNonNull(required.asText()))
+                throw invalid();
         for (var property : fields.properties()) {
             var value = arguments.path(property.getKey());
-            if (value.isMissingNode()) continue;
+            if (value.isMissingNode())
+                continue;
             var spec = property.getValue();
-            if (spec.has("anyOf")) spec = spec.path("anyOf").get(0);
+            if (spec.has("anyOf"))
+                spec = spec.path("anyOf").get(0);
             if (spec.path("type").asText().equals("string")) {
-                if (!value.isTextual() || value.asText().isBlank()) throw invalid();
+                if (!value.isTextual() || value.asText().isBlank())
+                    throw invalid();
                 String text = value.asText();
-                if (text.length() > spec.path("maxLength").asInt(200)) throw invalid();
-                if (spec.has("pattern") && !text.matches(spec.path("pattern").asText())) throw invalid();
+                if (text.length() > spec.path("maxLength").asInt(200))
+                    throw invalid();
+                if (spec.has("pattern") && !text.matches(spec.path("pattern").asText()))
+                    throw invalid();
                 if (spec.path("format").asText().equals("uuid"))
                     try {
                         UUID.fromString(text);
@@ -183,13 +194,17 @@ public class ToolRegistry implements AutoCloseable {
             }
             if (spec.has("enum")) {
                 boolean match = false;
-                for (var item : spec.path("enum")) if (item.asText().equals(value.asText())) match = true;
-                if (!match) throw invalid();
+                for (var item : spec.path("enum"))
+                    if (item.asText().equals(value.asText()))
+                        match = true;
+                if (!match)
+                    throw invalid();
             }
         }
         if (arguments.has("maxPrice")) {
             var amount = new BigDecimal(arguments.path("maxPrice").asText());
-            if (amount.compareTo(new BigDecimal("999999999.99")) > 0) throw invalid();
+            if (amount.compareTo(new BigDecimal("999999999.99")) > 0)
+                throw invalid();
         }
     }
 
@@ -225,40 +240,32 @@ public class ToolRegistry implements AutoCloseable {
                             HttpStatus.FORBIDDEN,
                             "AI_TOOL_CONTEXT_REQUIRED",
                             "A leased run is required to prepare a proposal");
-                var proposal =
-                        actions.prepare(
-                                run,
-                                fence,
-                                actor,
-                                args.path("operation").asText(),
-                                UUID.fromString(args.path("productId").asText()),
-                                args.path("quantity").asInt());
+                var proposal = actions.prepare(
+                        run,
+                        fence,
+                        actor,
+                        args.path("operation").asText(),
+                        UUID.fromString(args.path("productId").asText()),
+                        args.path("quantity").asInt());
                 yield new ToolResult(json.valueToTree(proposal), List.of());
             }
             case "searchKnowledge" -> {
                 var result = knowledge.search(args.path("query").asText(), mode, 6);
-                var evidence =
-                        result.items().stream()
-                                .map(
-                                        e ->
-                                                new Evidence(
-                                                        e.id(),
-                                                        e.sourceId(),
-                                                        e.version(),
-                                                        e.title(),
-                                                        e.heading(),
-                                                        e.chunkId(),
-                                                        clip(e.content(), 700)))
-                                .toList();
+                var evidence = result.items().stream()
+                        .map(e -> new Evidence(
+                                e.id(),
+                                e.sourceId(),
+                                e.version(),
+                                e.title(),
+                                e.heading(),
+                                e.chunkId(),
+                                clip(e.content(), 700)))
+                        .toList();
                 yield new ToolResult(
-                        json.valueToTree(
-                                Map.of(
-                                        "semantic",
-                                        result.semantic(),
-                                        "degraded",
-                                        result.degraded(),
-                                        "sourceCount",
-                                        evidence.size())),
+                        json.valueToTree(Map.of(
+                                "semantic", result.semantic(),
+                                "degraded", result.degraded(),
+                                "sourceCount", evidence.size())),
                         evidence);
             }
             case "searchProducts" -> {
@@ -266,9 +273,9 @@ public class ToolRegistry implements AutoCloseable {
                 parameters.put("q", args.path("query").asText());
                 parameters.put("currency", "USD");
                 parameters.put("size", 4);
-                if (args.has("maxPrice")) parameters.put("maxPrice", args.path("maxPrice").asText());
-                var page =
-                        commerce.get("catalog", "/api/v1/products/search", parameters, actor, correlation);
+                if (args.has("maxPrice"))
+                    parameters.put("maxPrice", args.path("maxPrice").asText());
+                var page = commerce.get("catalog", "/api/v1/products/search", parameters, actor, correlation);
                 String matchedQuery = args.path("query").asText();
                 boolean relaxed = false;
                 if (page.path("items").isEmpty()) {
@@ -293,20 +300,20 @@ public class ToolRegistry implements AutoCloseable {
                     }
                     int probes = 0;
                     for (String candidate : candidates) {
-                        if (candidate.length() > 80) continue;
+                        if (candidate.length() > 80)
+                            continue;
                         for (String category :
                                 new LinkedHashSet<>(
                                         List.of(
                                                 candidate,
                                                 candidate.substring(0, 1).toUpperCase(Locale.ROOT)
                                                         + candidate.substring(1).toLowerCase(Locale.ROOT)))) {
-                            if (++probes > 4) break;
+                            if (++probes > 4)
+                                break;
                             var categoryParameters = new LinkedHashMap<>(parameters);
                             categoryParameters.remove("q");
                             categoryParameters.put("category", category);
-                            var alternative =
-                                    commerce.get(
-                                            "catalog", "/api/v1/products/search", categoryParameters, actor, correlation);
+                            var alternative = commerce.get("catalog", "/api/v1/products/search", categoryParameters, actor, correlation);
                             if (!alternative.path("items").isEmpty()) {
                                 page = alternative;
                                 matchedQuery = "category:" + category;
@@ -314,7 +321,8 @@ public class ToolRegistry implements AutoCloseable {
                                 break;
                             }
                         }
-                        if (relaxed) break;
+                        if (relaxed)
+                            break;
                     }
                     if (!relaxed) {
                         int attempts = 0;
@@ -331,11 +339,15 @@ public class ToolRegistry implements AutoCloseable {
                                             "usd")
                                     .contains(word.toLowerCase(Locale.ROOT))
                                     || word.equals(matchedQuery)) continue;
-                            if (++attempts > 3) break;
+                            if (++attempts > 3)
+                                break;
                             parameters.put("q", word);
-                            var alternative =
-                                    commerce.get(
-                                            "catalog", "/api/v1/products/search", parameters, actor, correlation);
+                            var alternative = commerce.get(
+                                    "catalog",
+                                    "/api/v1/products/search",
+                                    parameters,
+                                    actor,
+                                    correlation);
                             if (!alternative.path("items").isEmpty()) {
                                 page = alternative;
                                 matchedQuery = word;
@@ -350,111 +362,91 @@ public class ToolRegistry implements AutoCloseable {
                 for (var item : page.path("items")) {
                     if (Thread.currentThread().isInterrupted())
                         throw new IllegalStateException("Interrupted");
-                    var product =
-                            commerce.get(
-                                    "catalog",
-                                    "/api/v1/products/" + UUID.fromString(item.path("id").asText()),
-                                    Map.of(),
-                                    actor,
-                                    correlation);
+                    var product = commerce.get(
+                            "catalog",
+                            "/api/v1/products/" + UUID.fromString(item.path("id").asText()),
+                            Map.of(),
+                            actor,
+                            correlation);
                     // Search is a derived projection; revalidate current currency/price against Catalog
                     // before returning candidates.
-                    if (!product.path("currency").asText().equals("USD")) continue;
+                    if (!product.path("currency").asText().equals("USD"))
+                        continue;
                     if (args.has("maxPrice")
-                            && new BigDecimal(product.path("price").asText())
-                            .compareTo(new BigDecimal(args.path("maxPrice").asText()))
-                            > 0) continue;
+                            && new BigDecimal(product.path("price").asText()).compareTo(new BigDecimal(args.path("maxPrice").asText())) > 0)
+                        continue;
                     if (matchedQuery.startsWith("category:")
-                            && !product.path("category").asText().equals(matchedQuery.substring(9))) continue;
+                            && !product.path("category").asText().equals(matchedQuery.substring(9)))
+                        continue;
                     var selected = new LinkedHashMap<String, Object>();
                     selected.put("matchScope", relaxed ? "PARTIAL" : "ORIGINAL_QUERY");
                     selected.putAll(product(product));
                     items.add(selected);
-                    evidence.add(
-                            liveEvidence(
-                                    "product",
-                                    product.path("id").asText(),
-                                    product.path("version").asLong(),
-                                    product.path("name").asText(),
-                                    selected));
+                    evidence.add(liveEvidence(
+                            "product",
+                            product.path("id").asText(),
+                            product.path("version").asLong(),
+                            product.path("name").asText(),
+                            selected));
                 }
-                yield new ToolResult(
-                        json.valueToTree(
-                                Map.of(
-                                        "items",
-                                        items,
-                                        "totalElements",
-                                        page.path("totalElements").asLong(),
-                                        "matchedQuery",
-                                        matchedQuery,
-                                        "relaxedQuery",
-                                        relaxed,
-                                        "observedAt",
-                                        Instant.now().toString())),
+                yield new ToolResult(json.valueToTree(Map.of(
+                        "items", items,
+                        "totalElements", page.path("totalElements").asLong(),
+                        "matchedQuery", matchedQuery,
+                        "relaxedQuery", relaxed,
+                        "observedAt", Instant.now().toString())),
                         evidence);
             }
             case "getProduct" -> {
                 UUID id = UUID.fromString(args.path("productId").asText());
-                var product =
-                        commerce.get("catalog", "/api/v1/products/" + id, Map.of(), actor, correlation);
+                var product = commerce.get("catalog", "/api/v1/products/" + id, Map.of(), actor, correlation);
                 var selected = product(product);
                 yield new ToolResult(
                         json.valueToTree(selected),
-                        List.of(
-                                liveEvidence(
-                                        "product",
-                                        id.toString(),
-                                        product.path("version").asLong(),
-                                        product.path("name").asText(),
-                                        selected)));
+                        List.of(liveEvidence(
+                                "product",
+                                id.toString(),
+                                product.path("version").asLong(),
+                                product.path("name").asText(),
+                                selected)));
             }
             case "getMyOrderExplanation", "getSupportOrderExplanation" -> {
                 UUID id = UUID.fromString(args.path("orderId").asText());
-                String prefix =
-                        name.equals("getSupportOrderExplanation") ? "/api/v1/admin/orders/" : "/api/v1/orders/";
-                var response =
-                        commerce.get("order", prefix + id + "/explanation", Map.of(), actor, correlation);
+                String prefix = name.equals("getSupportOrderExplanation") ? "/api/v1/admin/orders/" : "/api/v1/orders/";
+                var response = commerce.get("order", prefix + id + "/explanation", Map.of(), actor, correlation);
                 // The copilot explains the current public state/cause. Keep the full event timeline in
                 // Order's API; ISO timestamps are observations, not model-computed elapsed durations.
                 var selected = json.createObjectNode();
-                for (String field :
-                        List.of("id", "status", "reason", "reasonKnown", "version", "observedAt")) {
+                for (String field : List.of("id", "status", "reason", "reasonKnown", "version", "observedAt")) {
                     selected.set(field, response.path(field));
                 }
                 yield new ToolResult(
                         selected,
-                        List.of(
-                                liveEvidence(
-                                        "order",
-                                        id.toString(),
-                                        response.path("version").asLong(),
-                                        "Current order state and recorded public cause",
-                                        selected)));
+                        List.of(liveEvidence(
+                                "order",
+                                id.toString(),
+                                response.path("version").asLong(),
+                                "Current order state and recorded public cause",
+                                selected)));
             }
             case "getMyCart" -> {
                 var cart = commerce.get("cart", "/api/v1/cart", Map.of(), actor, correlation);
                 List<JsonNode> items = new ArrayList<>();
                 for (var item : cart.path("items")) {
-                    if (items.size() == 20) break;
+                    if (items.size() == 20)
+                        break;
                     items.add(item);
                 }
-                var result =
-                        Map.of(
-                                "items",
-                                items,
-                                "totalItems",
-                                cart.path("items").size(),
-                                "version",
-                                cart.path("version").asLong(),
-                                "revision",
-                                cart.path("revision").asText(),
-                                "observedAt",
-                                Instant.now().toString());
+                var result = Map.of(
+                        "items", items,
+                        "totalItems", cart.path("items").size(),
+                        "version", cart.path("version").asLong(),
+                        "revision", cart.path("revision").asText(),
+                        "observedAt", Instant.now().toString());
                 yield new ToolResult(
                         json.valueToTree(result),
-                        List.of(
-                                liveEvidence(
-                                        "cart", "current", cart.path("version").asLong(), "Current cart", result)));
+                        List.of(liveEvidence(
+                                "cart", "current", cart.path("version").asLong(), "Current cart", result)));
             }
             default -> throw new IllegalStateException("Tool is not dispatched");
         };
@@ -462,26 +454,17 @@ public class ToolRegistry implements AutoCloseable {
 
     private Map<String, Object> product(JsonNode p) {
         return Map.of(
-                "id",
-                p.path("id").asText(),
-                "name",
-                p.path("name").asText(),
-                "description",
-                clip(p.path("description").asText(), 240),
-                "price",
-                p.path("price").asText(),
-                "currency",
-                p.path("currency").asText(),
-                "category",
-                p.path("category").asText(),
-                "version",
-                p.path("version").asLong(),
-                "observedAt",
-                Instant.now().toString());
+                "id", p.path("id").asText(),
+                "name", p.path("name").asText(),
+                "description", clip(p.path("description").asText(), 240),
+                "price", p.path("price").asText(),
+                "currency", p.path("currency").asText(),
+                "category", p.path("category").asText(),
+                "version", p.path("version").asLong(),
+                "observedAt", Instant.now().toString());
     }
 
-    private Evidence liveEvidence(
-            String kind, String id, long version, String title, Object content) {
+    private Evidence liveEvidence(String kind, String id, long version, String title, Object content) {
         String reference = kind + ":" + id + ":" + version + ":" + UUID.randomUUID();
         return new Evidence(
                 reference,

@@ -6,20 +6,20 @@ CREATE TABLE categories
 
 CREATE TABLE products
 (
-    id          uuid PRIMARY KEY,
-    sku         varchar(64)    NOT NULL UNIQUE,
-    name        varchar(200)   NOT NULL,
-    description varchar(4000)  NOT NULL,
-    category    varchar(80)    NOT NULL REFERENCES categories (name),
-    price       numeric(19, 2) NOT NULL CHECK (price >= 0),
-    currency    varchar(3)     NOT NULL CHECK (currency ~ '^[A-Z]{3}$'
-) ,
-    active boolean NOT NULL,
-    version bigint NOT NULL DEFAULT 0,
-    created_at timestamptz NOT NULL,
-    updated_at timestamptz NOT NULL,
-    idempotency_key varchar(128) NOT NULL UNIQUE,
-    request_hash varchar(64) NOT NULL,
+    id              uuid PRIMARY KEY,
+    sku             varchar(64)    NOT NULL UNIQUE,
+    name            varchar(200)   NOT NULL,
+    description     varchar(4000)  NOT NULL,
+    category        varchar(80)    NOT NULL REFERENCES categories (name),
+    price           numeric(19, 2) NOT NULL CHECK (price >= 0),
+    currency        varchar(3)     NOT NULL CHECK (currency ~ '^[A-Z]{3}$'
+        ),
+    active          boolean        NOT NULL,
+    version         bigint         NOT NULL DEFAULT 0,
+    created_at      timestamptz    NOT NULL,
+    updated_at      timestamptz    NOT NULL,
+    idempotency_key varchar(128)   NOT NULL UNIQUE,
+    request_hash    varchar(64)    NOT NULL,
     CHECK (length(trim(sku)) > 0),
     CHECK (length(trim(name)) > 0)
 );

@@ -7,11 +7,13 @@ package com.commerceflow.ai.persistence;
 import com.commerceflow.ai.domain.AiModels.Claimed;
 import com.commerceflow.ai.retrieval.KnowledgeModels.Evidence;
 import com.commerceflow.support.RequestHash;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -36,13 +38,13 @@ public class RunStore {
     private final JdbcClient jdbc;
     private final JsonMapper json;
     private final AiStore views;
-    private final io.micrometer.core.instrument.MeterRegistry metrics;
+    private final MeterRegistry metrics;
 
     public RunStore(
             JdbcClient jdbc,
             JsonMapper json,
             AiStore views,
-            io.micrometer.core.instrument.MeterRegistry metrics) {
+            MeterRegistry metrics) {
         this.jdbc = jdbc;
         this.json = json;
         this.views = views;
@@ -62,7 +64,8 @@ public class RunStore {
                                         + " 1")
                         .query(UUID.class)
                         .optional();
-        if (id.isEmpty()) return Optional.empty();
+        if (id.isEmpty())
+            return Optional.empty();
         jdbc.sql(
                         "UPDATE ai_runs SET state='RUNNING',fence=fence+1,lease_until=now()+interval '15"
                                 + " seconds',accounted_at=now(),updated_at=now() WHERE id=:id")
@@ -173,7 +176,7 @@ public class RunStore {
                 .update();
         metrics
                 .timer("commerceflow.ai.step", "outcome", success ? "success" : "failure")
-                .record(java.time.Duration.ofMillis(Math.max(0, duration)));
+                .record(Duration.ofMillis(Math.max(0, duration)));
         views.event(c.id(), "step", Map.of("stepId", step, "state", success ? "SUCCEEDED" : "FAILED"));
     }
 
@@ -224,7 +227,7 @@ public class RunStore {
         if (Set.of("SUCCEEDED", "FAILED", "CANCELLED").contains(state))
             metrics
                     .timer("commerceflow.ai.run", "state", state)
-                    .record(java.time.Duration.ofMillis(Math.max(0, activeMillis)));
+                    .record(Duration.ofMillis(Math.max(0, activeMillis)));
         jdbc.sql(
                         "UPDATE ai_run_steps SET state='FAILED',result='{"
                                 + "\"errorCode\":\"AI_INTERRUPTED\"}'::jsonb WHERE run_id=:id AND state='PENDING'")
@@ -281,7 +284,8 @@ public class RunStore {
                                         + " WHERE state='RUNNING' AND lease_until<=now() RETURNING id")
                         .query(UUID.class)
                         .list();
-        for (var id : expired) views.event(id, "state", Map.of("state", "AUTHENTICATION_REQUIRED"));
+        for (var id : expired)
+            views.event(id, "state", Map.of("state", "AUTHENTICATION_REQUIRED"));
         var abandoned =
                 jdbc.sql(
                                 "UPDATE ai_runs SET"

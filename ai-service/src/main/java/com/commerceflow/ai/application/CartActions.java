@@ -114,7 +114,8 @@ public class CartActions {
      */
     public boolean continueAction(Claimed c, Actor actor) {
         var proposals = views.proposals(c.id());
-        if (proposals.isEmpty()) return false;
+        if (proposals.isEmpty())
+            return false;
         var proposal = proposals.getFirst();
         var found = actions.execution(proposal.id());
         if (found.isEmpty()) {
@@ -170,7 +171,8 @@ public class CartActions {
                 // The fenced finish below still prevents this worker from overwriting the run state.
                 actions.record(proposal.id(), "SUCCEEDED", result, null);
             } catch (BusinessException error) {
-                if (error.status().value() == 401) throw error;
+                if (error.status().value() == 401)
+                    throw error;
                 // Once a request may have reached Cart, a later error cannot prove the write did not
                 // happen.
                 boolean uncertain = error.status().is5xxServerError() || execution.attempts() > 1;
@@ -179,7 +181,8 @@ public class CartActions {
                         uncertain ? "OUTCOME_UNKNOWN" : "FAILED",
                         null,
                         uncertain ? "AI_OUTCOME_UNKNOWN" : error.code());
-                if (uncertain && error.status().is5xxServerError()) throw error;
+                if (uncertain && error.status().is5xxServerError())
+                    throw error;
                 runs.stop(c, "FAILED", uncertain ? "AI_OUTCOME_UNKNOWN" : error.code(), 0);
                 return true;
             }

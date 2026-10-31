@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -32,7 +33,7 @@ public class OrderRepository {
             UUID customerId,
             String requestHash,
             OrderState status,
-            java.math.BigDecimal total,
+            BigDecimal total,
             String currency,
             PaymentScenario scenario,
             String correlation,
@@ -83,9 +84,7 @@ public class OrderRepository {
                 .param("id", id)
                 .query(this::row)
                 .optional()
-                .orElseThrow(
-                        () ->
-                                new BusinessException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Order not found"));
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Order not found"));
     }
 
     public void create(
@@ -95,15 +94,14 @@ public class OrderRepository {
             String hash,
             CreateOrder request,
             List<Line> lines,
-            java.math.BigDecimal total,
+            BigDecimal total,
             String currency,
             String correlation,
             Instant deadline) {
-        jdbc.sql(
-                        """
-                                INSERT INTO orders(id,customer_id,idempotency_key,request_hash,status,total_amount,currency,payment_scenario,correlation_id,deadline_at)
-                                VALUES (:id,:customer,:key,:hash,'PENDING_INVENTORY',:total,:currency,:scenario,:correlation,:deadline)
-                                """)
+        jdbc.sql("""
+                        INSERT INTO orders(id,customer_id,idempotency_key,request_hash,status,total_amount,currency,payment_scenario,correlation_id,deadline_at)
+                        VALUES (:id,:customer,:key,:hash,'PENDING_INVENTORY',:total,:currency,:scenario,:correlation,:deadline)
+                        """)
                 .param("id", id)
                 .param("customer", customer)
                 .param("key", key)
@@ -115,9 +113,8 @@ public class OrderRepository {
                 .param("deadline", Timestamp.from(deadline))
                 .update();
         for (var line : lines)
-            jdbc.sql(
-                            "INSERT INTO order_items(id,order_id,product_id,quantity,unit_price) VALUES"
-                                    + " (:id,:order,:product,:quantity,:price)")
+            jdbc.sql("INSERT INTO order_items(id,order_id,product_id,quantity,unit_price) VALUES"
+                            + " (:id,:order,:product,:quantity,:price)")
                     .param("id", UUID.randomUUID())
                     .param("order", id)
                     .param("product", line.productId())
@@ -127,14 +124,11 @@ public class OrderRepository {
     }
 
     public OrderView view(Row order) {
-        var items =
-                jdbc.sql(
-                                "SELECT product_id,quantity,unit_price FROM order_items WHERE order_id=:id ORDER BY"
-                                        + " product_id")
-                        .param("id", order.id())
-                        .query(
-                                (rs, n) -> new Line(rs.getObject(1, UUID.class), rs.getInt(2), rs.getBigDecimal(3)))
-                        .list();
+        var items = jdbc.sql("SELECT product_id,quantity,unit_price FROM order_items WHERE order_id=:id ORDER BY"
+                        + " product_id")
+                .param("id", order.id())
+                .query((rs, n) -> new Line(rs.getObject(1, UUID.class), rs.getInt(2), rs.getBigDecimal(3)))
+                .list();
         return new OrderView(
                 order.id(),
                 order.customerId(),
@@ -148,53 +142,47 @@ public class OrderRepository {
     }
 
     public OrderPage list(UUID customer, int page, int size) {
-        String where =
-                customer == null
-                        ? " WHERE :customer IS NULL"
-                        : " WHERE customer_id=CAST(:customer AS uuid)";
+        String where = customer == null
+                ? " WHERE :customer IS NULL"
+                : " WHERE customer_id=CAST(:customer AS uuid)";
         // Explicit cast permits a typed null parameter for the administrator query.
         where = customer == null ? " WHERE CAST(:customer AS uuid) IS NULL" : where;
-        var total =
-                jdbc.sql("SELECT count(*) FROM orders" + where)
-                        .param("customer", customer)
-                        .query(Long.class)
-                        .single();
-        var rows =
-                jdbc.sql(
-                                "SELECT * FROM orders"
-                                        + where
-                                        + " ORDER BY created_at DESC,id LIMIT :size OFFSET :offset")
-                        .param("customer", customer)
-                        .param("size", size)
-                        .param("offset", (long) page * size)
-                        .query(this::row)
-                        .list();
+        var total = jdbc.sql("SELECT count(*) FROM orders" + where)
+                .param("customer", customer)
+                .query(Long.class)
+                .single();
+        var rows = jdbc.sql("SELECT * FROM orders"
+                        + where
+                        + " ORDER BY created_at DESC,id LIMIT :size OFFSET :offset")
+                .param("customer", customer)
+                .param("size", size)
+                .param("offset", (long) page * size)
+                .query(this::row)
+                .list();
         return new OrderPage(rows.stream().map(this::view).toList(), page, size, total);
     }
 
     public void move(Row order, OrderState target, Instant deadline) {
         // Check the legal transition before issuing the optimistic update or recording public history.
         order.status().requireTransition(target);
-        int changed =
-                jdbc.sql(
-                                "UPDATE orders SET"
-                                        + " status=:target,deadline_at=:deadline,version=version+1,updated_at=now()"
-                                        + " WHERE id=:id AND version=:version")
-                        .param("target", target.name())
-                        .param("deadline", Timestamp.from(deadline))
-                        .param("id", order.id())
-                        .param("version", order.version())
-                        .update();
-        if (changed != 1) throw new IllegalStateException("Order changed without its row lock");
+        int changed = jdbc.sql("UPDATE orders SET"
+                        + " status=:target,deadline_at=:deadline,version=version+1,updated_at=now()"
+                        + " WHERE id=:id AND version=:version")
+                .param("target", target.name())
+                .param("deadline", Timestamp.from(deadline))
+                .param("id", order.id())
+                .param("version", order.version())
+                .update();
+        if (changed != 1)
+            throw new IllegalStateException("Order changed without its row lock");
     }
 
     public void step(UUID order, String step, String status, String error) {
-        jdbc.sql(
-                        """
-                                INSERT INTO order_saga_steps(id,order_id,step,status,last_error) VALUES (:id,:order,:step,:status,:error)
-                                ON CONFLICT(order_id,step) DO UPDATE SET status=excluded.status,last_error=excluded.last_error,
-                                attempts=order_saga_steps.attempts+CASE WHEN excluded.status='PENDING' THEN 1 ELSE 0 END,updated_at=now()
-                                """)
+        jdbc.sql("""
+                        INSERT INTO order_saga_steps(id,order_id,step,status,last_error) VALUES (:id,:order,:step,:status,:error)
+                        ON CONFLICT(order_id,step) DO UPDATE SET status=excluded.status,last_error=excluded.last_error,
+                        attempts=order_saga_steps.attempts+CASE WHEN excluded.status='PENDING' THEN 1 ELSE 0 END,updated_at=now()
+                        """)
                 .param("id", UUID.randomUUID())
                 .param("order", order)
                 .param("step", step)

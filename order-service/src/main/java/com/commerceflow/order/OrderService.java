@@ -16,11 +16,13 @@ import com.commerceflow.order.OrderModels.OrderView;
 import com.commerceflow.support.BusinessException;
 import com.commerceflow.support.OutboxStore;
 import com.commerceflow.support.RequestHash;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -32,14 +34,14 @@ public class OrderService {
     private final OrderRepository orders;
     private final TrustedCatalog catalog;
     private final OutboxStore outbox;
-    private final java.time.Duration timeout;
+    private final Duration timeout;
 
     public OrderService(
             OrderRepository orders,
             TrustedCatalog catalog,
             OutboxStore outbox,
-            @org.springframework.beans.factory.annotation.Value("${saga.step-timeout:PT60S}")
-            java.time.Duration timeout) {
+            @Value("${saga.step-timeout:PT60S}")
+            Duration timeout) {
         this.orders = orders;
         this.catalog = catalog;
         this.outbox = outbox;

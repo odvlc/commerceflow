@@ -33,10 +33,8 @@ class GroundedAnswerTest {
                         List.of("secret-internal"),
                         List.of("owned-source", "owned-source"),
                         List.of()))
-            assertThatThrownBy(
-                    () ->
-                            GroundedAnswer.validate(
-                                    json.valueToTree(Map.of("answer", "30 days", "citationIds", ids)), evidence))
+            assertThatThrownBy(() -> GroundedAnswer.validate(
+                    json.valueToTree(Map.of("answer", "30 days", "citationIds", ids)), evidence))
                     .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -44,27 +42,20 @@ class GroundedAnswerTest {
     void answerCannotSmuggleAnActionOrAuthorityField() {
         // A final answer is data only; accepting extra action fields would bypass the explicit
         // proposal/confirmation boundary.
-        assertThatThrownBy(
-                () ->
-                        GroundedAnswer.validate(
-                                json.valueToTree(
-                                        Map.of(
-                                                "answer",
-                                                "30 days",
-                                                "citationIds",
-                                                List.of("owned-source"),
-                                                "confirm",
-                                                true)),
-                                evidence))
+        assertThatThrownBy(() -> GroundedAnswer.validate(
+                json.valueToTree(Map.of(
+                        "answer", "30 days",
+                        "citationIds", List.of("owned-source"),
+                        "confirm", true)),
+                evidence))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void acceptedReferencesResolveOnlyToServerEvidence() {
-        var result =
-                GroundedAnswer.validate(
-                        json.valueToTree(Map.of("answer", "30 days", "citationIds", List.of("owned-source"))),
-                        evidence);
+        var result = GroundedAnswer.validate(
+                json.valueToTree(Map.of("answer", "30 days", "citationIds", List.of("owned-source"))),
+                evidence);
         assertThat(result.citations()).containsExactly(evidence.get("owned-source"));
     }
 }

@@ -116,7 +116,8 @@ public class CommerceClient {
                                         extra.forEach(headers::set);
                                     })
                             .contentType(MediaType.APPLICATION_JSON);
-            if (body != null) request.body(body);
+            if (body != null)
+                request.body(body);
             return json.readTree(request.retrieve().body(String.class));
         } catch (RestClientResponseException error) {
             int status = error.getStatusCode().value();

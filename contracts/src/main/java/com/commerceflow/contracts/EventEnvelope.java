@@ -29,7 +29,8 @@ public record EventEnvelope<T>(
             throw new IllegalArgumentException("eventType required");
         // Fail unknown schemas explicitly rather than interpreting a newer payload using incompatible
         // assumptions.
-        if (schemaVersion != 1) throw new IllegalArgumentException("Unsupported schema version");
+        if (schemaVersion != 1)
+            throw new IllegalArgumentException("Unsupported schema version");
         if (correlationId == null || correlationId.isBlank() || correlationId.length() > 128)
             throw new IllegalArgumentException("Invalid correlationId");
     }

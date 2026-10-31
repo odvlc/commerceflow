@@ -65,13 +65,17 @@ public final class CheckoutEvents {
 
     }
 
-    public record OrderStatus(
-            UUID customerId, String status, BigDecimal totalAmount, String currency) {
+    public record OrderStatus(UUID customerId, String status, BigDecimal totalAmount, String currency) {
 
     }
 
     public record NotificationCreated(
-            UUID id, UUID orderId, UUID customerId, String status, String message, Instant createdAt) {
+            UUID id,
+            UUID orderId,
+            UUID customerId,
+            String status,
+            String message,
+            Instant createdAt) {
 
     }
 

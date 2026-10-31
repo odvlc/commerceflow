@@ -129,9 +129,11 @@ public class KnowledgeStore {
             for (String paragraph : paragraphs) {
                 // Chunk whole nonempty paragraphs so evidence boundaries remain readable and
                 // reproducible across imports.
-                if (paragraph.isBlank()) continue;
+                if (paragraph.isBlank())
+                    continue;
                 String text = paragraph.strip();
-                if (text.startsWith("#")) heading = text.replaceFirst("^#+\\s*", "").split("\n")[0];
+                if (text.startsWith("#"))
+                    heading = text.replaceFirst("^#+\\s*", "").split("\n")[0];
                 for (int start = 0; start < text.length(); start += 1400) {
                     String chunk = text.substring(start, Math.min(text.length(), start + 1400));
                     UUID chunkId =
@@ -292,7 +294,8 @@ public class KnowledgeStore {
                         .param("key", key)
                         .query(UUID.class)
                         .optional();
-        if (existing.isPresent()) return job(existing.get());
+        if (existing.isPresent())
+            return job(existing.get());
         UUID id = UUID.randomUUID();
         jdbc.sql(
                         "INSERT INTO knowledge_rebuilds(id,owner_id,request_key,index_name)"

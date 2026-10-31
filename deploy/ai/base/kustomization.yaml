@@ -21,14 +21,14 @@ patches:
         value:
           - key: app
             operator: NotIn
-            values: [ai-service, ollama, ai-model-prepare, ai-model-check, ai-db-provision]
+            values: [ ai-service, ollama, ai-model-prepare, ai-model-check, ai-db-provision ]
   - target:
       kind: Deployment
       name: api-gateway
     patch: |-
       - op: add
         path: /spec/template/spec/containers/0/env/-
-        value: {name: AI_ENABLED, value: "true"}
+        value: { name: AI_ENABLED, value: "true" }
       - op: add
         path: /spec/template/spec/containers/0/env/-
-        value: {name: AI_URL, value: "http://ai-service:8080"}
+        value: { name: AI_URL, value: "http://ai-service:8080" }

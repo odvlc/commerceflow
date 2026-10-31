@@ -24,7 +24,7 @@ CREATE TABLE reservations
     expires_at timestamptz NOT NULL,
     UNIQUE (order_id, product_id)
 );
-CREATE INDEX reservations_expiring_idx ON reservation_orders (expires_at) WHERE status='RESERVED' AND expiry_notified_at IS NULL;
+CREATE INDEX reservations_expiring_idx ON reservation_orders (expires_at) WHERE status = 'RESERVED' AND expiry_notified_at IS NULL;
 CREATE TABLE outbox_events
 (
     id           uuid PRIMARY KEY,

@@ -5,12 +5,13 @@
 package com.commerceflow.cart;
 
 import com.commerceflow.support.WebConfiguration;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Import;
 
-@SpringBootApplication(
-        exclude = {org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration.class})
+@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 @Import(WebConfiguration.class)
 public class CartApplication {
 

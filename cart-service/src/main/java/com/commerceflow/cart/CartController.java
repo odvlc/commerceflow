@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
@@ -44,12 +45,12 @@ public class CartController {
     }
 
     @GetMapping
-    public org.springframework.http.ResponseEntity<CartService.CartView> get(@AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<CartService.CartView> get(@AuthenticationPrincipal Jwt jwt) {
         // The subject comes from the validated JWT; clients cannot select another customer cart.
         var cart = carts.get(UUID.fromString(jwt.getSubject()));
         // Expose the same revision in ETag and the body so approval clients can submit an exact If-
         // Match.
-        return org.springframework.http.ResponseEntity.ok().eTag(cart.revision()).body(cart);
+        return ResponseEntity.ok().eTag(cart.revision()).body(cart);
     }
 
     @PostMapping("/items")

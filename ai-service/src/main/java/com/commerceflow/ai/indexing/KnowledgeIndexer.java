@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
+import java.sql.SQLException;
 import java.util.UUID;
 
 @Component
@@ -24,8 +25,7 @@ public class KnowledgeIndexer {
     private final KnowledgeIndex index;
     private final MeterRegistry metrics;
 
-    public KnowledgeIndexer(
-            DataSource data, KnowledgeStore store, KnowledgeIndex index, MeterRegistry metrics) {
+    public KnowledgeIndexer(DataSource data, KnowledgeStore store, KnowledgeIndex index, MeterRegistry metrics) {
         this.data = data;
         this.store = store;
         this.index = index;
@@ -39,14 +39,13 @@ public class KnowledgeIndexer {
         try (var connection = data.getConnection()) {
             boolean acquired;
             try (var statement = connection.createStatement();
-                 var result =
-                         statement.executeQuery(
-                                 "SELECT"
-                                         + " pg_try_advisory_lock(hashtextextended('commerceflow-ai-knowledge-index',0))")) {
+                 var result = statement.executeQuery(
+                         "SELECT pg_try_advisory_lock(hashtextextended('commerceflow-ai-knowledge-index',0))")) {
                 result.next();
                 acquired = result.getBoolean(1);
             }
-            if (!acquired) return;
+            if (!acquired)
+                return;
             try {
                 var rebuild = store.pendingRebuild();
                 if (rebuild.isPresent()) {
@@ -82,7 +81,7 @@ public class KnowledgeIndexer {
                             "SELECT pg_advisory_unlock(hashtextextended('commerceflow-ai-knowledge-index',0))");
                 }
             }
-        } catch (java.sql.SQLException error) {
+        } catch (SQLException error) {
             metrics.counter("commerceflow.ai.knowledge.failures").increment();
         }
     }
@@ -107,7 +106,8 @@ public class KnowledgeIndexer {
                     count++;
                     after = doc.id();
                 }
-                if (documents.size() < 100) break;
+                if (documents.size() < 100)
+                    break;
             }
             // Publish the completed generation through one alias change before marking rebuild success.
             index.swap(job.indexName());

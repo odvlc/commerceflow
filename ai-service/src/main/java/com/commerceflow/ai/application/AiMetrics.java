@@ -5,6 +5,7 @@
 package com.commerceflow.ai.application;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -34,7 +35,7 @@ public class AiMetrics {
             var gauge = new AtomicLong();
             runs.put(state, gauge);
             metrics.gauge("commerceflow.ai.runs",
-                    List.of(io.micrometer.core.instrument.Tag.of("state", state)),
+                    List.of(Tag.of("state", state)),
                     gauge);
         }
         metrics.gauge("commerceflow.ai.index.pending", pending);

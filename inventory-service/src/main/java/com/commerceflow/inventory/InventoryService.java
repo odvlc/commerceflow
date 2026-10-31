@@ -12,6 +12,7 @@ import com.commerceflow.support.BusinessException;
 import com.commerceflow.support.BusinessMetrics;
 import com.commerceflow.support.OutboxStore;
 import com.commerceflow.support.RequestHash;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -39,13 +40,13 @@ public class InventoryService {
     private final JdbcClient jdbc;
     private final OutboxStore outbox;
     private final Duration ttl;
-    private final io.micrometer.core.instrument.MeterRegistry metrics;
+    private final MeterRegistry metrics;
 
     public InventoryService(
             JdbcClient jdbc,
             OutboxStore outbox,
             @Value("${inventory.reservation-ttl:PT5M}") Duration ttl,
-            io.micrometer.core.instrument.MeterRegistry metrics) {
+            MeterRegistry metrics) {
         this.jdbc = jdbc;
         this.outbox = outbox;
         this.ttl = ttl;
@@ -134,7 +135,8 @@ public class InventoryService {
                             .param("id", item.productId())
                             .query(Integer.class)
                             .optional();
-            if (quantity.isEmpty() || quantity.get() < item.quantity()) sufficient = false;
+            if (quantity.isEmpty() || quantity.get() < item.quantity())
+                sufficient = false;
         }
         String status = sufficient ? "RESERVED" : "REJECTED";
         BusinessMetrics.afterCommit(
@@ -165,7 +167,8 @@ public class InventoryService {
                                 .update();
                 // The guarded decrement is the final no-oversell check; any failure rolls back the
                 // whole multi-item reservation.
-                if (changed != 1) throw new IllegalStateException("Inventory invariant violated");
+                if (changed != 1)
+                    throw new IllegalStateException("Inventory invariant violated");
                 jdbc.sql(
                                 "INSERT INTO reservations(id,order_id,product_id,quantity,status,expires_at) VALUES"
                                         + " (:id,:order,:product,:quantity,'RESERVED',:expiry)")

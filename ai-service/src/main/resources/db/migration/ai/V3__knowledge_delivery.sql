@@ -1,6 +1,6 @@
 ALTER TABLE knowledge_index_jobs
     ADD COLUMN ready boolean NOT NULL DEFAULT false;
-CREATE INDEX knowledge_jobs_pending ON knowledge_index_jobs (next_attempt_at) WHERE state='PENDING' AND ready;
+CREATE INDEX knowledge_jobs_pending ON knowledge_index_jobs (next_attempt_at) WHERE state = 'PENDING' AND ready;
 CREATE TABLE knowledge_requests
 (
     owner_id     uuid         NOT NULL,

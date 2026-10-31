@@ -18,13 +18,11 @@ import java.util.UUID;
 @Service
 public class NotificationService {
 
-    public record Notification(
-            UUID id, UUID orderId, String status, String message, Instant createdAt) {
+    public record Notification(UUID id, UUID orderId, String status, String message, Instant createdAt) {
 
     }
 
-    public record NotificationPage(
-            List<Notification> items, int page, int size, long totalElements) {
+    public record NotificationPage(List<Notification> items, int page, int size, long totalElements) {
 
     }
 
@@ -48,18 +46,17 @@ public class NotificationService {
                     default -> throw new IllegalArgumentException("Unknown order status");
                 };
         var id = UUID.randomUUID();
-        int inserted =
-                jdbc.sql(
-                                "INSERT INTO notifications(id,event_id,customer_id,order_id,status,message) VALUES"
-                                        + " (:id,:event,:customer,:order,:status,:message) ON CONFLICT(order_id,status)"
-                                        + " DO NOTHING")
-                        .param("id", id)
-                        .param("event", eventId)
-                        .param("customer", result.customerId())
-                        .param("order", order)
-                        .param("status", result.status())
-                        .param("message", message)
-                        .update();
+        int inserted = jdbc.sql(
+                        "INSERT INTO notifications(id,event_id,customer_id,order_id,status,message) VALUES"
+                                + " (:id,:event,:customer,:order,:status,:message) ON CONFLICT(order_id,status)"
+                                + " DO NOTHING")
+                .param("id", id)
+                .param("event", eventId)
+                .param("customer", result.customerId())
+                .param("order", order)
+                .param("status", result.status())
+                .param("message", message)
+                .update();
         // Only a newly stored order/status notification emits an outgoing event; replay produces no
         // second notification.
         if (inserted == 1)
@@ -73,29 +70,25 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public NotificationPage list(UUID customer, int page, int size) {
-        var total =
-                jdbc.sql("SELECT count(*) FROM notifications WHERE customer_id=:id")
-                        .param("id", customer)
-                        .query(Long.class)
-                        .single();
-        var items =
-                jdbc.sql(
-                                "SELECT id,order_id,status,message,created_at FROM notifications WHERE"
-                                        + " customer_id=:id ORDER BY created_at DESC,id LIMIT :size OFFSET :offset")
-                        .param("id", customer)
-                        .param("size", size)
-                        // Promote before multiplication so a large validated page number cannot
-                        // overflow a 32-bit offset.
-                        .param("offset", (long) page * size)
-                        .query(
-                                (rs, n) ->
-                                        new Notification(
-                                                rs.getObject(1, UUID.class),
-                                                rs.getObject(2, UUID.class),
-                                                rs.getString(3),
-                                                rs.getString(4),
-                                                rs.getTimestamp(5).toInstant()))
-                        .list();
+        var total = jdbc.sql("SELECT count(*) FROM notifications WHERE customer_id=:id")
+                .param("id", customer)
+                .query(Long.class)
+                .single();
+        var items = jdbc.sql("SELECT id,order_id,status,message,created_at FROM notifications WHERE"
+                        + " customer_id=:id ORDER BY created_at DESC,id LIMIT :size OFFSET :offset")
+                .param("id", customer)
+                .param("size", size)
+                // Promote before multiplication so a large validated page number cannot
+                // overflow a 32-bit offset.
+                .param("offset", (long) page * size)
+                .query((rs, n) ->
+                        new Notification(
+                                rs.getObject(1, UUID.class),
+                                rs.getObject(2, UUID.class),
+                                rs.getString(3),
+                                rs.getString(4),
+                                rs.getTimestamp(5).toInstant()))
+                .list();
         return new NotificationPage(items, page, size, total);
     }
 }

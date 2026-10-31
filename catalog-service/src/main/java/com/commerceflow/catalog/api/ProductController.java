@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @RestController
@@ -59,7 +60,7 @@ public class ProductController {
             @RequestHeader(value = "Cache-Control", defaultValue = "") String cacheControl) {
         // Trusted price callers request no-cache; ordinary catalog reads may use the bounded Redis
         // cache.
-        return catalog.get(id, cacheControl.toLowerCase(java.util.Locale.ROOT).contains("no-cache"));
+        return catalog.get(id, cacheControl.toLowerCase(Locale.ROOT).contains("no-cache"));
     }
 
     @GetMapping("/admin/products")

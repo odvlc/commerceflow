@@ -57,7 +57,8 @@ public class ProductCache {
         this.json = json;
         this.metrics = metrics;
         this.ttl = ttl.toSeconds();
-        if (this.ttl < 1) throw new IllegalArgumentException("Cache TTL must be positive");
+        if (this.ttl < 1)
+            throw new IllegalArgumentException("Cache TTL must be positive");
     }
 
     public Optional<ProductView> get(UUID id) {

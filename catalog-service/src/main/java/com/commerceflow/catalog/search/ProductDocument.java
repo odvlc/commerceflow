@@ -21,7 +21,8 @@ public record ProductDocument(
         String updatedAt) {
 
     public static ProductDocument from(ProductChanged product) {
-        if (product.version() < 0) throw new IllegalArgumentException("Invalid product version");
+        if (product.version() < 0)
+            throw new IllegalArgumentException("Invalid product version");
         return new ProductDocument(
                 product.id().toString(),
                 product.sku(),

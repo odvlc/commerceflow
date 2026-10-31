@@ -17,11 +17,13 @@ import org.springframework.ai.ollama.api.OllamaApi.ChatResponse;
 import org.springframework.ai.ollama.api.OllamaApi.Message;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -64,7 +66,7 @@ public class RunWorker implements AutoCloseable {
             ToolRegistry tools,
             JsonMapper json,
             CartActions actions)
-            throws java.io.IOException {
+            throws IOException {
         this.actions = actions;
         this.store = store;
         this.credentials = credentials;
@@ -79,10 +81,12 @@ public class RunWorker implements AutoCloseable {
 
     @Scheduled(fixedDelay = 500)
     public synchronized void poll() {
-        if (closed || active != null) return;
+        if (closed || active != null)
+            return;
         store.recover();
         var claim = store.claim();
-        if (claim.isEmpty()) return;
+        if (claim.isEmpty())
+            return;
         active = claim.get();
         started = System.nanoTime();
         task = executor.submit(() -> execute(claim.get()));
@@ -90,7 +94,8 @@ public class RunWorker implements AutoCloseable {
 
     private synchronized void watch() {
         var c = active;
-        if (c == null || closed) return;
+        if (c == null || closed)
+            return;
         try {
             // Account for active time before and after recovery; restarting a worker must not reset the
             // run deadline.
@@ -101,7 +106,8 @@ public class RunWorker implements AutoCloseable {
         } catch (RunStore.LostLease ignored) {
             task.cancel(true);
         } catch (RuntimeException unavailable) {
-            if (task != null) task.cancel(true);
+            if (task != null)
+                task.cancel(true);
         }
     }
 
@@ -110,13 +116,15 @@ public class RunWorker implements AutoCloseable {
     }
 
     private void check(Claimed c, Actor a) {
-        if (!store.active(c)) throw new RunStore.LostLease();
+        if (!store.active(c))
+            throw new RunStore.LostLease();
         if (!a.valid())
             throw new BusinessException(
-                    org.springframework.http.HttpStatus.UNAUTHORIZED,
+                    HttpStatus.UNAUTHORIZED,
                     "AI_AUTHENTICATION_REQUIRED",
                     "Fresh authentication required");
-        if (c.activeMillis() + elapsed() >= 120000) throw new RunStore.BudgetExceeded();
+        if (c.activeMillis() + elapsed() >= 120000)
+            throw new RunStore.BudgetExceeded();
     }
 
     private void execute(Claimed c) {
@@ -129,12 +137,13 @@ public class RunWorker implements AutoCloseable {
             var actor = identity.get();
             if (!actor.subject().equals(c.ownerId()))
                 throw new BusinessException(
-                        org.springframework.http.HttpStatus.UNAUTHORIZED,
+                        HttpStatus.UNAUTHORIZED,
                         "AI_AUTHENTICATION_REQUIRED",
                         "Fresh owner authentication required");
             actor.requireMode(c.mode());
             // A confirmed intent survives a crash and can finish without another model decision.
-            if (actions.continueAction(c, actor)) return;
+            if (actions.continueAction(c, actor))
+                return;
             var evidence = new LinkedHashMap<String, Evidence>();
             var observations = new ArrayList<JsonNode>();
             var history = store.history(c);
@@ -150,7 +159,8 @@ public class RunWorker implements AutoCloseable {
                                 tools.definitions(c.mode()),
                                 null);
                 var calls = response.message().toolCalls();
-                if (calls == null || calls.isEmpty()) break;
+                if (calls == null || calls.isEmpty())
+                    break;
                 for (var call : calls) {
                     check(c, actor);
                     String name = call.function().name();
@@ -202,7 +212,8 @@ public class RunWorker implements AutoCloseable {
                                                         + " broader-authority route.")));
                     }
                 }
-                if (evidence.size() >= 4) break;
+                if (evidence.size() >= 4)
+                    break;
             }
             check(c, actor);
             // Abstain before asking for a final answer when no authorized tool produced evidence.
@@ -332,8 +343,10 @@ public class RunWorker implements AutoCloseable {
         // Old user commands must not become fresh tool requests when a conversation continues.
         for (int i = history.size() - 2; i >= 0; i--) {
             var previous = history.get(i);
-            if (!previous.role().equals("ASSISTANT")) continue;
-            if (previous.content().length() + 20 > remaining) break;
+            if (!previous.role().equals("ASSISTANT"))
+                continue;
+            if (previous.content().length() + 20 > remaining)
+                break;
             completed.addFirst(previous.content());
             remaining -= previous.content().length() + 20;
         }
@@ -378,7 +391,8 @@ public class RunWorker implements AutoCloseable {
         control.shutdownNow();
         if (active != null) {
             stop(active, "AUTHENTICATION_REQUIRED", "AI_WORKER_INTERRUPTED");
-            if (task != null) task.cancel(true);
+            if (task != null)
+                task.cancel(true);
         }
         executor.shutdownNow();
     }

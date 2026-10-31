@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -63,41 +64,38 @@ class KeycloakSecurityTest {
         catalog = startApp(CatalogApplication.class, "catalog");
         orders = startApp(OrderApplication.class, "order", "--catalog.base-url=" + base(catalog));
         inventory = startApp(InventoryApplication.class, "inventory");
-        gateway =
-                new SpringApplicationBuilder(GatewayApplication.class)
-                        .run(
-                                "--server.port=0",
-                                "--server.address=127.0.0.1",
-                                "--security.issuer=" + keycloak.issuer(),
-                                "--security.jwk-set-uri=" + keycloak.issuer() + "/protocol/openid-connect/certs",
-                                "--CATALOG_URL=" + base(catalog),
-                                "--ORDER_URL=" + base(orders),
-                                "--INVENTORY_URL=" + base(inventory),
-                                "--logging.level.root=WARN");
+        gateway = new SpringApplicationBuilder(GatewayApplication.class)
+                .run("--server.port=0",
+                        "--server.address=127.0.0.1",
+                        "--security.issuer=" + keycloak.issuer(),
+                        "--security.jwk-set-uri=" + keycloak.issuer() + "/protocol/openid-connect/certs",
+                        "--CATALOG_URL=" + base(catalog),
+                        "--ORDER_URL=" + base(orders),
+                        "--INVENTORY_URL=" + base(inventory),
+                        "--logging.level.root=WARN");
         alice = login("alice");
         bob = login("bob");
         admin = login("admin");
     }
 
     static ConfigurableApplicationContext startApp(Class<?> source, String service, String... extra) {
-        var args =
-                new ArrayList<>(
-                        List.of(
-                                "--spring.config.name=identity-test",
-                                "--server.port=0",
-                                "--server.address=127.0.0.1",
-                                "--spring.datasource.url=" + postgres.getJdbcUrl("cf_" + service, "cf_" + service),
-                                "--spring.datasource.username=cf_" + service,
-                                "--spring.datasource.password=test-only-" + service,
-                                "--spring.flyway.locations=classpath:db/migration/" + service,
-                                "--spring.jpa.hibernate.ddl-auto=validate",
-                                "--spring.jpa.open-in-view=false",
-                                "--commerceflow.messaging.enabled=false",
-                                "--catalog.cache.enabled=false",
-                                "--catalog.search.enabled=false",
-                                "--security.issuer=" + keycloak.issuer(),
-                                "--security.jwk-set-uri=" + keycloak.issuer() + "/protocol/openid-connect/certs",
-                                "--logging.level.root=WARN"));
+        var args = new ArrayList<>(
+                List.of(
+                        "--spring.config.name=identity-test",
+                        "--server.port=0",
+                        "--server.address=127.0.0.1",
+                        "--spring.datasource.url=" + postgres.getJdbcUrl("cf_" + service, "cf_" + service),
+                        "--spring.datasource.username=cf_" + service,
+                        "--spring.datasource.password=test-only-" + service,
+                        "--spring.flyway.locations=classpath:db/migration/" + service,
+                        "--spring.jpa.hibernate.ddl-auto=validate",
+                        "--spring.jpa.open-in-view=false",
+                        "--commerceflow.messaging.enabled=false",
+                        "--catalog.cache.enabled=false",
+                        "--catalog.search.enabled=false",
+                        "--security.issuer=" + keycloak.issuer(),
+                        "--security.jwk-set-uri=" + keycloak.issuer() + "/protocol/openid-connect/certs",
+                        "--logging.level.root=WARN"));
         args.addAll(List.of(extra));
         return new SpringApplicationBuilder(source).run(args.toArray(String[]::new));
     }
@@ -108,9 +106,13 @@ class KeycloakSecurityTest {
 
     @AfterAll
     static void stop() throws Exception {
-        for (var app : Arrays.asList(gateway, inventory, orders, catalog)) if (app != null) app.close();
-        if (keycloak != null) keycloak.close();
-        if (postgres != null) postgres.close();
+        for (var app : Arrays.asList(gateway, inventory, orders, catalog))
+            if (app != null)
+                app.close();
+        if (keycloak != null)
+            keycloak.close();
+        if (postgres != null)
+            postgres.close();
     }
 
     static String encode(String value) {
@@ -120,11 +122,10 @@ class KeycloakSecurityTest {
     static String form(Map<String, String> values) {
         return values.entrySet().stream()
                 .map(e -> encode(e.getKey()) + "=" + encode(e.getValue()))
-                .collect(java.util.stream.Collectors.joining("&"));
+                .collect(Collectors.joining("&"));
     }
 
-    static HttpResponse<String> post(HttpClient client, String url, Map<String, String> body)
-            throws Exception {
+    static HttpResponse<String> post(HttpClient client, String url, Map<String, String> body) throws Exception {
         return client.send(
                 HttpRequest.newBuilder(URI.create(url))
                         .header("Content-Type", "application/x-www-form-urlencoded")
@@ -137,84 +138,57 @@ class KeycloakSecurityTest {
         var cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
         var http = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build();
         String verifier = UUID.randomUUID().toString() + UUID.randomUUID();
-        String challenge =
-                Base64.getUrlEncoder()
-                        .withoutPadding()
-                        .encodeToString(
-                                MessageDigest.getInstance("SHA-256")
-                                        .digest(verifier.getBytes(StandardCharsets.US_ASCII)));
+        String challenge = Base64.getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(
+                        MessageDigest.getInstance("SHA-256")
+                                .digest(verifier.getBytes(StandardCharsets.US_ASCII)));
         String redirect = "http://localhost:5173/";
-        String uri =
-                keycloak.issuer()
-                        + "/protocol/openid-connect/auth?"
-                        + form(
-                        Map.of(
-                                "client_id",
-                                "commerceflow-web",
-                                "redirect_uri",
-                                redirect,
-                                "response_type",
-                                "code",
-                                "scope",
-                                "openid",
-                                "state",
-                                UUID.randomUUID().toString(),
-                                "nonce",
-                                UUID.randomUUID().toString(),
-                                "code_challenge",
-                                challenge,
-                                "code_challenge_method",
-                                "S256"));
-        var page =
-                http.send(
-                        HttpRequest.newBuilder(URI.create(uri)).build(), HttpResponse.BodyHandlers.ofString());
+        String uri = keycloak.issuer()
+                + "/protocol/openid-connect/auth?"
+                + form(
+                Map.of(
+                        "client_id", "commerceflow-web",
+                        "redirect_uri", redirect,
+                        "response_type", "code",
+                        "scope", "openid",
+                        "state", UUID.randomUUID().toString(),
+                        "nonce", UUID.randomUUID().toString(),
+                        "code_challenge", challenge,
+                        "code_challenge_method", "S256"));
+        var page = http.send(HttpRequest.newBuilder(URI.create(uri)).build(), HttpResponse.BodyHandlers.ofString());
         var action = Pattern.compile("<form[^>]+action=\"([^\"]+)\"").matcher(page.body());
         assertThat(action.find()).as("Keycloak login form exists").isTrue();
-        String cookie =
-                page.headers().allValues("set-cookie").stream()
-                        .map(value -> value.split(";", 2)[0])
-                        .collect(java.util.stream.Collectors.joining("; "));
+        String cookie = page.headers().allValues("set-cookie").stream()
+                .map(value -> value.split(";", 2)[0])
+                .collect(Collectors.joining("; "));
         assertThat(cookie).as("Keycloak auth-session cookie").contains("AUTH_SESSION_ID");
-        var logged =
-                http.send(
-                        HttpRequest.newBuilder(URI.create(action.group(1).replace("&amp;", "&")))
-                                .header("Content-Type", "application/x-www-form-urlencoded")
-                                .header("Cookie", cookie)
-                                .POST(
-                                        HttpRequest.BodyPublishers.ofString(
-                                                form(
-                                                        Map.of(
-                                                                "username",
-                                                                user,
-                                                                "password",
-                                                                "local-" + user + "-only",
-                                                                "credentialId",
-                                                                ""))))
-                                .build(),
-                        HttpResponse.BodyHandlers.ofString());
+        var logged = http.send(
+                HttpRequest.newBuilder(URI.create(action.group(1).replace("&amp;", "&")))
+                        .header("Content-Type", "application/x-www-form-urlencoded")
+                        .header("Cookie", cookie)
+                        .POST(HttpRequest.BodyPublishers.ofString(
+                                form(Map.of(
+                                        "username", user,
+                                        "password", "local-" + user + "-only",
+                                        "credentialId", ""))))
+                        .build(),
+                HttpResponse.BodyHandlers.ofString());
         assertThat(logged.statusCode()).as("Keycloak login redirect").isEqualTo(302);
         String location = logged.headers().firstValue("location").orElseThrow();
-        String code =
-                Arrays.stream(URI.create(location).getRawQuery().split("&"))
-                        .filter(p -> p.startsWith("code="))
-                        .map(p -> URLDecoder.decode(p.substring(5), StandardCharsets.UTF_8))
-                        .findFirst()
-                        .orElseThrow();
-        var token =
-                post(
-                        http,
-                        keycloak.issuer() + "/protocol/openid-connect/token",
-                        Map.of(
-                                "grant_type",
-                                "authorization_code",
-                                "client_id",
-                                "commerceflow-web",
-                                "redirect_uri",
-                                redirect,
-                                "code",
-                                code,
-                                "code_verifier",
-                                verifier));
+        String code = Arrays.stream(URI.create(location).getRawQuery().split("&"))
+                .filter(p -> p.startsWith("code="))
+                .map(p -> URLDecoder.decode(p.substring(5), StandardCharsets.UTF_8))
+                .findFirst()
+                .orElseThrow();
+        var token = post(http,
+                keycloak.issuer() + "/protocol/openid-connect/token",
+                Map.of(
+                        "grant_type", "authorization_code",
+                        "client_id", "commerceflow-web",
+                        "redirect_uri", redirect,
+                        "code", code,
+                        "code_verifier", verifier));
         assertThat(token.statusCode()).isEqualTo(200);
         return JSON.readTree(token.body()).get("access_token").asText();
     }
@@ -227,10 +201,10 @@ class KeycloakSecurityTest {
             Object body,
             Map<String, String> headers)
             throws Exception {
-        var request =
-                HttpRequest.newBuilder(URI.create(base(app) + path))
-                        .header("Content-Type", "application/json");
-        if (token != null) request.header("Authorization", "Bearer " + token);
+        var request = HttpRequest.newBuilder(URI.create(base(app) + path))
+                .header("Content-Type", "application/json");
+        if (token != null)
+            request.header("Authorization", "Bearer " + token);
         headers.forEach(request::header);
         request.method(
                 method,
@@ -244,60 +218,42 @@ class KeycloakSecurityTest {
     void keycloakPkceTokensFlowThroughGatewayAndBackendRoleAndOwnershipChecks() throws Exception {
         // Use real realm-issued browser tokens; a locally signed JWT fixture cannot verify
         // PKCE/client/realm integration.
-        var input =
-                Map.of(
-                        "sku",
-                        "OIDC-" + UUID.randomUUID(),
-                        "name",
-                        "Secured product",
-                        "description",
-                        "Real Keycloak test",
-                        "category",
-                        "Security",
-                        "price",
-                        new BigDecimal("12.00"),
-                        "currency",
-                        "USD",
-                        "active",
-                        true);
-        var created =
-                call(
-                        gateway,
-                        "POST",
-                        "/api/v1/admin/products",
-                        admin,
-                        input,
-                        Map.of("Idempotency-Key", UUID.randomUUID().toString()));
+        var input = Map.of(
+                "sku", "OIDC-" + UUID.randomUUID(),
+                "name", "Secured product",
+                "description", "Real Keycloak test",
+                "category", "Security",
+                "price", new BigDecimal("12.00"),
+                "currency", "USD",
+                "active", true);
+        var created = call(gateway,
+                "POST",
+                "/api/v1/admin/products",
+                admin,
+                input,
+                Map.of("Idempotency-Key", UUID.randomUUID().toString()));
         assertThat(created.statusCode()).as(created.body()).isEqualTo(201);
         var product = JSON.readValue(created.body(), ProductView.class);
-        assertThat(
-                call(gateway, "GET", "/api/v1/products/" + product.id(), null, null, Map.of())
-                        .statusCode())
+        assertThat(call(gateway, "GET", "/api/v1/products/" + product.id(), null, null, Map.of())
+                .statusCode())
                 .isEqualTo(200);
-        assertThat(
-                call(
-                        gateway,
-                        "POST",
-                        "/api/v1/admin/products",
-                        alice,
-                        input,
-                        Map.of("Idempotency-Key", UUID.randomUUID().toString()))
-                        .statusCode())
+        assertThat(call(gateway,
+                "POST",
+                "/api/v1/admin/products",
+                alice,
+                input,
+                Map.of("Idempotency-Key", UUID.randomUUID().toString()))
+                .statusCode())
                 .isEqualTo(403);
-        var checkout =
-                Map.of(
-                        "items",
-                        List.of(Map.of("productId", product.id(), "quantity", 1)),
-                        "paymentScenario",
-                        "APPROVE");
-        var placed =
-                call(
-                        gateway,
-                        "POST",
-                        "/api/v1/orders",
-                        alice,
-                        checkout,
-                        Map.of("Idempotency-Key", UUID.randomUUID().toString()));
+        var checkout = Map.of(
+                "items", List.of(Map.of("productId", product.id(), "quantity", 1)),
+                "paymentScenario", "APPROVE");
+        var placed = call(gateway,
+                "POST",
+                "/api/v1/orders",
+                alice,
+                checkout,
+                Map.of("Idempotency-Key", UUID.randomUUID().toString()));
         assertThat(placed.statusCode()).as(placed.body()).isEqualTo(201);
         var order = JSON.readValue(placed.body(), OrderView.class);
         assertThat(
@@ -314,17 +270,12 @@ class KeycloakSecurityTest {
 
     @Test
     void serviceAccountScopeAllowsInternalMutationAndCustomerDoesNot() throws Exception {
-        var response =
-                post(
-                        HttpClient.newHttpClient(),
-                        keycloak.issuer() + "/protocol/openid-connect/token",
-                        Map.of(
-                                "grant_type",
-                                "client_credentials",
-                                "client_id",
-                                "commerceflow-service",
-                                "client_secret",
-                                KeycloakTestServer.SECRET));
+        var response = post(HttpClient.newHttpClient(),
+                keycloak.issuer() + "/protocol/openid-connect/token",
+                Map.of(
+                        "grant_type", "client_credentials",
+                        "client_id", "commerceflow-service",
+                        "client_secret", KeycloakTestServer.SECRET));
         assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
         String service = JSON.readTree(response.body()).get("access_token").asText();
         String path = "/internal/v1/reservations/" + UUID.randomUUID() + "/release";
@@ -336,39 +287,26 @@ class KeycloakSecurityTest {
     void publicClientRejectsPasswordGrantAndMissingPkce() throws Exception {
         // The browser public client must not acquire broader authentication flows just to simplify
         // test login.
-        var response =
-                post(
-                        HttpClient.newHttpClient(),
-                        keycloak.issuer() + "/protocol/openid-connect/token",
-                        Map.of(
-                                "grant_type",
-                                "password",
-                                "client_id",
-                                "commerceflow-web",
-                                "username",
-                                "alice",
-                                "password",
-                                "local-alice-only"));
+        var response = post(HttpClient.newHttpClient(),
+                keycloak.issuer() + "/protocol/openid-connect/token",
+                Map.of(
+                        "grant_type", "password",
+                        "client_id", "commerceflow-web",
+                        "username", "alice",
+                        "password", "local-alice-only"));
         assertThat(response.statusCode()).isEqualTo(400);
         assertThat(response.body()).contains("unauthorized_client");
-        String auth =
-                keycloak.issuer()
-                        + "/protocol/openid-connect/auth?"
-                        + form(
-                        Map.of(
-                                "client_id",
-                                "commerceflow-web",
-                                "redirect_uri",
-                                "http://localhost:5173/",
-                                "response_type",
-                                "code",
-                                "scope",
-                                "openid"));
-        var rejected =
-                HttpClient.newHttpClient()
-                        .send(
-                                HttpRequest.newBuilder(URI.create(auth)).build(),
-                                HttpResponse.BodyHandlers.ofString());
+        String auth = keycloak.issuer()
+                + "/protocol/openid-connect/auth?"
+                + form(
+                Map.of(
+                        "client_id", "commerceflow-web",
+                        "redirect_uri", "http://localhost:5173/",
+                        "response_type", "code",
+                        "scope", "openid"));
+        var rejected = HttpClient.newHttpClient()
+                .send(HttpRequest.newBuilder(URI.create(auth)).build(),
+                        HttpResponse.BodyHandlers.ofString());
         assertThat(rejected.statusCode()).isEqualTo(302);
         assertThat(rejected.headers().firstValue("location").orElseThrow())
                 .contains("error=invalid_request")

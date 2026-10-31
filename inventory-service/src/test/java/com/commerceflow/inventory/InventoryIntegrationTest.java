@@ -103,7 +103,8 @@ class InventoryIntegrationTest {
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var futures = tasks.stream().map(executor::submit).toList();
             gate.countDown();
-            for (var future : futures) reservations.add(future.get(15, TimeUnit.SECONDS));
+            for (var future : futures)
+                reservations.add(future.get(15, TimeUnit.SECONDS));
         }
         assertThat(reservations).filteredOn(r -> r.status().equals("RESERVED")).hasSize(10);
         assertThat(reservations).filteredOn(r -> r.status().equals("REJECTED")).hasSize(90);
@@ -120,7 +121,8 @@ class InventoryIntegrationTest {
         var product = UUID.randomUUID();
         var order = UUID.randomUUID();
         inventory.setStock(product, 10, null);
-        for (int i = 0; i < 5; i++) inventory.reserve(order, request(product, 3), "test");
+        for (int i = 0; i < 5; i++)
+            inventory.reserve(order, request(product, 3), "test");
         assertThat(inventory.stock(product).reservedQuantity()).isEqualTo(3);
         assertThat(jdbc.sql("SELECT count(*) FROM outbox_events").query(Long.class).single())
                 .isEqualTo(1);
@@ -231,13 +233,15 @@ class InventoryIntegrationTest {
                                 }));
             }
             gate.countDown();
-            for (var future : futures) future.get(15, TimeUnit.SECONDS);
+            for (var future : futures)
+                future.get(15, TimeUnit.SECONDS);
         }
         for (var id : List.of(low, high)) {
             assertThat(inventory.stock(id).availableQuantity()).isEqualTo(80);
             assertThat(inventory.stock(id).reservedQuantity()).isEqualTo(20);
         }
-        for (var id : incoming) inventory.release(id, "mixed-locks");
+        for (var id : incoming)
+            inventory.release(id, "mixed-locks");
         for (var id : List.of(low, high)) {
             assertThat(inventory.stock(id).availableQuantity()).isEqualTo(100);
             assertThat(inventory.stock(id).reservedQuantity()).isZero();

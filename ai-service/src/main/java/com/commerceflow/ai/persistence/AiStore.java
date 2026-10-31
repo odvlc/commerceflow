@@ -327,7 +327,8 @@ public class AiStore {
     @Transactional
     public RunView resume(UUID id, Actor actor) {
         // Re-authentication rechecks admission; a paused run must not bypass the durable queue bound.
-        if (run(id, actor).state().equals("AUTHENTICATION_REQUIRED")) admit();
+        if (run(id, actor).state().equals("AUTHENTICATION_REQUIRED"))
+            admit();
         jdbc.sql(
                         "UPDATE ai_runs SET state='QUEUED',error_code=NULL,updated_at=now() WHERE id=:id AND"
                                 + " state='AUTHENTICATION_REQUIRED'")

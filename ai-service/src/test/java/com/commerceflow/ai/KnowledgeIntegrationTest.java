@@ -23,8 +23,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestContext;
+import org.springframework.test.context.TestExecutionListeners;
+import org.springframework.test.context.support.AbstractTestExecutionListener;
 import tools.jackson.databind.json.JsonMapper;
 
 import javax.sql.DataSource;
@@ -52,11 +56,10 @@ import static org.awaitility.Awaitility.await;
         partitions = 3,
         topics = {Topics.AI_KNOWLEDGE, Topics.DEAD_LETTER},
         bootstrapServersProperty = "commerceflow.messaging.bootstrap-servers")
-@org.springframework.test.annotation.DirtiesContext
-@org.springframework.test.context.TestExecutionListeners(
+@DirtiesContext
+@TestExecutionListeners(
         listeners = KnowledgeIntegrationTest.Cleanup.class,
-        mergeMode =
-                org.springframework.test.context.TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
+        mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 class KnowledgeIntegrationTest {
 
     static final EmbeddedPostgres PG = startPg();
@@ -116,10 +119,9 @@ class KnowledgeIntegrationTest {
 
     @BeforeEach
     void clear() {
-        jdbc.sql(
-                        "TRUNCATE"
-                                + " knowledge_requests,knowledge_documents,outbox_events,processed_events,knowledge_rebuilds"
-                                + " CASCADE")
+        jdbc.sql("TRUNCATE"
+                        + " knowledge_requests,knowledge_documents,outbox_events,processed_events,knowledge_rebuilds"
+                        + " CASCADE")
                 .update();
     }
 
@@ -128,35 +130,33 @@ class KnowledgeIntegrationTest {
     }
 
     void index(ImportResult result) {
-        await()
-                .atMost(Duration.ofSeconds(40))
+        await().atMost(Duration.ofSeconds(40))
                 .pollInterval(Duration.ofMillis(100))
-                .untilAsserted(
-                        () -> {
-                            publisher.publishBatch();
-                            indexer.poll();
-                            assertThat(store.job(result.jobId()).state()).isEqualTo("SUCCEEDED");
-                        });
+                .untilAsserted(() -> {
+                    publisher.publishBatch();
+                    indexer.poll();
+                    assertThat(store.job(result.jobId()).state()).isEqualTo("SUCCEEDED");
+                });
     }
 
     @Test
     void concurrentImportsPublishOnceAndRealKafkaElasticsearchProduceCitations() throws Exception {
         // Exercise the actual delivery/index path so a stored import row alone cannot satisfy
         // retrieval acceptance.
-        var input =
-                doc(
-                        "return-policy",
-                        1,
-                        "# Return window\n\n"
-                                + "Unused items in original packaging have a 30 calendar day return window.",
-                        true);
+        var input = doc(
+                "return-policy",
+                1,
+                "# Return window\n\n"
+                        + "Unused items in original packaging have a 30 calendar day return window.",
+                true);
         try (var pool = Executors.newFixedThreadPool(8)) {
             List<Callable<ImportResult>> calls = new ArrayList<>();
             for (int i = 0; i < 20; i++)
                 calls.add(() -> store.ingest(owner, "same-import-key", input, "ingest"));
             var results = pool.invokeAll(calls);
             Set<UUID> ids = new HashSet<>();
-            for (var r : results) ids.add(r.get().jobId());
+            for (var r : results)
+                ids.add(r.get().jobId());
             assertThat(ids).hasSize(1);
             index(results.getFirst().get());
         }
@@ -167,43 +167,42 @@ class KnowledgeIntegrationTest {
         assertThat(found.getFirst().sourceId()).isEqualTo("return-policy");
         assertThat(found.getFirst().version()).isEqualTo(1);
         assertThat(found.getFirst().id()).startsWith("k:");
-        assertThatThrownBy(
-                () ->
-                        store.ingest(
-                                owner, "same-import-key", doc("return-policy", 2, "changed", true), "ingest"))
+        assertThatThrownBy(() -> store.ingest(
+                owner,
+                "same-import-key",
+                doc("return-policy",
+                        2,
+                        "changed",
+                        true), "ingest"))
                 .hasMessageContaining("different contents");
     }
 
     @Test
     void sourceVersionsAudienceTombstonesAndAliasRebuildAreVerified() {
-        var first =
-                store.ingest(
-                        owner,
-                        "import-v1",
-                        doc("policy", 1, "Original obsolete return rule.\n\nSecond obsolete paragraph.", true),
-                        "v1");
+        var first = store.ingest(
+                owner,
+                "import-v1",
+                doc("policy", 1, "Original obsolete return rule.\n\nSecond obsolete paragraph.", true),
+                "v1");
         index(first);
-        var updated =
-                store.ingest(owner, "import-v2", doc("policy", 2, "Updated replacement rule.", true), "v2");
+        var updated = store.ingest(owner, "import-v2", doc("policy", 2, "Updated replacement rule.", true), "v2");
         assertThat(search.search("obsolete", "CUSTOMER", 6).items()).isEmpty();
         index(updated);
         assertThat(search.search("replacement", "CUSTOMER", 6).items()).isNotEmpty();
         assertThat(search.search("obsolete", "CUSTOMER", 6).items()).isEmpty();
-        assertThatThrownBy(
-                () -> store.ingest(owner, "stale-v1-key", doc("policy", 1, "stale", true), "stale"))
+        assertThatThrownBy(() -> store.ingest(owner, "stale-v1-key", doc("policy", 1, "stale", true), "stale"))
                 .hasMessageContaining("stale");
-        var support =
-                store.ingest(
-                        owner,
-                        "support-key",
-                        new ImportDocument(
-                                "runbook",
-                                1,
-                                "Internal reconciliation",
-                                "SUPPORT",
-                                "Investigate reconciliation using authorized explanation.",
-                                true),
-                        "support");
+        var support = store.ingest(
+                owner,
+                "support-key",
+                new ImportDocument(
+                        "runbook",
+                        1,
+                        "Internal reconciliation",
+                        "SUPPORT",
+                        "Investigate reconciliation using authorized explanation.",
+                        true),
+                "support");
         index(support);
         assertThat(search.search("reconciliation", "CUSTOMER", 6).items()).isEmpty();
         assertThat(search.search("reconciliation", "SUPPORT", 6).items()).isNotEmpty();
@@ -213,12 +212,12 @@ class KnowledgeIntegrationTest {
         assertThat(store.job(rebuild.id()).documents()).isEqualTo(2);
         assertThat(store.rebuild(owner, "rebuild-key").id()).isEqualTo(rebuild.id());
         assertThat(search.search("replacement", "CUSTOMER", 6).items()).isNotEmpty();
-        var inactive =
-                store.ingest(
-                        owner,
-                        "deactivate-v3",
-                        doc("policy", 3, "Updated replacement rule.", false),
-                        "deactivate");
+
+        var inactive = store.ingest(
+                owner,
+                "deactivate-v3",
+                doc("policy", 3, "Updated replacement rule.", false),
+                "deactivate");
         index(inactive);
         assertThat(search.search("replacement", "CUSTOMER", 6).items()).isEmpty();
     }
@@ -228,34 +227,29 @@ class KnowledgeIntegrationTest {
             throws Exception {
         // A released session lock is the recovery authority; the diagnostic lease must not delay a
         // safe replay.
-        var imported =
-                store.ingest(
-                        owner,
-                        "recovery-source",
-                        doc("recovery", 1, "Recoverable rebuild evidence.", true),
-                        "recovery");
+        var imported = store.ingest(
+                owner,
+                "recovery-source",
+                doc("recovery", 1, "Recoverable rebuild evidence.", true),
+                "recovery");
         index(imported);
         var job = store.rebuild(owner, "recovery-rebuild");
         store.rebuildState(job.id(), "RUNNING", 0, null);
         try (var connection = data.getConnection();
              var statement = connection.createStatement()) {
-            statement.execute(
-                    "SELECT pg_advisory_lock(hashtextextended('commerceflow-ai-knowledge-index',0))");
+            statement.execute("SELECT pg_advisory_lock(hashtextextended('commerceflow-ai-knowledge-index',0))");
             try {
                 indexer.poll();
                 assertThat(store.job(job.id()).state()).isEqualTo("RUNNING");
             } finally {
-                statement.execute(
-                        "SELECT pg_advisory_unlock(hashtextextended('commerceflow-ai-knowledge-index',0))");
+                statement.execute("SELECT pg_advisory_unlock(hashtextextended('commerceflow-ai-knowledge-index',0))");
             }
         }
-        assertThat(
-                jdbc.sql(
-                                "SELECT lease_until>now()+interval '9 minutes' FROM knowledge_rebuilds WHERE"
-                                        + " id=:id")
-                        .param("id", job.id())
-                        .query(Boolean.class)
-                        .single())
+        assertThat(jdbc.sql("SELECT lease_until>now()+interval '9 minutes' FROM knowledge_rebuilds WHERE"
+                        + " id=:id")
+                .param("id", job.id())
+                .query(Boolean.class)
+                .single())
                 .isTrue();
         indexer.poll();
         assertThat(store.job(job.id()).state()).isEqualTo("SUCCEEDED");
@@ -269,31 +263,27 @@ class KnowledgeIntegrationTest {
 
     @Test
     void projectionOutageRetainsRecoverableJobsAndSearchFailsExplicitly() {
-        var pending =
-                store.ingest(
-                        owner,
-                        "outage-import",
-                        doc("outage-policy", 1, "Recoverable policy evidence.", true),
-                        "outage");
-        await()
-                .atMost(Duration.ofSeconds(20))
-                .untilAsserted(
-                        () -> {
-                            publisher.publishBatch();
-                            assertThat(
-                                    jdbc.sql("SELECT ready FROM knowledge_index_jobs WHERE id=:id")
-                                            .param("id", pending.jobId())
-                                            .query(Boolean.class)
-                                            .single())
-                                    .isTrue();
-                        });
+        var pending = store.ingest(
+                owner,
+                "outage-import",
+                doc("outage-policy", 1, "Recoverable policy evidence.", true),
+                "outage");
+        await().atMost(Duration.ofSeconds(20))
+                .untilAsserted(() -> {
+                    publisher.publishBatch();
+                    assertThat(
+                            jdbc.sql("SELECT ready FROM knowledge_index_jobs WHERE id=:id")
+                                    .param("id", pending.jobId())
+                                    .query(Boolean.class)
+                                    .single())
+                            .isTrue();
+                });
         var broken = new KnowledgeIndex("http://127.0.0.1:1", json);
         new KnowledgeIndexer(data, store, broken, new SimpleMeterRegistry()).poll();
         assertThat(store.job(pending.jobId()).state()).isEqualTo("PENDING");
-        assertThatThrownBy(
-                () ->
-                        new KnowledgeSearch(broken, store, new SimpleMeterRegistry())
-                                .search("policy", "CUSTOMER", 6))
+        assertThatThrownBy(() ->
+                new KnowledgeSearch(broken, store, new SimpleMeterRegistry())
+                        .search("policy", "CUSTOMER", 6))
                 .hasMessageContaining("temporarily unavailable");
         jdbc.sql("UPDATE knowledge_index_jobs SET next_attempt_at=now()").update();
         index(pending);
@@ -302,45 +292,36 @@ class KnowledgeIntegrationTest {
 
     @Test
     void replayedKnowledgeEventsHaveOneReadyJobAndOneMarker() throws Exception {
-        var imported =
-                store.ingest(
-                        owner,
-                        "replay-import",
-                        doc("replay-policy", 1, "Unique replay proof.", true),
-                        "replay");
-        var event =
-                EventEnvelope.create(
-                        "KnowledgeChanged",
-                        imported.documentId(),
-                        "replay",
-                        new KnowledgeChanged(imported.documentId(), 1));
+        var imported = store.ingest(
+                owner,
+                "replay-import",
+                doc("replay-policy", 1, "Unique replay proof.", true),
+                "replay");
+        var event = EventEnvelope.create(
+                "KnowledgeChanged",
+                imported.documentId(),
+                "replay",
+                new KnowledgeChanged(imported.documentId(), 1));
         for (int i = 0; i < 5; i++)
-            kafka
-                    .send(
-                            Topics.AI_KNOWLEDGE, imported.documentId().toString(), json.writeValueAsString(event))
+            kafka.send(Topics.AI_KNOWLEDGE, imported.documentId().toString(), json.writeValueAsString(event))
                     .get();
-        await()
-                .atMost(Duration.ofSeconds(20))
-                .untilAsserted(
-                        () ->
-                                assertThat(
-                                        jdbc.sql("SELECT count(*) FROM processed_events WHERE event_id=:id")
-                                                .param("id", event.eventId())
-                                                .query(Long.class)
-                                                .single())
-                                        .isEqualTo(1));
-        assertThat(
-                jdbc.sql("SELECT count(*) FROM knowledge_index_jobs WHERE document_id=:id")
-                        .param("id", imported.documentId())
-                        .query(Long.class)
-                        .single())
+        await().atMost(Duration.ofSeconds(20))
+                .untilAsserted(() -> assertThat(
+                        jdbc.sql("SELECT count(*) FROM processed_events WHERE event_id=:id")
+                                .param("id", event.eventId())
+                                .query(Long.class)
+                                .single())
+                        .isEqualTo(1));
+        assertThat(jdbc.sql("SELECT count(*) FROM knowledge_index_jobs WHERE document_id=:id")
+                .param("id", imported.documentId())
+                .query(Long.class)
+                .single())
                 .isEqualTo(1);
         indexer.poll();
         assertThat(store.job(imported.jobId()).state()).isEqualTo("SUCCEEDED");
     }
 
-    public static class Cleanup
-            extends org.springframework.test.context.support.AbstractTestExecutionListener {
+    public static class Cleanup extends AbstractTestExecutionListener {
 
         @Override
         public int getOrder() {
@@ -348,8 +329,7 @@ class KnowledgeIntegrationTest {
         }
 
         @Override
-        public void afterTestClass(org.springframework.test.context.TestContext context)
-                throws Exception {
+        public void afterTestClass(TestContext context) throws Exception {
             SEARCH.close();
             PG.close();
         }

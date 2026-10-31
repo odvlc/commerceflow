@@ -11,12 +11,14 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 @Service
 public class KnowledgeSearch {
@@ -66,7 +68,8 @@ public class KnowledgeSearch {
                 String source = value.path("sourceId").asText();
                 long version = value.path("sourceVersion").asLong();
                 // Elasticsearch can lag revocation/version changes; PostgreSQL makes the final access check.
-                if (!store.permitted(source, version, mode)) continue;
+                if (!store.permitted(source, version, mode))
+                    continue;
                 String chunk = value.path("chunkId").asText();
                 result.add(new Evidence(
                         "k:" + chunk + ":" + version,
@@ -76,7 +79,8 @@ public class KnowledgeSearch {
                         value.path("heading").asText(),
                         chunk,
                         value.path("content").asText()));
-                if (result.size() >= size) break;
+                if (result.size() >= size)
+                    break;
             }
             return new SearchResult(List.copyOf(result), semantic, degraded);
         } catch (RuntimeException error) {
@@ -90,11 +94,10 @@ public class KnowledgeSearch {
         }
     }
 
-    private List<tools.jackson.databind.JsonNode> fuse(
-            List<tools.jackson.databind.JsonNode> first, List<tools.jackson.databind.JsonNode> second) {
+    private List<JsonNode> fuse(List<JsonNode> first, List<JsonNode> second) {
         // Reciprocal rank fusion combines rankings because BM25 and vector scores use different scales.
         // The constant 61 is the usual offset 60 plus a one-based rank.
-        var values = new HashMap<String, tools.jackson.databind.JsonNode>();
+        var values = new HashMap<String, JsonNode>();
         var scores = new HashMap<String, Double>();
         for (var list : List.of(first, second))
             for (int rank = 0; rank < list.size(); rank++) {
@@ -106,7 +109,7 @@ public class KnowledgeSearch {
         return scores.keySet().stream()
                 .sorted(Comparator.<String>comparingDouble(scores::get)
                         .reversed()
-                        .thenComparing(java.util.function.Function.identity()))
+                        .thenComparing(Function.identity()))
                 .map(values::get)
                 .toList();
     }

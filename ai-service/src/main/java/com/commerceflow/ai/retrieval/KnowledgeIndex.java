@@ -4,9 +4,11 @@
  */
 package com.commerceflow.ai.retrieval;
 
+import com.commerceflow.ai.model.LocalModels;
 import com.commerceflow.ai.retrieval.KnowledgeModels.Chunk;
 import com.commerceflow.ai.retrieval.KnowledgeModels.Document;
 import com.commerceflow.support.BusinessException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -32,18 +34,18 @@ public class KnowledgeIndex {
     public static final String READ = "cf-ai-knowledge-read", WRITE = "cf-ai-knowledge-write";
     private final RestClient http;
     private final JsonMapper json;
-    private final com.commerceflow.ai.model.LocalModels models;
+    private final LocalModels models;
     private final boolean embeddings;
 
     public KnowledgeIndex(String url, JsonMapper json) {
         this(url, json, null, false);
     }
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     public KnowledgeIndex(
             @Value("${ai.search-url:http://127.0.0.1:9200}") String url,
             JsonMapper json,
-            com.commerceflow.ai.model.LocalModels models,
+            LocalModels models,
             @Value("${ai.embeddings-enabled:false}") boolean embeddings) {
         this.json = json;
         this.models = models;
@@ -59,12 +61,14 @@ public class KnowledgeIndex {
         try {
             http.head().uri("/_alias/" + READ).retrieve().toBodilessEntity();
         } catch (RestClientResponseException e) {
-            if (e.getStatusCode().value() != 404) throw e;
+            if (e.getStatusCode().value() != 404)
+                throw e;
             String index = "cf-ai-knowledge-v1-" + UUID.randomUUID();
             create(index);
             swap(index);
         }
-        if (embeddings) verifyEmbeddingMapping();
+        if (embeddings)
+            verifyEmbeddingMapping();
     }
 
     public void create(String index) {
@@ -143,7 +147,8 @@ public class KnowledgeIndex {
                     .retrieve()
                     .toBodilessEntity();
         } catch (RestClientResponseException e) {
-            if (e.getStatusCode().value() != 409) throw e;
+            if (e.getStatusCode().value() != 409)
+                throw e;
         }
     }
 
@@ -195,7 +200,8 @@ public class KnowledgeIndex {
                         .retrieve()
                         .body(String.class);
         var result = new ArrayList<JsonNode>();
-        for (var hit : json.readTree(response).path("hits").path("hits")) result.add(hit);
+        for (var hit : json.readTree(response).path("hits").path("hits"))
+            result.add(hit);
         return result;
     }
 
@@ -206,7 +212,8 @@ public class KnowledgeIndex {
     // This bounded retrieval path is for the curated local corpus, not an unbounded full-index vector
     // scan.
     public List<JsonNode> vector(String query, String mode, int size) {
-        if (!embeddings) return List.of();
+        if (!embeddings)
+            return List.of();
         verifyEmbeddingMapping();
         float[] vector = models.embed("search_query: " + query);
         var filter = new ArrayList<>(filters(mode));

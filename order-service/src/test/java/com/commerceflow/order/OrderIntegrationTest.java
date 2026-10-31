@@ -3,6 +3,7 @@
  */
 package com.commerceflow.order;
 
+import com.commerceflow.contracts.CheckoutEvents;
 import com.commerceflow.contracts.CheckoutEvents.PaymentScenario;
 import com.commerceflow.order.OrderModels.CreateOrder;
 import com.commerceflow.order.OrderModels.Item;
@@ -23,6 +24,8 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
@@ -132,39 +135,26 @@ class OrderIntegrationTest {
     void ownershipAndAdministrativeRolesAreEnforced() throws Exception {
         var order = orders.create(customer, "owned-order-key", request(), "test");
         http.perform(get("/api/v1/orders/{id}", order.id())).andExpect(status().isUnauthorized());
-        http.perform(
-                        get("/api/v1/orders/{id}", order.id())
-                                .with(
-                                        jwt()
-                                                .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
-                                                .jwt(j -> j.subject(UUID.randomUUID().toString()))))
+        http.perform(get("/api/v1/orders/{id}", order.id())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
+                                .jwt(j -> j.subject(UUID.randomUUID().toString()))))
                 .andExpect(status().isNotFound());
-        http.perform(
-                        post("/api/v1/orders/{id}/cancel", order.id())
-                                .with(
-                                        jwt()
-                                                .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
-                                                .jwt(j -> j.subject(UUID.randomUUID().toString()))))
+        http.perform(post("/api/v1/orders/{id}/cancel", order.id())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
+                                .jwt(j -> j.subject(UUID.randomUUID().toString()))))
                 .andExpect(status().isNotFound());
-        http.perform(
-                        get("/api/v1/orders/{id}", order.id())
-                                .with(
-                                        jwt()
-                                                .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
-                                                .jwt(j -> j.subject(customer.toString()))))
+        http.perform(get("/api/v1/orders/{id}", order.id())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
+                                .jwt(j -> j.subject(customer.toString()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalAmount").value(25.00));
-        http.perform(
-                        get("/api/v1/orders")
-                                .with(
-                                        jwt()
-                                                .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
-                                                .jwt(j -> j.subject(UUID.randomUUID().toString()))))
+        http.perform(get("/api/v1/orders")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
+                                .jwt(j -> j.subject(UUID.randomUUID().toString()))))
                 .andExpect(jsonPath("$.totalElements").value(0));
         http.perform(get("/api/v1/admin/orders").with(jwt())).andExpect(status().isForbidden());
-        http.perform(
-                        get("/api/v1/admin/orders")
-                                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+        http.perform(get("/api/v1/admin/orders")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
@@ -197,29 +187,22 @@ class OrderIntegrationTest {
 
     @Test
     void rejectsDuplicatesAndInvalidHttpRequests() throws Exception {
-        var duplicate =
-                new CreateOrder(
-                        List.of(new Item(product, 1), new Item(product, 1)), PaymentScenario.APPROVE);
-        http.perform(
-                        post("/api/v1/orders")
-                                .with(
-                                        jwt()
-                                                .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
-                                                .jwt(j -> j.subject(customer.toString())))
-                                .header("Idempotency-Key", "duplicate-key")
-                                .contentType("application/json")
-                                .content(json.writeValueAsString(duplicate)))
+        var duplicate = new CreateOrder(
+                List.of(new Item(product, 1), new Item(product, 1)), PaymentScenario.APPROVE);
+        http.perform(post("/api/v1/orders")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
+                                .jwt(j -> j.subject(customer.toString())))
+                        .header("Idempotency-Key", "duplicate-key")
+                        .contentType("application/json")
+                        .content(json.writeValueAsString(duplicate)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("DUPLICATE_PRODUCT"));
-        http.perform(
-                        post("/api/v1/orders")
-                                .with(
-                                        jwt()
-                                                .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
-                                                .jwt(j -> j.subject(customer.toString())))
-                                .header("Idempotency-Key", "invalid-key")
-                                .contentType("application/json")
-                                .content("{\"items\":[],\"paymentScenario\":\"APPROVE\"}"))
+        http.perform(post("/api/v1/orders")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
+                                .jwt(j -> j.subject(customer.toString())))
+                        .header("Idempotency-Key", "invalid-key")
+                        .contentType("application/json")
+                        .content("{\"items\":[],\"paymentScenario\":\"APPROVE\"}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -227,15 +210,15 @@ class OrderIntegrationTest {
     SagaCoordinator saga;
 
     @Autowired
-    org.springframework.transaction.PlatformTransactionManager transactions;
+    PlatformTransactionManager transactions;
 
     @Test
     void publicExplanationsRecordCausesAndEnforceReadRoles() throws Exception {
         var order = orders.create(customer, "explanation-key", request(), "explanation");
-        saga.inventory(order.id(), new com.commerceflow.contracts.CheckoutEvents.InventoryResult("RESERVED", null));
-        saga.payment(order.id(), new com.commerceflow.contracts.CheckoutEvents.PaymentResult("DECLINED", "sensitive provider diagnostic"));
-        saga.inventory(order.id(), new com.commerceflow.contracts.CheckoutEvents.InventoryResult("RELEASED", null));
-        saga.inventory(order.id(), new com.commerceflow.contracts.CheckoutEvents.InventoryResult("RELEASED", null));
+        saga.inventory(order.id(), new CheckoutEvents.InventoryResult("RESERVED", null));
+        saga.payment(order.id(), new CheckoutEvents.PaymentResult("DECLINED", "sensitive provider diagnostic"));
+        saga.inventory(order.id(), new CheckoutEvents.InventoryResult("RELEASED", null));
+        saga.inventory(order.id(), new CheckoutEvents.InventoryResult("RELEASED", null));
         var explanation = orders.explanation(customer, order.id());
         assertThat(explanation.reason()).isEqualTo("PAYMENT_DECLINED");
         assertThat(explanation.history()).hasSize(4);
@@ -254,7 +237,7 @@ class OrderIntegrationTest {
         // Public explanations are committed business facts; rollback and legacy gaps must not turn
         // into invented historical causes.
         var order = orders.create(customer, "rollback-history", request(), "explanation");
-        assertThatThrownBy(() -> new org.springframework.transaction.support.TransactionTemplate(transactions).executeWithoutResult(tx -> {
+        assertThatThrownBy(() -> new TransactionTemplate(transactions).executeWithoutResult(tx -> {
             orders.cancel(customer, order.id());
             throw new IllegalStateException("rollback");
         })).isInstanceOf(IllegalStateException.class);
@@ -270,11 +253,11 @@ class OrderIntegrationTest {
     @Test
     void publicTimeoutAndCustomerCancellationCausesSurviveCompensation() {
         var timeout = orders.create(customer, "timeout-explanation", request(), "explanation");
-        saga.inventory(timeout.id(), new com.commerceflow.contracts.CheckoutEvents.InventoryResult("RESERVED", null));
+        saga.inventory(timeout.id(), new CheckoutEvents.InventoryResult("RESERVED", null));
         jdbc.sql("UPDATE orders SET deadline_at=now()-interval '1 second' WHERE id=:id").param("id", timeout.id()).update();
         saga.reconcileDeadlines();
-        saga.payment(timeout.id(), new com.commerceflow.contracts.CheckoutEvents.PaymentResult("CANCELLED", null));
-        saga.inventory(timeout.id(), new com.commerceflow.contracts.CheckoutEvents.InventoryResult("RELEASED", null));
+        saga.payment(timeout.id(), new CheckoutEvents.PaymentResult("CANCELLED", null));
+        saga.inventory(timeout.id(), new CheckoutEvents.InventoryResult("RELEASED", null));
         assertThat(orders.explanation(customer, timeout.id()).reason()).isEqualTo("PAYMENT_TIMEOUT");
         var cancelled = orders.create(customer, "cancel-explanation", request(), "explanation");
         orders.cancel(customer, cancelled.id());
@@ -282,7 +265,7 @@ class OrderIntegrationTest {
         assertThat(orders.explanation(customer, cancelled.id()).reason()).isEqualTo("CUSTOMER_CANCELLED");
         assertThat(orders.explanation(customer, cancelled.id()).history()).hasSize(2);
         var stock = orders.create(customer, "stock-explanation", request(), "explanation");
-        saga.inventory(stock.id(), new com.commerceflow.contracts.CheckoutEvents.InventoryResult("REJECTED", "INSUFFICIENT_STOCK"));
+        saga.inventory(stock.id(), new CheckoutEvents.InventoryResult("REJECTED", "INSUFFICIENT_STOCK"));
         assertThat(orders.explanation(customer, stock.id()).reason()).isEqualTo("INSUFFICIENT_STOCK");
     }
 }

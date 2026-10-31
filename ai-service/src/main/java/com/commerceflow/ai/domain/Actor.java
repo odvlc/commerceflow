@@ -8,13 +8,14 @@ import com.commerceflow.support.BusinessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public record Actor(UUID subject, String token, Set<String> roles, java.time.Instant expiresAt) {
+public record Actor(UUID subject, String token, Set<String> roles, Instant expiresAt) {
 
     public static Actor from(Jwt jwt) {
         Map<String, Object> access = jwt.getClaimAsMap("realm_access");
@@ -41,7 +42,7 @@ public record Actor(UUID subject, String token, Set<String> roles, java.time.Ins
     public boolean valid() {
         // Leave a small expiry margin before dispatch so a token that is about to expire is not treated
         // as usable.
-        return expiresAt != null && expiresAt.isAfter(java.time.Instant.now().plusSeconds(5));
+        return expiresAt != null && expiresAt.isAfter(Instant.now().plusSeconds(5));
     }
 
     @Override

@@ -11,6 +11,7 @@ import com.commerceflow.catalog.persistence.ProductRepository;
 import com.commerceflow.contracts.CheckoutEvents.ProductChanged;
 import com.commerceflow.support.BusinessException;
 import com.commerceflow.support.OutboxStore;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -18,6 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.charset.StandardCharsets;
@@ -33,14 +36,14 @@ public class CatalogService {
     private final JdbcClient jdbc;
     private final JsonMapper json;
     private final OutboxStore outbox;
-    private final org.springframework.beans.factory.ObjectProvider<ProductCache> cache;
+    private final ObjectProvider<ProductCache> cache;
 
     public CatalogService(
             ProductRepository products,
             JdbcClient jdbc,
             JsonMapper json,
             OutboxStore outbox,
-            org.springframework.beans.factory.ObjectProvider<ProductCache> cache) {
+            ObjectProvider<ProductCache> cache) {
         this.products = products;
         this.jdbc = jdbc;
         this.json = json;
@@ -78,12 +81,15 @@ public class CatalogService {
         // prices.
         if (!fresh && storage != null) {
             var hit = storage.get(id);
-            if (hit.isPresent()) return hit.get();
+            if (hit.isPresent())
+                return hit.get();
         }
         var product = required(id);
-        if (!product.isActive()) throw missing();
+        if (!product.isActive())
+            throw missing();
         var result = ProductView.from(product);
-        if (!fresh && storage != null) storage.put(result);
+        if (!fresh && storage != null)
+            storage.put(result);
         return result;
     }
 
@@ -159,15 +165,16 @@ public class CatalogService {
                         product.getUpdatedAt()));
         var id = product.getId();
         var version = product.getVersion();
-        org.springframework.transaction.support.TransactionSynchronizationManager
+        TransactionSynchronizationManager
                 // Invalidate after commit; invalidating before commit would let a reader refill from
                 // old database state.
                 .registerSynchronization(
-                        new org.springframework.transaction.support.TransactionSynchronization() {
+                        new TransactionSynchronization() {
                             @Override
                             public void afterCommit() {
                                 var storage = cache.getIfAvailable();
-                                if (storage != null) storage.invalidate(id, version);
+                                if (storage != null)
+                                    storage.invalidate(id, version);
                             }
                         });
     }

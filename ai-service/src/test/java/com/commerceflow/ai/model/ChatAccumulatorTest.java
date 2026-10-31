@@ -61,8 +61,7 @@ class ChatAccumulatorTest {
         // paths separately.
         var first = new ArrayList<String>();
         var accumulator = new ChatAccumulator(first::add);
-        var call =
-                new Message.ToolCall("request", new Message.ToolCallFunction("getMyCart", Map.of(), 0));
+        var call = new Message.ToolCall("request", new Message.ToolCallFunction("getMyCart", Map.of(), 0));
         accumulator.accept(part("", false, List.of(call)));
         accumulator.accept(part("", true, List.of()));
         assertThat(accumulator.finish().message().toolCalls()).containsExactly(call);

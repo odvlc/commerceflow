@@ -373,12 +373,12 @@ class KafkaDeliveryIntegrationTest {
             kafka.send(Topics.ORDER, key, poison).get();
             await()
                     .atMost(Duration.ofSeconds(30))
-                    .until(
-                            () -> {
-                                for (var record : consumer.poll(Duration.ofMillis(250)))
-                                    if (key.equals(record.key()) && poison.equals(record.value())) return true;
-                                return false;
-                            });
+                    .until(() -> {
+                        for (var record : consumer.poll(Duration.ofMillis(250)))
+                            if (key.equals(record.key()) && poison.equals(record.value()))
+                                return true;
+                        return false;
+                    });
         }
     }
 }

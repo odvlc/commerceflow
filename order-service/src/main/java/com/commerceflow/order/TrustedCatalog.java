@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -40,16 +41,14 @@ public class TrustedCatalog {
 
     public Quote quote(UUID productId, String correlation) {
         try {
-            var quote =
-                    client
-                            .get()
-                            .uri("/api/v1/products/{id}", productId)
-                            .header("X-Correlation-ID", correlation)
-                            // The quote is authoritative for checkout, so a stale detail-cache value
-                            // cannot set the order total.
-                            .header("Cache-Control", "no-cache")
-                            .retrieve()
-                            .body(Quote.class);
+            var quote = client.get()
+                    .uri("/api/v1/products/{id}", productId)
+                    .header("X-Correlation-ID", correlation)
+                    // The quote is authoritative for checkout, so a stale detail-cache value
+                    // cannot set the order total.
+                    .header("Cache-Control", "no-cache")
+                    .retrieve()
+                    .body(Quote.class);
             // Validate the service response too; a successful HTTP status is not sufficient evidence of
             // a usable price.
             if (quote == null
@@ -65,7 +64,7 @@ public class TrustedCatalog {
                         "PRODUCT_UNAVAILABLE",
                         "Catalog returned an unavailable product");
             return quote;
-        } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
+        } catch (HttpClientErrorException.NotFound e) {
             throw new BusinessException(
                     HttpStatus.UNPROCESSABLE_ENTITY, "PRODUCT_UNAVAILABLE", "Product unavailable");
         } catch (RestClientException e) {

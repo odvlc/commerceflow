@@ -4,9 +4,12 @@
  */
 package com.commerceflow.support;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
@@ -21,7 +24,9 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import tools.jackson.databind.json.JsonMapper;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,18 +41,16 @@ public class SecurityConfiguration {
     @Bean
     JwtDecoder jwtDecoder(
             @Value("${security.issuer:http://localhost:8180/realms/commerceflow}") String issuer,
-            @Value(
-                    "${security.jwk-set-uri:http://localhost:8180/realms/commerceflow/protocol/openid-connect/certs}")
+            @Value("${security.jwk-set-uri:http://localhost:8180/realms/commerceflow/protocol/openid-connect/certs}")
             String jwks,
             @Value("${security.audience:commerceflow-api}") String audience) {
         // Internal JWKS routing can differ from the browser issuer URL; validate the public issuer anyway.
         var decoder = NimbusJwtDecoder.withJwkSetUri(jwks).build();
         OAuth2TokenValidator<Jwt> audienceValidator =
-                token ->
-                        token.getAudience().contains(audience)
-                                ? OAuth2TokenValidatorResult.success()
-                                : OAuth2TokenValidatorResult.failure(
-                                new OAuth2Error("invalid_token", "Required audience missing", null));
+                token -> token.getAudience().contains(audience)
+                        ? OAuth2TokenValidatorResult.success()
+                        : OAuth2TokenValidatorResult.failure(
+                        new OAuth2Error("invalid_token", "Required audience missing", null));
         OAuth2TokenValidator<Jwt> subjectValidator =
                 token -> {
                     try {
@@ -67,7 +70,7 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    SecurityFilterChain security(HttpSecurity http, tools.jackson.databind.json.JsonMapper json)
+    SecurityFilterChain security(HttpSecurity http, JsonMapper json)
             throws Exception {
         var converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(
@@ -94,93 +97,80 @@ public class SecurityConfiguration {
                 .sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(
-                        auth ->
-                                auth.requestMatchers(
-                                                "/api/v1/products",
-                                                "/api/v1/products/**",
-                                                "/actuator/health",
-                                                "/actuator/health/**",
-                                                "/v3/api-docs/**",
-                                                "/docs",
-                                                "/swagger-ui/**")
-                                        .permitAll()
-                                        .requestMatchers(
-                                                org.springframework.http.HttpMethod.GET, "/api/v1/admin/orders", "/api/v1/admin/orders/*/explanation")
-                                        .hasAnyRole("ADMIN", "SUPPORT")
-                                        .requestMatchers("/api/v1/admin/**")
-                                        .hasRole("ADMIN")
-                                        .requestMatchers("/internal/**")
-                                        .hasAuthority("SCOPE_commerceflow.internal")
-                                        .requestMatchers("/actuator/prometheus")
-                                        .hasAuthority("SCOPE_commerceflow.internal")
-                                        .requestMatchers(
-                                                "/api/v1/orders", "/api/v1/orders/**", "/api/v1/cart", "/api/v1/cart/**")
-                                        .hasAnyRole("CUSTOMER", "ADMIN")
-                                        .anyRequest()
-                                        .authenticated())
+                        auth -> auth.requestMatchers(
+                                        "/api/v1/products",
+                                        "/api/v1/products/**",
+                                        "/actuator/health",
+                                        "/actuator/health/**",
+                                        "/v3/api-docs/**",
+                                        "/docs",
+                                        "/swagger-ui/**")
+                                .permitAll()
+                                .requestMatchers(
+                                        HttpMethod.GET, "/api/v1/admin/orders", "/api/v1/admin/orders/*/explanation")
+                                .hasAnyRole("ADMIN", "SUPPORT")
+                                .requestMatchers("/api/v1/admin/**")
+                                .hasRole("ADMIN")
+                                .requestMatchers("/internal/**")
+                                .hasAuthority("SCOPE_commerceflow.internal")
+                                .requestMatchers("/actuator/prometheus")
+                                .hasAuthority("SCOPE_commerceflow.internal")
+                                .requestMatchers(
+                                        "/api/v1/orders", "/api/v1/orders/**", "/api/v1/cart", "/api/v1/cart/**")
+                                .hasAnyRole("CUSTOMER", "ADMIN")
+                                .anyRequest()
+                                .authenticated())
                 .exceptionHandling(
-                        errors ->
-                                errors.accessDeniedHandler(
-                                        (request, response, error) ->
-                                                securityProblem(
-                                                        request,
-                                                        response,
-                                                        json,
-                                                        403,
-                                                        "ACCESS_DENIED",
-                                                        "Insufficient permissions")))
-                .oauth2ResourceServer(
-                        oauth ->
-                                oauth
-                                        .jwt(jwt -> jwt.jwtAuthenticationConverter(converter))
-                                        .authenticationEntryPoint(
-                                                (request, response, error) ->
-                                                        securityProblem(
-                                                                request,
-                                                                response,
-                                                                json,
-                                                                401,
-                                                                "AUTHENTICATION_REQUIRED",
-                                                                "A valid access token is required"))
-                                        .accessDeniedHandler(
-                                                (request, response, error) ->
-                                                        securityProblem(
-                                                                request,
-                                                                response,
-                                                                json,
-                                                                403,
-                                                                "ACCESS_DENIED",
-                                                                "Insufficient permissions")))
+                        errors -> errors.accessDeniedHandler((request, response, error) -> securityProblem(
+                                request,
+                                response,
+                                json,
+                                403,
+                                "ACCESS_DENIED",
+                                "Insufficient permissions")))
+                .oauth2ResourceServer(oauth -> oauth.jwt(
+                                jwt -> jwt.jwtAuthenticationConverter(converter))
+                        .authenticationEntryPoint((request, response, error) -> securityProblem(
+                                request,
+                                response,
+                                json,
+                                401,
+                                "AUTHENTICATION_REQUIRED",
+                                "A valid access token is required"))
+                        .accessDeniedHandler((request, response, error) -> securityProblem(
+                                request,
+                                response,
+                                json,
+                                403,
+                                "ACCESS_DENIED",
+                                "Insufficient permissions")))
                 .build();
     }
 
     private void securityProblem(
-            jakarta.servlet.http.HttpServletRequest request,
-            jakarta.servlet.http.HttpServletResponse response,
-            tools.jackson.databind.json.JsonMapper json,
+            HttpServletRequest request,
+            HttpServletResponse response,
+            JsonMapper json,
             int status,
             String code,
             String message)
-            throws java.io.IOException {
+            throws IOException {
         response.setStatus(status);
         response.setContentType("application/problem+json");
-        if (status == 401) response.setHeader("WWW-Authenticate", "Bearer");
-        response
-                .getWriter()
-                .write(
-                        json.writeValueAsString(
-                                Map.of(
-                                        "type",
-                                        "about:blank",
-                                        "title",
-                                        code,
-                                        "status",
-                                        status,
-                                        "detail",
-                                        message,
-                                        "code",
-                                        code,
-                                        "correlationId",
-                                        String.valueOf(request.getAttribute("correlationId")))));
+        if (status == 401)
+            response.setHeader("WWW-Authenticate", "Bearer");
+        response.getWriter().write(json.writeValueAsString(
+                Map.of("type",
+                        "about:blank",
+                        "title",
+                        code,
+                        "status",
+                        status,
+                        "detail",
+                        message,
+                        "code",
+                        code,
+                        "correlationId",
+                        String.valueOf(request.getAttribute("correlationId")))));
     }
 }

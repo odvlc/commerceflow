@@ -95,7 +95,8 @@ public class CartService {
         this.redis = redis;
         this.json = json;
         this.ttl = ttl.toSeconds();
-        if (this.ttl < 1) throw new IllegalArgumentException("Cart TTL must be at least one second");
+        if (this.ttl < 1)
+            throw new IllegalArgumentException("Cart TTL must be at least one second");
     }
 
     public CartView get(UUID customer) {
@@ -133,7 +134,8 @@ public class CartService {
                             idempotencyKey,
                             hash,
                             Long.toString(ttl), UUID.randomUUID().toString(), revision);
-            if (raw == null) throw unavailable();
+            if (raw == null)
+                throw unavailable();
             // Lua returns a domain conflict without partially updating the cart; infrastructure errors
             // take the outage path.
             if (raw.startsWith("ERROR:"))
@@ -148,7 +150,8 @@ public class CartService {
     }
 
     private CartView view(String raw, UUID customer) {
-        if (raw == null) throw unavailable();
+        if (raw == null)
+            throw unavailable();
         var document = json.readValue(raw, Document.class);
         var items =
                 document.items().entrySet().stream()

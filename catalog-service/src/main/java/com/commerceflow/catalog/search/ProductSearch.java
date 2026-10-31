@@ -116,11 +116,15 @@ public class ProductSearch {
             var filters = new ArrayList<Map<String, Object>>();
             filters.add(Map.of("term", Map.of("active", true)));
             filters.add(Map.of("term", Map.of("currency", currency)));
-            if (category != null) filters.add(Map.of("term", Map.of("category", category)));
+            if (category != null)
+                filters.add(Map.of("term", Map.of("category", category)));
             var range = new HashMap<String, Object>();
-            if (minimum != null) range.put("gte", minimum.movePointRight(2).longValueExact());
-            if (maximum != null) range.put("lte", maximum.movePointRight(2).longValueExact());
-            if (!range.isEmpty()) filters.add(Map.of("range", Map.of("priceMinor", range)));
+            if (minimum != null)
+                range.put("gte", minimum.movePointRight(2).longValueExact());
+            if (maximum != null)
+                range.put("lte", maximum.movePointRight(2).longValueExact());
+            if (!range.isEmpty())
+                filters.add(Map.of("range", Map.of("priceMinor", range)));
             Object match =
                     text == null || text.isBlank()
                             ? Map.of("match_all", Map.of())
@@ -209,7 +213,8 @@ public class ProductSearch {
                     count++;
                 }
                 entities.clear();
-                if (!batch.hasNext()) break;
+                if (!batch.hasNext())
+                    break;
             }
             client.indices().refresh(r -> r.index(index));
             client
@@ -237,11 +242,13 @@ public class ProductSearch {
     }
 
     private void ensureIndex() throws IOException {
-        if (client.indices().existsAlias(r -> r.name(READ_ALIAS)).value()) return;
+        if (client.indices().existsAlias(r -> r.name(READ_ALIAS)).value())
+            return;
         try {
             createIndex("cf-products-v1", true);
         } catch (ElasticsearchException error) {
-            if (!client.indices().existsAlias(r -> r.name(READ_ALIAS)).value()) throw error;
+            if (!client.indices().existsAlias(r -> r.name(READ_ALIAS)).value())
+                throw error;
         }
     }
 

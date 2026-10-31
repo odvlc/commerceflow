@@ -24,8 +24,7 @@ public class NotificationConsumer {
     private final ProcessedEvents processed;
     private final NotificationService notifications;
 
-    public NotificationConsumer(
-            EventCodec codec, ProcessedEvents processed, NotificationService notifications) {
+    public NotificationConsumer(EventCodec codec, ProcessedEvents processed, NotificationService notifications) {
         this.codec = codec;
         this.processed = processed;
         this.notifications = notifications;
@@ -39,11 +38,10 @@ public class NotificationConsumer {
             // status uniqueness.
             processed.once(
                     event.eventId(),
-                    () ->
-                            notifications.record(
-                                    event.eventId(),
-                                    event.aggregateId(),
-                                    codec.payload(event, OrderStatus.class),
-                                    event.correlationId()));
+                    () -> notifications.record(
+                            event.eventId(),
+                            event.aggregateId(),
+                            codec.payload(event, OrderStatus.class),
+                            event.correlationId()));
     }
 }
