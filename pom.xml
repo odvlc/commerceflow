@@ -9,7 +9,7 @@ service dependencies inherit these choices.
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.1</version>
+        <version>4.1.2</version>
         <relativePath/>
     </parent>
     <groupId>com.commerceflow</groupId>
@@ -33,7 +33,12 @@ service dependencies inherit these choices.
     <properties>
         <java.version>25</java.version>
         <springdoc.version>3.1.1</springdoc.version>
+        <spring-ai.version>2.0.2</spring-ai.version>
+        <spring-cloud.version>2025.1.3</spring-cloud.version>
+        <embedded-postgres.version>2.2.2</embedded-postgres.version>
         <postgres.binaries.version>18.6.0</postgres.binaries.version>
+        <maven-dependency-plugin.version>3.11.0</maven-dependency-plugin.version>
+        <versions-maven-plugin.version>2.23.0</versions-maven-plugin.version>
     </properties>
     <!-- Pin shared module/test dependencies here; Spring versions come from the inherited Boot
          dependency management. -->
@@ -50,14 +55,9 @@ service dependencies inherit these choices.
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.springdoc</groupId>
-                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-                <version>${springdoc.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>io.zonky.test</groupId>
                 <artifactId>embedded-postgres</artifactId>
-                <version>2.2.2</version>
+                <version>${embedded-postgres.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.zonky.test.postgres</groupId>
@@ -66,6 +66,11 @@ service dependencies inherit these choices.
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
     <build>
@@ -73,7 +78,33 @@ service dependencies inherit these choices.
             <plugins>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven-compiler-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>${maven-dependency-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>${maven-failsafe-plugin.version}</version>
+                    <!-- Integration-test execution and verification belong to the verify lifecycle;
+                         compilation alone does not run these tests. -->
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>integration-test</goal>
+                                <goal>verify</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven-surefire-plugin.version}</version>
                     <configuration>
                         <argLine>-XX:+EnableDynamicAgentLoading</argLine>
                         <systemPropertyVariables>
@@ -90,21 +121,31 @@ service dependencies inherit these choices.
                     </configuration>
                 </plugin>
                 <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <!-- Integration-test execution and verification belong to the verify lifecycle;
-                         compilation alone does not run these tests. -->
-                    <artifactId>maven-failsafe-plugin</artifactId>
-                    <executions>
-                        <execution>
-                            <goals>
-                                <goal>integration-test</goal>
-                                <goal>verify</goal>
-                            </goals>
-                        </execution>
-                    </executions>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>versions-maven-plugin</artifactId>
+                    <version>${versions-maven-plugin.version}</version>
+                    <configuration>
+                        <ignoredVersions>
+                            <ignoredVersion>(?i)(^|.*[-._+])(alpha|beta|rc|cr|milestone|preview|pre|snapshot|nightly|ea|dev|m[0-9]+)([-._+].*|[0-9].*|$)</ignoredVersion>
+                        </ignoredVersions>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>versions-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
     </build>
     <profiles>
         <profile>
