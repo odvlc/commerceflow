@@ -17,7 +17,12 @@ import java.util.concurrent.TimeUnit;
 
 public class OutboxPublisher {
 
-    private record Pending(UUID id, UUID aggregateId, String type, String payload, int attempts) {
+    private record Pending(
+            UUID id,
+            UUID aggregateId,
+            String type,
+            String payload,
+            int attempts) {
 
     }
 
@@ -48,23 +53,23 @@ public class OutboxPublisher {
                           AND earlier.published_at IS NULL AND earlier.sequence<e.sequence)
                         ORDER BY e.sequence LIMIT 20 FOR UPDATE OF e SKIP LOCKED
                         """)
-                .query(
-                        (rs, n) ->
-                                new Pending(
-                                        rs.getObject("id", UUID.class),
-                                        rs.getObject("aggregate_id", UUID.class),
-                                        rs.getString("event_type"),
-                                        rs.getString("payload"),
-                                        rs.getInt("attempts")))
+                .query((rs, n) ->
+                        new Pending(
+                                rs.getObject("id", UUID.class),
+                                rs.getObject("aggregate_id", UUID.class),
+                                rs.getString("event_type"),
+                                rs.getString("payload"),
+                                rs.getInt("attempts")))
                 .list();
+
         int delivered = 0;
         for (var event : batch) {
             try {
                 kafka.send(topic(event.type()), event.aggregateId().toString(), event.payload())
-                        // Wait for the broker result before writing published_at; producer idempotence
-                        // does not make the SQL/Kafka gap atomic.
+                        // Wait for broker acknowledgment before setting published_at. Producer idempotence cannot make the
+                        // SQL and Kafka writes atomic.
                         .get(8, TimeUnit.SECONDS);
-                // A crash before this commit causes replay, never a lost event. Consumers must deduplicate.
+                // A crash before this commit sends the event again. Consumers deduplicate replays.
                 jdbc.sql("UPDATE outbox_events SET published_at=now(),attempts=attempts+1,last_error=NULL"
                                 + " WHERE id=:id")
                         .param("id", event.id())
@@ -99,7 +104,8 @@ public class OutboxPublisher {
                  "AuthorizePayment",
                  "CancelPayment",
                  "OrderStatusChanged" -> Topics.ORDER;
-            case "InventoryResult", "InventoryExpiring" -> Topics.INVENTORY;
+            case "InventoryResult",
+                 "InventoryExpiring" -> Topics.INVENTORY;
             case "PaymentResult" -> Topics.PAYMENT;
             case "NotificationCreated" -> Topics.NOTIFICATION;
             default -> throw new IllegalArgumentException("Unknown event type " + type);

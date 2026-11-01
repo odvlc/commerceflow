@@ -39,39 +39,32 @@ import java.util.UUID;
 public class SecurityConfiguration {
 
     @Bean
-    JwtDecoder jwtDecoder(
-            @Value("${security.issuer:http://localhost:8180/realms/commerceflow}") String issuer,
-            @Value("${security.jwk-set-uri:http://localhost:8180/realms/commerceflow/protocol/openid-connect/certs}")
-            String jwks,
-            @Value("${security.audience:commerceflow-api}") String audience) {
-        // Internal JWKS routing can differ from the browser issuer URL; validate the public issuer anyway.
+    JwtDecoder jwtDecoder(@Value("${security.issuer:http://localhost:8180/realms/commerceflow}") String issuer,
+                          @Value("${security.jwk-set-uri:http://localhost:8180/realms/commerceflow/protocol/openid-connect/certs}") String jwks,
+                          @Value("${security.audience:commerceflow-api}") String audience) {
+        // Validate the public issuer even when internal JWKS routing uses another URL.
         var decoder = NimbusJwtDecoder.withJwkSetUri(jwks).build();
-        OAuth2TokenValidator<Jwt> audienceValidator =
-                token -> token.getAudience().contains(audience)
-                        ? OAuth2TokenValidatorResult.success()
-                        : OAuth2TokenValidatorResult.failure(
-                        new OAuth2Error("invalid_token", "Required audience missing", null));
-        OAuth2TokenValidator<Jwt> subjectValidator =
-                token -> {
-                    try {
-                        // Reject non-UUID subjects before controllers convert them into resource-owner
-                        // IDs.
-                        UUID.fromString(token.getSubject());
-                        return OAuth2TokenValidatorResult.success();
-                    } catch (RuntimeException error) {
-                        return OAuth2TokenValidatorResult.failure(
-                                new OAuth2Error("invalid_token", "UUID subject required", null));
-                    }
-                };
-        decoder.setJwtValidator(
-                new DelegatingOAuth2TokenValidator<>(
-                        JwtValidators.createDefaultWithIssuer(issuer), audienceValidator, subjectValidator));
+        OAuth2TokenValidator<Jwt> audienceValidator = token -> token.getAudience().contains(audience)
+                ? OAuth2TokenValidatorResult.success()
+                : OAuth2TokenValidatorResult.failure(
+                new OAuth2Error("invalid_token", "Required audience missing", null));
+
+        OAuth2TokenValidator<Jwt> subjectValidator = token -> {
+            try {
+                // Reject non-UUID subjects before controllers use them as resource-owner IDs.
+                UUID.fromString(token.getSubject());
+                return OAuth2TokenValidatorResult.success();
+            } catch (RuntimeException error) {
+                return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "UUID subject required", null));
+            }
+        };
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefaultWithIssuer(issuer), audienceValidator, subjectValidator));
         return decoder;
     }
 
     @Bean
-    SecurityFilterChain security(HttpSecurity http, JsonMapper json)
-            throws Exception {
+    SecurityFilterChain security(HttpSecurity http, JsonMapper json) throws Exception {
         var converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(
                 jwt -> {
@@ -83,8 +76,7 @@ public class SecurityConfiguration {
                                 .filter(Set.of("ADMIN", "CUSTOMER", "SUPPORT")::contains)
                                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                                 .forEach(roles::add);
-                    // Service scopes and realm roles are distinct authorities; possessing a customer
-                    // role does not grant internal write access.
+                    // Service scopes authorize internal writes. Customer realm roles do not grant those permissions.
                     String scope = jwt.getClaimAsString("scope");
                     if (scope != null)
                         Arrays.stream(scope.split(" "))
@@ -94,42 +86,39 @@ public class SecurityConfiguration {
                     return roles;
                 });
         return http.csrf(csrf -> csrf.disable())
-                .sessionManagement(
-                        session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(
-                        auth -> auth.requestMatchers(
-                                        "/api/v1/products",
-                                        "/api/v1/products/**",
-                                        "/actuator/health",
-                                        "/actuator/health/**",
-                                        "/v3/api-docs/**",
-                                        "/docs",
-                                        "/swagger-ui/**")
-                                .permitAll()
-                                .requestMatchers(
-                                        HttpMethod.GET, "/api/v1/admin/orders", "/api/v1/admin/orders/*/explanation")
-                                .hasAnyRole("ADMIN", "SUPPORT")
-                                .requestMatchers("/api/v1/admin/**")
-                                .hasRole("ADMIN")
-                                .requestMatchers("/internal/**")
-                                .hasAuthority("SCOPE_commerceflow.internal")
-                                .requestMatchers("/actuator/prometheus")
-                                .hasAuthority("SCOPE_commerceflow.internal")
-                                .requestMatchers(
-                                        "/api/v1/orders", "/api/v1/orders/**", "/api/v1/cart", "/api/v1/cart/**")
-                                .hasAnyRole("CUSTOMER", "ADMIN")
-                                .anyRequest()
-                                .authenticated())
-                .exceptionHandling(
-                        errors -> errors.accessDeniedHandler((request, response, error) -> securityProblem(
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/api/v1/products",
+                                "/api/v1/products/**",
+                                "/actuator/health",
+                                "/actuator/health/**",
+                                "/v3/api-docs/**",
+                                "/docs",
+                                "/swagger-ui/**")
+                        .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/orders", "/api/v1/admin/orders/*/explanation")
+                        .hasAnyRole("ADMIN", "SUPPORT")
+                        .requestMatchers("/api/v1/admin/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers("/internal/**")
+                        .hasAuthority("SCOPE_commerceflow.internal")
+                        .requestMatchers("/actuator/prometheus")
+                        .hasAuthority("SCOPE_commerceflow.internal")
+                        .requestMatchers("/api/v1/orders", "/api/v1/orders/**", "/api/v1/cart", "/api/v1/cart/**")
+                        .hasAnyRole("CUSTOMER", "ADMIN")
+                        .anyRequest()
+                        .authenticated())
+                .exceptionHandling(errors -> errors
+                        .accessDeniedHandler((request, response, error) -> securityProblem(
                                 request,
                                 response,
                                 json,
                                 403,
                                 "ACCESS_DENIED",
                                 "Insufficient permissions")))
-                .oauth2ResourceServer(oauth -> oauth.jwt(
-                                jwt -> jwt.jwtAuthenticationConverter(converter))
+                .oauth2ResourceServer(oauth -> oauth
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(converter))
                         .authenticationEntryPoint((request, response, error) -> securityProblem(
                                 request,
                                 response,
@@ -160,17 +149,11 @@ public class SecurityConfiguration {
         if (status == 401)
             response.setHeader("WWW-Authenticate", "Bearer");
         response.getWriter().write(json.writeValueAsString(
-                Map.of("type",
-                        "about:blank",
-                        "title",
-                        code,
-                        "status",
-                        status,
-                        "detail",
-                        message,
-                        "code",
-                        code,
-                        "correlationId",
-                        String.valueOf(request.getAttribute("correlationId")))));
+                Map.of("type", "about:blank",
+                        "title", code,
+                        "status", status,
+                        "detail", message,
+                        "code", code,
+                        "correlationId", String.valueOf(request.getAttribute("correlationId")))));
     }
 }

@@ -1,5 +1,5 @@
-# Environment-driven ai-service defaults bind locally; deployment overrides supply service DNS,
-# identity endpoints and owned infrastructure credentials.
+# Local AI defaults bind to loopback. Deployments supply service DNS, identity endpoints, and
+# infrastructure credentials.
 server:
   port: ${PORT:8087}
   address: ${BIND_ADDRESS:127.0.0.1}
@@ -8,8 +8,7 @@ spring:
   application:
     name: ai-service
   threads:
-    # Virtual threads reduce blocked-thread overhead; database connections and downstream capacity
-    # remain independently bounded.
+    # Virtual threads handle blocking requests. Database pools and downstream calls remain bounded.
     virtual:
       enabled: ${VIRTUAL_THREADS:true}
   datasource:
@@ -17,8 +16,7 @@ spring:
     username: ${DB_USERNAME:ai}
     password: ${DB_PASSWORD}
     hikari:
-      # Bound database concurrency explicitly instead of sizing it from the number of virtual request
-      # threads.
+      # Keep database concurrency separate from the virtual request thread count.
       maximum-pool-size: ${DB_POOL_SIZE:10}
       connection-timeout: 3000
   flyway:
@@ -71,5 +69,5 @@ ai:
   embedding-dimensions: ${AI_EMBEDDING_DIMENSIONS:768}
   chat-digest: ${AI_CHAT_DIGEST:46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e}
   embedding-digest: ${AI_EMBEDDING_DIGEST:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f}
-  # This is durable work admission, separate from the single shared model inference permit.
+  # Durable queue admission is separate from the shared model inference permit.
   queue-limit: ${AI_QUEUE_LIMIT:8}

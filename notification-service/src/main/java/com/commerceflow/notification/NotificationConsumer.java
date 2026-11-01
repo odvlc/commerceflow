@@ -36,12 +36,10 @@ public class NotificationConsumer {
         if (event.eventType().equals("OrderStatusChanged"))
             // Use the incoming event identity for transport replay, in addition to notification-level
             // status uniqueness.
-            processed.once(
+            processed.once(event.eventId(), () -> notifications.record(
                     event.eventId(),
-                    () -> notifications.record(
-                            event.eventId(),
-                            event.aggregateId(),
-                            codec.payload(event, OrderStatus.class),
-                            event.correlationId()));
+                    event.aggregateId(),
+                    codec.payload(event, OrderStatus.class),
+                    event.correlationId()));
     }
 }

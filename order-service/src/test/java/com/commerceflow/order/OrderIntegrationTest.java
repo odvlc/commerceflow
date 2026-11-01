@@ -107,8 +107,7 @@ class OrderIntegrationTest {
 
     @Test
     void trustedPriceAndConcurrentIdempotencyPersistExactlyOneOrderAndEvent() throws Exception {
-        // All callers race the same request key; verify persistence and outbox cardinality rather
-        // than only comparing HTTP results.
+        // Race callers with the same request key and check persisted orders and outbox rows.
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var tasks = new ArrayList<Callable<OrderView>>();
             for (int i = 0; i < 20; i++)
@@ -234,8 +233,7 @@ class OrderIntegrationTest {
 
     @Test
     void historyAndReasonRollBackWithBusinessTransactionAndLegacyIsUnknown() {
-        // Public explanations are committed business facts; rollback and legacy gaps must not turn
-        // into invented historical causes.
+        // Public explanations come from committed business facts. Rollbacks and legacy gaps have no invented cause.
         var order = orders.create(customer, "rollback-history", request(), "explanation");
         assertThatThrownBy(() -> new TransactionTemplate(transactions).executeWithoutResult(tx -> {
             orders.cancel(customer, order.id());

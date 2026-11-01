@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# Renders narrowly scoped private API-address egress for Traefik instead of allowing arbitrary
-# cluster-external destinations.
+# Renders private API-address egress rules for Traefik.
 """Allow Traefik to contact only explicitly supplied private cluster API addresses."""
 import ipaddress
 import json
@@ -11,8 +10,7 @@ addresses = sys.argv[1:] or ["10.96.0.1"]
 networks = []
 for value in addresses:
     address = ipaddress.ip_address(value)
-    # Each permitted destination is an explicit private API address; reject broad/public or loopback
-    # substitutes.
+    # Require explicit private API addresses; reject broad, public, or loopback destinations.
     if not address.is_private or address.is_unspecified or address.is_loopback:
         raise ValueError("Expected a specific private kind API address")
     networks.append({"ipBlock": {"cidr": str(address) + ("/32" if address.version == 4 else "/128")}})

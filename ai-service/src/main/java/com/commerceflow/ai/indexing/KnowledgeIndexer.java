@@ -68,7 +68,7 @@ public class KnowledgeIndexer {
                                 store.embeddingRecorded(
                                         doc.id(), doc.version(), index.embeddingModel(), index.embeddingDimensions());
                         }
-                        // Checkpoint after Elasticsearch acknowledges; a crash in between replays the write.
+                        // Checkpoint after Elasticsearch acknowledges so a crash before then replays the write.
                         store.completed(job.id());
                         metrics.counter("commerceflow.ai.knowledge.indexed").increment();
                     } catch (RuntimeException error) {

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# Checks the host model endpoint from Docker networking because host-side reachability does not
-# prove container reachability.
+# Checks model endpoint reachability from Docker; a host-side check cannot verify container access.
 """Verify the native model endpoint from inside Docker Desktop, not from the host network."""
 import argparse
 import json
@@ -25,8 +24,8 @@ endpoint = (args.endpoint or os.environ.get('AI_HOST_MODEL_URL', configured)).rs
 parsed = urlparse(endpoint)
 if parsed.scheme != 'http' or parsed.hostname != 'host.docker.internal' or parsed.username or parsed.password or parsed.path or parsed.query or parsed.fragment:
     raise ValueError('Expected local Docker Desktop host endpoint')
-# Endpoint discovery must not trigger inference; callers can read configuration before the container-
-# side model check.
+# Discover the endpoint without running inference. Callers can read its configuration before testing
+# container access.
 if args.endpoint_only:
     print(endpoint)
     sys.exit(0)
@@ -36,7 +35,7 @@ response = subprocess.run(['docker', 'run', '--rm',
                           check=True, capture_output=True, text=True)
 installed = {model['name']: model['digest'] for model in json.loads(response.stdout)['models']}
 lock = json.loads((Path(__file__).resolve().parent.parent / 'infra/ai/models.lock.json').read_text())
-# Compare exact digests from inside Docker; matching a mutable model tag is insufficient.
+# Compare model digests from inside Docker; tags can point to different weights.
 for model in lock['models']:
     if installed.get(model['name']) != model['digest']:
         raise RuntimeError('Missing/changed model from inside container: ' + model['name'])

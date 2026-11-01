@@ -21,7 +21,9 @@ public final class CheckoutEvents {
         DELAY
     }
 
-    public record StockItem(UUID productId, int quantity) {
+    public record StockItem(
+            UUID productId,
+            int quantity) {
 
         public StockItem {
             if (productId == null || quantity < 1 || quantity > 1000)
@@ -29,7 +31,8 @@ public final class CheckoutEvents {
         }
     }
 
-    public record ReserveInventory(List<StockItem> items) {
+    public record ReserveInventory(
+            List<StockItem> items) {
 
         public ReserveInventory {
             // Freeze the list at the wire boundary so later caller mutation cannot change an already
@@ -42,11 +45,16 @@ public final class CheckoutEvents {
         }
     }
 
-    public record InventoryResult(String status, String reason) {
+    public record InventoryResult(
+            String status,
+            String reason) {
 
     }
 
-    public record AuthorizePayment(BigDecimal amount, String currency, PaymentScenario scenario) {
+    public record AuthorizePayment(
+            BigDecimal amount,
+            String currency,
+            PaymentScenario scenario) {
 
         public AuthorizePayment {
             // Validate message payloads as well as HTTP DTOs; Kafka commands do not pass through MVC
@@ -61,11 +69,17 @@ public final class CheckoutEvents {
         }
     }
 
-    public record PaymentResult(String status, String reason) {
+    public record PaymentResult(
+            String status,
+            String reason) {
 
     }
 
-    public record OrderStatus(UUID customerId, String status, BigDecimal totalAmount, String currency) {
+    public record OrderStatus(
+            UUID customerId,
+            String status,
+            BigDecimal totalAmount,
+            String currency) {
 
     }
 
@@ -93,7 +107,8 @@ public final class CheckoutEvents {
 
     }
 
-    public record Command(String reason) {
+    public record Command(
+            String reason) {
 
     }
 }

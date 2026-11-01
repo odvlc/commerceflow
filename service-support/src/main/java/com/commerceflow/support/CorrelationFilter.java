@@ -22,17 +22,15 @@ import java.util.UUID;
 public class CorrelationFilter extends OncePerRequestFilter {
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String id = request.getHeader("X-Correlation-ID");
-        // Restrict caller-controlled IDs before putting them in logs/headers to prevent multiline or
-        // oversized values.
+        // Validate caller-supplied IDs before adding them to logs or headers.
         if (id == null || !id.matches("[A-Za-z0-9._-]{1,128}"))
             id = UUID.randomUUID().toString();
         request.setAttribute("correlationId", id);
         response.setHeader("X-Correlation-ID", id);
-        // Close the MDC scope on both success and failure so request context cannot leak to later work.
+        // Clear the MDC scope on success and failure so context does not leak to later work.
         try (var ignored = MDC.putCloseable("correlationId", id)) {
             chain.doFilter(request, response);
         }

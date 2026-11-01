@@ -35,11 +35,9 @@ public record EventEnvelope<T>(
             throw new IllegalArgumentException("Invalid correlationId");
     }
 
-    public static <T> EventEnvelope<T> create(
-            String type, UUID aggregateId, String correlationId, T payload) {
-        return new EventEnvelope<>(
-                // Create a new delivery identity; retries of this envelope must retain that identity
-                // for deduplication.
-                UUID.randomUUID(), type, 1, aggregateId, correlationId, Instant.now(), payload);
+    public static <T> EventEnvelope<T> create(String type, UUID aggregateId, String correlationId, T payload) {
+        // Create a new delivery identity; retries of this envelope must retain that identity
+        // for deduplication.
+        return new EventEnvelope<>(UUID.randomUUID(), type, 1, aggregateId, correlationId, Instant.now(), payload);
     }
 }

@@ -13,7 +13,9 @@ public final class KnowledgeEvents {
 
     // Consumers use this version to schedule/replay projection work; document content stays in the AI-
     // owned store.
-    public record KnowledgeChanged(UUID documentId, long version) {
+    public record KnowledgeChanged(
+            UUID documentId,
+            long version) {
 
         public KnowledgeChanged {
             if (documentId == null || version < 1)

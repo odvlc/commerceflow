@@ -1,5 +1,5 @@
-# Adds AI resources to the commerce base; choose host or CPU overlay for the model endpoint and
-# its network policy.
+# Adds AI resources to the commerce base. Select a host or CPU overlay for the model endpoint and
+# network policy.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: commerceflow
@@ -9,8 +9,7 @@ resources:
   - policies.yaml
   - database-job.yaml
   - .generated-model-config.yaml
-# Exclude optional AI identities from the broad base policy so their own narrow allowlists remain
-# effective.
+# Keep optional AI identities out of the broad base policy; their overlays define narrower rules.
 patches:
   - target:
       kind: NetworkPolicy

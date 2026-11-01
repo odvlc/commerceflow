@@ -1,5 +1,5 @@
-# Allows only declared AI dependencies; NetworkPolicy rules are additive, so base selectors must
-# exclude unintended AI access.
+# Allows declared AI dependencies. NetworkPolicy rules are additive, so selectors must exclude other
+# workloads.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -7,8 +7,7 @@ metadata:
 spec:
   podSelector:
     matchLabels: { app: ai-service }
-  # Declare both traffic directions for this selected workload; all allowed dependencies are explicit
-  # below.
+  # Declare ingress and egress for this workload. The rules below list each allowed dependency.
   policyTypes: [ Ingress, Egress ]
   ingress:
     - from:

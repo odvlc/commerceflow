@@ -21,8 +21,7 @@ public final class BusinessMetrics {
                             record.run();
                         }
                     });
-            // Outside a transaction there is no future commit callback; record the already completed work
-            // immediately.
+            // Record completed work immediately when there is no transaction to await.
         else record.run();
     }
 }

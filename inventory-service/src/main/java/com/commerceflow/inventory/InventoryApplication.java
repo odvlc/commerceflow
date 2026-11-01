@@ -1,6 +1,5 @@
 /*
- * Bootstraps the independently deployable inventory-service; shared helpers are imported without
- * sharing service persistence.
+ * Starts the inventory service with shared support and its own persistence.
  */
 package com.commerceflow.inventory;
 
@@ -14,8 +13,7 @@ import org.springframework.context.annotation.Import;
 public class InventoryApplication {
 
     public static void main(String[] args) {
-        // Start this service context only; its configuration supplies the owned database and enabled
-        // infrastructure helpers.
+        // Load shared support in the inventory service context.
         SpringApplication.run(InventoryApplication.class, args);
     }
 }

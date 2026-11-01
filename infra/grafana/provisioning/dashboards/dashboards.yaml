@@ -1,11 +1,9 @@
-# Loads versioned dashboards from files at startup so local Grafana has repeatable service/saga/AI
-# views.
+# Loads versioned dashboard files at startup for service, saga, and AI views.
 apiVersion: 1
 providers:
   - name: CommerceFlow
     folder: CommerceFlow
     type: file
     options:
-      # This container path is the provisioned dashboard mount; native monitoring renders the matching
-      # host path separately.
+      # This is the dashboard mount in the container. Native monitoring renders the matching host path.
       path: /var/lib/grafana/dashboards

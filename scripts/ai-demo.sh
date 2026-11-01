@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Runs the selected local deployment demonstration and evidence checks; restarts reset in-process
-# metric timers.
+# Runs the selected local deployment demo and evidence checks. Restarts reset in-process metric timers.
 set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -23,8 +22,8 @@ with urlopen(Request(os.environ['BASE_URL']+'/api/v1/ai/capabilities',headers={'
 with urlopen(os.environ['BASE_URL']+'/api/v1/products?size=100',timeout=10) as response:
     assert any(item['sku']=='BAG-01' for item in json.load(response)['items']), 'Run documented demo.py seed on synthetic local data first'
 PY
-# Wait for the curated index before testing citations so a missing import is not mistaken for a model
-# failure.
+# Wait for the curated index before checking citations; otherwise a missing import could look like a
+# model failure.
 python3 scripts/import-ai-knowledge.py
 AI_ENABLED=true E2E_BASE_URL=http://localhost:3000 npm run --prefix frontend test:e2e -- e2e/copilot.spec.ts
 python3 scripts/ai-recovery-smoke.py --target="$target"
@@ -42,7 +41,7 @@ def query(expression):
         return json.loads(result.stdout)['data']['result']
     with urlopen('http://localhost:9090'+suffix,timeout=10) as response:return json.load(response)['data']['result']
 
-# Timers reset with the AI process. Exercise the restored instance before asking Prometheus for a fresh sample.
+# AI process restarts reset timers. Exercise the restored instance before requesting a fresh Prometheus sample.
 token=login('alice')
 def call(path,body=None):
     headers={'Authorization':'Bearer '+token,'Content-Type':'application/json','Idempotency-Key':str(uuid.uuid4())}

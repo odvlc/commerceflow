@@ -99,8 +99,7 @@ class CatalogIntegrationTest {
 
     @Test
     void createsListsReadsAndGeneratesOpenApi() throws Exception {
-        // Exercise the MVC boundary and persisted result together; a valid DTO alone does not prove
-        // the endpoint contract.
+        // Check the HTTP endpoint and persisted result together.
         var response = http.perform(post("/api/v1/admin/products")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
                         .header("Idempotency-Key", "create-001")

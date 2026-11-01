@@ -8,8 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
 @Configuration(proxyBeanMethods = false)
-// Install correlation before shared error/security handling; service controllers stay in their own
-// packages.
+// Register correlation before shared error and security handling. Controllers remain in their service packages.
 @Import({CorrelationFilter.class, ApiErrors.class, SecurityConfiguration.class})
 public class WebConfiguration {
 

@@ -29,8 +29,7 @@ public class NotificationController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        // Resolve ownership from the signed subject rather than accepting a customer ID query
-        // parameter.
+        // Read the customer ID from the signed subject, not a query parameter.
         return notifications.list(UUID.fromString(jwt.getSubject()), page, size);
     }
 }

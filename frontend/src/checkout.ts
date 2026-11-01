@@ -1,5 +1,4 @@
-// Retains the key for an unchanged checkout intent across ambiguous network failures, with a
-// memory fallback if storage is blocked.
+// Reuses a checkout key after ambiguous network failures. Falls back to memory when storage is blocked.
 let fallback: { intent: string; key: string } | undefined;
 
 /** Reuse the key after an ambiguous network failure, including a page reload where storage is available. */
@@ -11,14 +10,13 @@ export function checkoutKey(
         const previous = JSON.parse(
             storage.getItem("commerceflow.checkout") || "null",
         );
-        // A request key belongs to the full customer/item intent; changing contents must create a
-        // different key.
+        // A key identifies the customer and item list. Changed contents need a new key.
         if (previous?.intent === intent && typeof previous.key === "string")
             return previous.key;
     } catch {
-        /* A blocked storage policy still permits the in-memory retry guard. */
+        /* Use the in-memory retry guard when storage is blocked. */
     }
-    // Blocked sessionStorage still permits safe retries within this page lifetime.
+    // Keep retries safe for this page lifetime when sessionStorage is blocked.
     if (fallback?.intent === intent) return fallback.key;
     const key = crypto.randomUUID();
     fallback = {intent, key};

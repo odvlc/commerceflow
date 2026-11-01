@@ -18,11 +18,20 @@ import java.util.UUID;
 @Service
 public class NotificationService {
 
-    public record Notification(UUID id, UUID orderId, String status, String message, Instant createdAt) {
+    public record Notification(
+            UUID id,
+            UUID orderId,
+            String status,
+            String message,
+            Instant createdAt) {
 
     }
 
-    public record NotificationPage(List<Notification> items, int page, int size, long totalElements) {
+    public record NotificationPage(
+            List<Notification> items,
+            int page,
+            int size,
+            long totalElements) {
 
     }
 
@@ -36,20 +45,18 @@ public class NotificationService {
 
     @Transactional
     public void record(UUID eventId, UUID order, OrderStatus result, String correlation) {
-        String message =
-                switch (result.status()) {
-                    case "CONFIRMED" -> "Your order is confirmed.";
-                    case "CANCELLED" -> "Your order was cancelled. Reserved stock has been released.";
-                    case "AWAITING_PAYMENT" -> "Stock reserved. Your payment is being processed.";
-                    case "COMMITTING_INVENTORY" -> "Payment authorized. Finalizing your order.";
-                    case "CANCELLING_PAYMENT", "CANCELLING_INVENTORY" -> "Your cancellation is being processed.";
-                    default -> throw new IllegalArgumentException("Unknown order status");
-                };
+        String message = switch (result.status()) {
+            case "CONFIRMED" -> "Your order is confirmed.";
+            case "CANCELLED" -> "Your order was cancelled. Reserved stock has been released.";
+            case "AWAITING_PAYMENT" -> "Stock reserved. Your payment is being processed.";
+            case "COMMITTING_INVENTORY" -> "Payment authorized. Finalizing your order.";
+            case "CANCELLING_PAYMENT", "CANCELLING_INVENTORY" -> "Your cancellation is being processed.";
+            default -> throw new IllegalArgumentException("Unknown order status");
+        };
         var id = UUID.randomUUID();
-        int inserted = jdbc.sql(
-                        "INSERT INTO notifications(id,event_id,customer_id,order_id,status,message) VALUES"
-                                + " (:id,:event,:customer,:order,:status,:message) ON CONFLICT(order_id,status)"
-                                + " DO NOTHING")
+        int inserted = jdbc.sql("INSERT INTO notifications(id,event_id,customer_id,order_id,status,message) VALUES"
+                        + " (:id,:event,:customer,:order,:status,:message) ON CONFLICT(order_id,status)"
+                        + " DO NOTHING")
                 .param("id", id)
                 .param("event", eventId)
                 .param("customer", result.customerId())
@@ -57,15 +64,13 @@ public class NotificationService {
                 .param("status", result.status())
                 .param("message", message)
                 .update();
-        // Only a newly stored order/status notification emits an outgoing event; replay produces no
-        // second notification.
+        // Emit an event only when a new order/status notification is stored.
         if (inserted == 1)
             outbox.append(
                     "NotificationCreated",
                     order,
                     correlation,
-                    new NotificationCreated(
-                            id, order, result.customerId(), result.status(), message, Instant.now()));
+                    new NotificationCreated(id, order, result.customerId(), result.status(), message, Instant.now()));
     }
 
     @Transactional(readOnly = true)

@@ -29,11 +29,17 @@ import java.util.UUID;
 @Service
 public class InventoryService {
 
-    public record Stock(UUID productId, int availableQuantity, int reservedQuantity, long version) {
+    public record Stock(
+            UUID productId,
+            int availableQuantity,
+            int reservedQuantity,
+            long version) {
 
     }
 
-    public record Reservation(UUID orderId, String status) {
+    public record Reservation(
+            UUID orderId,
+            String status) {
 
     }
 
@@ -118,16 +124,14 @@ public class InventoryService {
                         .listOfRows()
                         .stream()
                         .findFirst();
-        // An order retry reuses its stored reservation outcome; a different item set with that order ID
-        // is a conflict.
+        // Reuse the stored outcome for a matching retry. A different item set with the same order ID conflicts.
         if (existing.isPresent()) {
             var oldHash = existing.get().get("request_hash");
             if (oldHash != null && !hash.equals(oldHash))
                 throw error(HttpStatus.CONFLICT, "IDEMPOTENCY_CONFLICT", "Reservation contents differ");
             return new Reservation(orderId, existing.get().get("status").toString());
         }
-        // Lock products in deterministic order. No partial reservation survives an insufficient-stock
-        // result.
+        // Reserve all products in deterministic order. Insufficient stock rolls back every decrement.
         boolean sufficient = true;
         for (var item : items) {
             var quantity =
@@ -141,8 +145,7 @@ public class InventoryService {
         String status = sufficient ? "RESERVED" : "REJECTED";
         BusinessMetrics.afterCommit(
                 () -> metrics.counter("commerceflow.inventory.reservations", "result", status).increment());
-        // Expiry requests reconciliation; it does not authorize this service to release potentially
-        // paid stock.
+        // Expiry triggers reconciliation. The inventory service cannot release stock that may already be paid.
         Instant expiry = Instant.now().plus(ttl);
         jdbc.sql(
                         "INSERT INTO reservation_orders(order_id,request_hash,status,expires_at,correlation_id)"
@@ -165,8 +168,7 @@ public class InventoryService {
                                 .param("id", item.productId())
                                 .param("quantity", item.quantity())
                                 .update();
-                // The guarded decrement is the final no-oversell check; any failure rolls back the
-                // whole multi-item reservation.
+                // The guarded decrement prevents overselling. Any failure rolls back the full reservation.
                 if (changed != 1)
                     throw new IllegalStateException("Inventory invariant violated");
                 jdbc.sql(
@@ -270,8 +272,7 @@ public class InventoryService {
                         .query((rs, row) -> Map.entry(rs.getObject(1, UUID.class), rs.getString(2)))
                         .list();
         for (var entry : expired) {
-            // Payment may still authorize: only the orchestrator can safely request release after
-            // reconciliation.
+            // Payment may still authorize. The orchestrator requests release after reconciliation.
             outbox.append(
                     "InventoryExpiring",
                     entry.getKey(),

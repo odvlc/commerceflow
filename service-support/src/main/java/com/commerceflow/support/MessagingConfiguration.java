@@ -1,6 +1,5 @@
 /*
- * Configures acknowledged Kafka publishing, explicit consumer commits, bounded retries and dead-
- * letter routing.
+ * Configures acknowledged Kafka publishing, explicit consumer commits, bounded retries and dead-letter routing.
  */
 package com.commerceflow.support;
 
@@ -93,8 +92,7 @@ public class MessagingConfiguration {
         var recoverer = new DeadLetterPublishingRecoverer(
                 producer,
                 (record, error) -> new TopicPartition(Topics.DEAD_LETTER, record.partition()));
-        // A failed dead-letter publish must remain a failed consume; do not commit an offset that loses
-        // the record.
+        // If dead-letter publishing fails, leave the record uncommitted so Kafka can retry it.
         recoverer.setFailIfSendResultIsError(true);
         recoverer.setWaitForSendResultTimeout(Duration.ofSeconds(8));
 
@@ -105,8 +103,7 @@ public class MessagingConfiguration {
 
         var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
         factory.setConsumerFactory(consumers);
-        // Commit offsets per successful record after the local business/dedup transaction has
-        // completed.
+        // Commit each offset after its business and deduplication transaction completes.
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
         factory.getContainerProperties().setObservationEnabled(true);
         factory.setCommonErrorHandler(new DefaultErrorHandler(recoverer, backoff));
@@ -130,9 +127,9 @@ public class MessagingConfiguration {
                         Topics.AI_KNOWLEDGE,
                         Topics.NOTIFICATION,
                         Topics.DEAD_LETTER)
-                // One replica is a local-development capacity choice, not a production
-                // durability guarantee.
+                // One replica is a local-development setting. It does not provide production durability.
                 .map(name -> TopicBuilder.name(name).partitions(3).replicas(1).build())
-                .toArray(NewTopic[]::new));
+                //.toArray(NewTopic[]::new))
+                .toArray(size -> new NewTopic[size]));
     }
 }

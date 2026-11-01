@@ -83,8 +83,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 /**
- * Four real HTTP applications, four separately owned databases, real Kafka, and signed JWT
- * validation. The local JWKS test fixture is not a Keycloak login or realm integration test.
+ * Tests four HTTP applications, separately owned databases, Kafka, and signed JWT validation. The
+ * local JWKS fixture does not test Keycloak login or realm integration.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class CheckoutWorkflowTest {

@@ -1,5 +1,5 @@
-# Scales supported commerce workloads from resource metrics; replica counts alone do not establish
-# high availability on one node.
+# Scales supported commerce workloads from resource metrics. More replicas on one node do not provide
+# high availability.
 {
   "apiVersion": "autoscaling/v2",
   "kind": "HorizontalPodAutoscaler",
@@ -12,8 +12,7 @@
       "kind": "Deployment",
       "name": "catalog-service"
     },
-    # HPA requires live resource metrics; one-node replica growth remains constrained by the same node
-    # capacity.
+    # HPA needs live resource metrics. Replicas still share the capacity of this node.
     "minReplicas": 1,
     "maxReplicas": 2,
     "metrics": [

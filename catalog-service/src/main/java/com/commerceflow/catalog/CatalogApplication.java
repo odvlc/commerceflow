@@ -1,6 +1,5 @@
 /*
- * Bootstraps the independently deployable catalog-service; shared helpers are imported without
- * sharing service persistence.
+ * Starts the catalog service with shared support and its own persistence.
  */
 package com.commerceflow.catalog;
 
@@ -14,8 +13,7 @@ import org.springframework.context.annotation.Import;
 public class CatalogApplication {
 
     public static void main(String[] args) {
-        // Start this service context only; its configuration supplies the owned database and enabled
-        // infrastructure helpers.
+        // Load shared support in the catalog service context.
         SpringApplication.run(CatalogApplication.class, args);
     }
 }

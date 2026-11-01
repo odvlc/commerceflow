@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# Creates/reuses a restricted inference-only container on the private kind network without
-# publishing a host port.
+# Creates or reuses a restricted inference proxy on the private kind network. It publishes no host port.
 set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
-# No host port is published. This fixed inference-only proxy lives on the local kind Docker network.
-# It also handles existing Calico 192.168/16 pools that overlap Docker Desktop's host gateway address.
+# The proxy lives on the local kind Docker network. It also handles Calico 192.168/16 pools that overlap
+# Docker Desktop's host gateway address.
 if docker inspect commerceflow-kind-model-proxy >/dev/null 2>&1; then
   docker start commerceflow-kind-model-proxy >/dev/null
 else
@@ -17,8 +16,7 @@ else
 fi
 for attempt in $(seq 1 30); do
   if docker exec commerceflow-kind-model-proxy wget -q -O /dev/null http://127.0.0.1:11434/api/tags; then
-    # Reload the fixed inference allowlist after reachability succeeds so an existing container uses the
-    # current proxy rules.
+    # Reload the inference allowlist after the endpoint responds so a reused container gets current rules.
     docker exec commerceflow-kind-model-proxy nginx -s reload
     exit 0
   fi

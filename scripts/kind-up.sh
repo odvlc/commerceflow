@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Builds/loads local images and assembles the selected overlay; existing cluster networking and
-# persisted data are not silently replaced.
+# Builds or loads local images and applies the selected overlay. Existing networking and data remain in place.
 set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -34,9 +33,8 @@ python3 scripts/render-monitoring.py
 if ! kind get clusters | grep -qx commerceflow; then
   kind create cluster --config infra/kind.yaml
 fi
-# An existing default-kindnet cluster does not establish policy enforcement. Never delete it implicitly.
-# An existing cluster with a different CNI needs an explicit migration; silently replacing it would
-# invalidate policy evidence.
+# An existing kindnet cluster does not enforce these policies. A cluster with another CNI needs an explicit
+# migration; replacing it would invalidate policy evidence.
 if kubectl --context kind-commerceflow -n kube-system get daemonset kindnet >/dev/null 2>&1; then
   echo 'Existing cluster uses kindnet; use a separately reviewed migration to Calico. No cluster/data erased.' >&2
   exit 1
@@ -52,8 +50,7 @@ modules=(catalog-service cart-service order-service inventory-service payment-se
 if [ "$mode" != off ]; then modules+=(ai-service); fi
 for module in "${modules[@]}"; do
   if [ "$build" = true ]; then docker build -f infra/Dockerfile --build-arg APP_MODULE="$module" -t "commerceflow/$module:local" .; fi
-  # Verify the image exists even when build is skipped; never deploy a missing local tag and assume a
-  # registry fallback.
+  # Check for the image even when build is skipped. Do not rely on a registry fallback for a missing local tag.
   docker image inspect "commerceflow/$module:local" >/dev/null
   kind load docker-image "commerceflow/$module:local" --name commerceflow
 done
@@ -82,7 +79,7 @@ if [ "$mode" != off ]; then
   fi
 fi
 if [ "$mode" != off ]; then
-  # This additive schema-owner Job is disposable; database/PVC data is never removed.
+  # This schema-owner Job is disposable. It does not remove database or PVC data.
   kubectl --context kind-commerceflow -n commerceflow delete job/ai-db-provision-v1 --ignore-not-found --wait=true
 fi
 kubectl --context kind-commerceflow apply -k "$target"
@@ -103,7 +100,7 @@ done
 if [ "$mode" != off ]; then
   kubectl --context kind-commerceflow -n commerceflow wait --for=condition=complete job/ai-db-provision-v1 --timeout=180s
 fi
-# CPU startup checks existing prepared models; installing weights is a separate explicit job.
+# CPU startup checks prepared models. Run the separate preparation job to install weights.
 if [ "$mode" = container ]; then
   kubectl --context kind-commerceflow -n commerceflow rollout status statefulset/ollama --timeout=300s
   python3 scripts/kind-ai-models.py --check

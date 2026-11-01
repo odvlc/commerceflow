@@ -38,7 +38,9 @@ import java.util.concurrent.TimeoutException;
 @Component
 public class ToolRegistry implements AutoCloseable {
 
-    public record ToolResult(JsonNode data, List<Evidence> evidence) {
+    public record ToolResult(
+            JsonNode data,
+            List<Evidence> evidence) {
 
     }
 
@@ -100,8 +102,7 @@ public class ToolRegistry implements AutoCloseable {
         if (!actor.valid())
             throw new BusinessException(
                     HttpStatus.UNAUTHORIZED, "AI_AUTHENTICATION_REQUIRED", "Fresh authentication required");
-        // Recheck the role-specific allowlist at execution time; a model-advertised or invented tool
-        // name grants no authority.
+        // Check the role allowlist again before execution. A tool name from the model grants no authority.
         if (!allowed(mode).contains(name))
             throw new BusinessException(
                     HttpStatus.FORBIDDEN,
@@ -140,9 +141,8 @@ public class ToolRegistry implements AutoCloseable {
         var canonical = json.createObjectNode();
         for (var field : arguments.properties()) {
             var value = field.getValue();
-            // Llama 3.1 may encode an absent optional string as JSON null or the literal string "null".
-            // This compatibility rule applies only to this read filter, never identifiers, quantities or
-            // actions.
+            // Llama 3.1 may return JSON null or the string "null" for an absent optional filter.
+            // Apply this compatibility rule to the read filter only.
             if (name.equals("searchProducts")
                     && field.getKey().equals("maxPrice")
                     && (value.isNull() || value.isTextual() && value.asText().equals("null"))) continue;
@@ -185,8 +185,7 @@ public class ToolRegistry implements AutoCloseable {
                         throw invalid();
                     }
             } else if (spec.path("type").asText().equals("integer")) {
-                // Reject out-of-range integers before conversion; a huge JSON integer must not wrap
-                // into a permitted cart quantity.
+                // Check the integer range before conversion so oversized values cannot wrap into valid quantities.
                 if (!value.isIntegralNumber()
                         || !value.canConvertToInt()
                         || value.asLong() < spec.path("minimum").asLong()
@@ -368,8 +367,7 @@ public class ToolRegistry implements AutoCloseable {
                             Map.of(),
                             actor,
                             correlation);
-                    // Search is a derived projection; revalidate current currency/price against Catalog
-                    // before returning candidates.
+                    // Search is a projection. Check current currency and price with Catalog before returning candidates.
                     if (!product.path("currency").asText().equals("USD"))
                         continue;
                     if (args.has("maxPrice")
@@ -414,8 +412,8 @@ public class ToolRegistry implements AutoCloseable {
                 UUID id = UUID.fromString(args.path("orderId").asText());
                 String prefix = name.equals("getSupportOrderExplanation") ? "/api/v1/admin/orders/" : "/api/v1/orders/";
                 var response = commerce.get("order", prefix + id + "/explanation", Map.of(), actor, correlation);
-                // The copilot explains the current public state/cause. Keep the full event timeline in
-                // Order's API; ISO timestamps are observations, not model-computed elapsed durations.
+                // The copilot explains the current public state and cause. Order's API provides the full timeline;
+                // timestamps are observations, not model-computed durations.
                 var selected = json.createObjectNode();
                 for (String field : List.of("id", "status", "reason", "reasonKnown", "version", "observedAt")) {
                     selected.set(field, response.path(field));

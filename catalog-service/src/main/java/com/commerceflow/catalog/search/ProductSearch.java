@@ -55,11 +55,17 @@ public class ProductSearch {
 
     }
 
-    public record SearchPage(List<SearchItem> items, long totalElements, int page, int size) {
+    public record SearchPage(
+            List<SearchItem> items,
+            long totalElements,
+            int page, int
+            size) {
 
     }
 
-    public record RebuildResult(String index, long documents) {
+    public record RebuildResult(
+            String index,
+            long documents) {
 
     }
 
@@ -270,16 +276,13 @@ public class ProductSearch {
     private void write(String index, ProductChanged product) throws IOException {
         try {
             client.index(
-                    r ->
-                            r.index(index)
-                                    .id(product.id().toString())
-                                    // Elasticsearch external versions start above zero; offset the
-                                    // zero-based product version consistently.
-                                    .version(product.version() + 1)
-                                    // Reject older or duplicate snapshots instead of letting delayed
-                                    // events overwrite newer indexed state.
-                                    .versionType(VersionType.External)
-                                    .document(ProductDocument.from(product)));
+                    r -> r.index(index)
+                            .id(product.id().toString())
+                            // Elasticsearch external versions start at one, so offset the zero-based product version.
+                            .version(product.version() + 1)
+                            // Ignore duplicate or older snapshots so delayed events cannot overwrite newer state.
+                            .versionType(VersionType.External)
+                            .document(ProductDocument.from(product)));
         } catch (ElasticsearchException error) {
             if (error.status() != 409)
                 throw error; // Same or older source version cannot overwrite this document.

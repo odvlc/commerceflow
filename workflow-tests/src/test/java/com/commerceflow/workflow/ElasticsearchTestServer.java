@@ -1,6 +1,5 @@
 /*
- * Manages a real isolated Elasticsearch test process; it is test lifecycle infrastructure, not an
- * in-memory search substitute.
+ * Manages an isolated Elasticsearch process for tests.
  */
 package com.commerceflow.workflow;
 

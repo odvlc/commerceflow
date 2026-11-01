@@ -1,5 +1,5 @@
-# Runs one bounded AI worker with Recreate rollout; model capacity is shared rather than increased
-# by adding HTTP replicas.
+# Runs one bounded AI worker with a Recreate rollout. Additional HTTP replicas would share the same
+# model capacity.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,7 +15,7 @@ spec:
       labels: { app: ai-service }
     spec:
       enableServiceLinks: false
-      # AI tools use the current caller token and fixed APIs, not Kubernetes control-plane
+      # AI tools use the caller's token and fixed service APIs. They do not need Kubernetes API
       # credentials.
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 60

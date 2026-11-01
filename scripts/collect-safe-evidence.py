@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# Exports only explicitly allowed synthetic artifacts; raw authenticated traces/logs and rendered
-# Secrets must not be uploaded.
+# Exports allowlisted synthetic artifacts. Never upload authenticated traces, logs, or rendered secrets.
 """Export an allowlist of synthetic evidence; never upload raw traces, logs, credentials or rendered Secrets."""
 import json
 import os
@@ -13,7 +12,7 @@ root = Path(__file__).resolve().parent.parent
 output = root / '.cache/verification/ci-safe'
 output.mkdir(parents=True, exist_ok=True)
 previous = output / 'manifest.json'
-# Remove only this exporter's previous outputs; an unexpected file must never become an artifact.
+# Remove this exporter's prior outputs. Unexpected files must not become artifacts.
 existing = {str(path.relative_to(output)) for path in output.rglob('*') if path.is_file()}
 if existing:
     if not previous.exists():
@@ -23,8 +22,7 @@ if existing:
         raise ValueError('Unexpected files in generated evidence directory; refusing to touch/upload it')
     for name in owned:
         path = (output / name).resolve()
-        # Validate ownership-manifest paths before deletion so a malformed manifest cannot escape the
-        # export directory.
+        # Validate manifest paths before deletion to keep cleanup inside the export directory.
         if not path.is_relative_to(output.resolve()):
             raise ValueError('Invalid prior evidence manifest path')
         if path.is_file():
@@ -36,8 +34,7 @@ manifest = []
 
 
 def export_text(source, destination, content):
-    # Fail the whole export on suspected credentials; silent redaction could hide unsafe artifact
-    # selection.
+    # Fail the export if an artifact may contain credentials. Redaction could hide a bad selection.
     if credential.search(content):
         raise ValueError(
             'Potential credential in allowlisted evidence; refusing export: ' + str(source.relative_to(root)))
@@ -45,8 +42,9 @@ def export_text(source, destination, content):
     destination.write_text(content)
     manifest.append(str(destination.relative_to(output)))
 
+    # JUnit dumps may contain HTTP headers. Export only results and test identity.
 
-# JUnit assertion dumps/system-out may contain HTTP headers. Export results and test identity only.
+
 for pattern in ('*/target/surefire-reports/TEST-*.xml', '*/target/failsafe-reports/TEST-*.xml'):
     for source in root.glob(pattern):
         suite = ET.parse(source).getroot()
@@ -86,7 +84,7 @@ if source.exists():
                                                                'JUnit HTTP dumps/system-out']}, indent=2) + '\n')
 print('Exported', len(manifest), 'allowlisted evidence files to', output.relative_to(root))
 
-# CI uploads only after every allowlisted export passes; partial failures never publish readiness.
+# CI uploads artifacts only after every allowlisted export passes.
 if os.environ.get('GITHUB_OUTPUT'):
     with Path(os.environ['GITHUB_OUTPUT']).open('a') as github_output:
         github_output.write('ready=true\n')

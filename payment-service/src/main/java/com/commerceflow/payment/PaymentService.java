@@ -28,7 +28,11 @@ import java.util.UUID;
 @Service
 public class PaymentService {
 
-    public record Attempt(int attemptNumber, String result, String failureReason, Instant createdAt) {
+    public record Attempt(
+            int attemptNumber,
+            String result,
+            String failureReason,
+            Instant createdAt) {
 
     }
 
@@ -61,13 +65,12 @@ public class PaymentService {
     @Transactional
     public PaymentView authorize(UUID orderId, AuthorizePayment request, String correlation) {
         lock(orderId);
-        String hash =
-                RequestHash.sha256(
-                        request.amount().stripTrailingZeros().toPlainString()
-                                + ":"
-                                + request.currency()
-                                + ":"
-                                + request.scenario());
+        String hash = RequestHash.sha256(
+                request.amount().stripTrailingZeros().toPlainString()
+                        + ":"
+                        + request.currency()
+                        + ":"
+                        + request.scenario());
         var existing = jdbc.sql("SELECT request_hash FROM payments WHERE order_id=:id")
                 .param("id", orderId)
                 .query()
@@ -82,6 +85,7 @@ public class PaymentService {
                 emit(orderId, payment.status(), correlation);
             return payment;
         }
+
         var id = UUID.randomUUID();
         String status = switch (request.scenario()) {
             case APPROVE -> "AUTHORIZED";
@@ -120,7 +124,7 @@ public class PaymentService {
                 .listOfRows();
         if (current.isEmpty()) {
             var id = UUID.randomUUID();
-            // Cancellation tombstone has no amount: no authorization has been received or attempted.
+            // A cancellation tombstone has no amount because no authorization was received or attempted.
             jdbc.sql("INSERT INTO payments(id,order_id,status,correlation_id) VALUES"
                             + " (:id,:order,'CANCELLED',:correlation)")
                     .param("id", id)
@@ -132,8 +136,7 @@ public class PaymentService {
             var id = (UUID) row.get("id");
             String status = row.get("status").toString();
             if (status.equals("PENDING") || status.equals("AUTHORIZED")) {
-                // A completed authorization needs a refund; a still-pending one can be cancelled before
-                // settlement.
+                // Refund completed authorizations. Cancel pending authorizations before settlement.
                 String target = status.equals("AUTHORIZED") ? "REFUNDED" : "CANCELLED";
                 jdbc.sql("UPDATE payments SET status=:status,updated_at=now() WHERE id=:id")
                         .param("id", id)
@@ -150,8 +153,7 @@ public class PaymentService {
 
     @Transactional
     public int settleDue() {
-        // Use the same per-order lock order as authorize/cancel; lock neither payment rows nor other
-        // aggregates first.
+        // Acquire the per-order lock before payment rows, as authorize and cancel do.
         var candidates = jdbc.sql("SELECT order_id FROM payments WHERE status='PENDING' AND scenario='DELAY' AND"
                         + " due_at<=now() ORDER BY order_id LIMIT 100")
                 .query(UUID.class)
@@ -160,8 +162,7 @@ public class PaymentService {
         for (var order : candidates) {
             lock(order);
             var payment = required(order);
-            // Recheck under the payment lock so a concurrent cancellation cannot be overwritten by
-            // delayed settlement.
+            // Recheck under the payment lock so delayed settlement cannot overwrite a concurrent cancellation.
             if (!payment.status().equals("PENDING"))
                 continue;
             jdbc.sql("UPDATE payments SET status='AUTHORIZED',updated_at=now() WHERE order_id=:id AND"

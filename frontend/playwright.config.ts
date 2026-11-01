@@ -1,5 +1,4 @@
-// Runs against the local dev server or an explicit loopback deployment; an external base skips
-// Vite startup.
+// Uses Vite locally unless a loopback deployment URL is supplied.
 import {defineConfig} from "@playwright/test";
 
 // @ts-ignore
@@ -9,8 +8,7 @@ if (externalBase && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(externalB
 // @ts-ignore
 export default defineConfig({
     testDir: "e2e",
-    // Serialize workflows that share synthetic stock and users so parallel test mutation does not
-    // change expected quantities.
+    // These workflows share synthetic stock and users, so run them serially.
     workers: 1,
     timeout: 60000,
     use: {
@@ -20,8 +18,7 @@ export default defineConfig({
         launchOptions: {channel: process.env.CI ? undefined : "chrome"},
         trace: "retain-on-failure",
     },
-    // When testing deployed nginx/Ingress, reuse that endpoint rather than accidentally launching a
-    // separate Vite stack.
+    // Reuse a deployed nginx/Ingress URL instead of starting another Vite server.
     webServer: externalBase ? undefined : {
         command: "npm run dev",
         url: "http://localhost:5173",

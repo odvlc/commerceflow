@@ -29,7 +29,8 @@ import java.util.UUID;
 @RequestMapping("/api/v1/ai/proposals")
 public class ActionController {
 
-    public record Rejection(@Min(0) long version) {
+    public record Rejection(
+            @Min(0) long version) {
 
     }
 

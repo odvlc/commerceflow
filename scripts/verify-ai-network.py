@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# Probes actual allowed/denied workload connections; a rendered NetworkPolicy alone is not
-# enforcement evidence.
+# Probes allowed and denied workload connections. Rendering a NetworkPolicy does not prove enforcement.
 """Prove allowed and denied connections in the local Calico kind deployment, using actual workload identities."""
 import json
 import subprocess
@@ -16,8 +15,7 @@ def probe(source, target, allowed):
     if allowed:
         assert result.returncode == 0, source + ' could not reach its allowed dependency: ' + target
     else:
-        # A denial needs a connection timeout; an unrelated command failure is not evidence that network
-        # policy blocked traffic.
+        # Treat a connection timeout as a denial. Other command failures do not prove the policy blocked traffic.
         assert result.returncode != 0 and 'HttpConnectTimeoutException' in result.stderr, \
             'Expected actual network timeout, not an HTTP authorization error or missing service: ' + target
     checks.append({'source': source, 'target': target, 'expectedAllowed': allowed, 'passed': True})

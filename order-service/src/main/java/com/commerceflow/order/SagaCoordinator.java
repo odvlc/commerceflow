@@ -95,8 +95,7 @@ public class SagaCoordinator {
         var order = orders.required(id, true);
         switch (result.status()) {
             case "AUTHORIZED" -> {
-                // Late authorization cannot revive a cancellation; payment reconciliation handles the
-                // already-issued operation.
+                // A late authorization cannot revive a cancelled order. Payment reconciliation handles the issued operation.
                 if (order.status() != AWAITING_PAYMENT)
                     return;
                 orders.step(id, "AUTHORIZE_PAYMENT", "SUCCEEDED", null);
@@ -150,11 +149,10 @@ public class SagaCoordinator {
                 move(order, CANCELLING_INVENTORY);
                 command(order, "RELEASE_INVENTORY", "ReleaseInventory", new Command(reason));
             }
-            // A timeout does not prove payment failed; cancel/reconcile it before releasing inventory.
+            // A timeout leaves payment status uncertain. Cancel or reconcile it before releasing inventory.
             case AWAITING_PAYMENT -> {
                 orders.recordReason(order.id(), "RESERVATION_EXPIRED".equals(reason) ? "RESERVATION_EXPIRED" : "PAYMENT_TIMEOUT");
-                // Record the timeout, then request cancellation; elapsed time alone does not prove no
-                // charge occurred.
+                // Record the timeout and request cancellation. Elapsed time does not prove no charge occurred.
                 orders.step(order.id(), "AUTHORIZE_PAYMENT", "FAILED", reason);
                 move(order, CANCELLING_PAYMENT);
                 command(order, "CANCEL_PAYMENT", "CancelPayment", new Command(reason));
@@ -168,8 +166,7 @@ public class SagaCoordinator {
                 command(order, "RELEASE_INVENTORY", "ReleaseInventory", new Command(reason));
             }
             case COMMITTING_INVENTORY -> {
-                // Payment is authorized. Never release stock on uncertainty; reconcile the idempotent
-                // commit instead.
+                // Payment is authorized. Reconcile the idempotent commit before releasing stock.
                 extend(order);
                 command(order, "COMMIT_INVENTORY", "CommitInventory", new Command(reason));
             }

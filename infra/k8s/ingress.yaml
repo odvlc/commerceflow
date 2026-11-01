@@ -1,5 +1,4 @@
-# Routes browser-visible localhost endpoints through Traefik; API discovery permissions and egress
-# remain explicitly scoped.
+# Routes browser traffic through Traefik. API discovery permissions and egress stay scoped.
 {
   "apiVersion": "v1",
   "kind": "ServiceAccount",
@@ -84,8 +83,7 @@
         }
       },
       "spec": {
-        # Traefik uses its scoped discovery account; application Pods do not need these Kubernetes API
-        # permissions.
+        # Traefik uses this account for discovery. Application Pods need no Kubernetes API permissions.
         "serviceAccountName": "traefik",
         "containers": [
           {

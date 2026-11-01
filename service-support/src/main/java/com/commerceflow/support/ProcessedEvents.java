@@ -25,17 +25,15 @@ public class ProcessedEvents {
     public boolean once(UUID eventId, Runnable businessEffect) {
         var sample = Timer.start(metrics);
         try {
-            int inserted = jdbc.sql(
-                            "INSERT INTO processed_events(event_id) VALUES (:id) ON CONFLICT DO NOTHING")
+            int inserted = jdbc.sql("INSERT INTO processed_events(event_id) VALUES (:id) ON CONFLICT DO NOTHING")
                     .param("id", eventId)
                     .update();
-            // A duplicate exits before invoking any business effect; its prior successful transaction
-            // already owns the outcome.
+            // Skip the business effect when this event was already committed.
             if (inserted == 0) {
                 metrics.counter("commerceflow.kafka.duplicates").increment();
                 return false;
             }
-            // A handler failure rolls back this marker too, allowing Kafka redelivery to retry the effect.
+            // Handler failures roll back the marker so Kafka can retry the effect.
             businessEffect.run();
             return true;
         } finally {

@@ -1,6 +1,5 @@
 /*
- * Accepts citation identifiers only from server-collected evidence; this checks provenance, not
- * the truth of every generated sentence.
+ * Accepts citation IDs from server-collected evidence. This verifies provenance, not factual accuracy.
  */
 package com.commerceflow.ai.application;
 
@@ -15,7 +14,9 @@ import java.util.Set;
 /**
  * Evidence authority comes only from this run's server-collected set.
  */
-public record GroundedAnswer(String content, List<Evidence> citations) {
+public record GroundedAnswer(
+        String content,
+        List<Evidence> citations) {
 
     public static GroundedAnswer validate(JsonNode input, Map<String, Evidence> permitted) {
         if (input == null

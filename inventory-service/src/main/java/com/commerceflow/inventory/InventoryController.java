@@ -29,7 +29,8 @@ public class InventoryController {
     }
 
     public record StockWrite(
-            @NotNull @Min(0) @Max(1_000_000_000) Integer availableQuantity, @Min(0) Long version) {
+            @NotNull @Min(0) @Max(1_000_000_000) Integer availableQuantity,
+            @Min(0) Long version) {
 
     }
 

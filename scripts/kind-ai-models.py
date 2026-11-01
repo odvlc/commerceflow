@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Runs explicit CPU model preparation/check jobs and removes temporary download egress afterward.
+# Runs CPU model preparation or checks, then removes temporary download egress.
 """Explicit digest-checked CPU model provisioning/warmup in kind; --check never downloads."""
 import argparse
 import json
@@ -29,8 +29,7 @@ if args.check:
     job['spec']['template']['spec']['containers'][0]['command'].append('--check')
 existing = subprocess.run(command + ['get', 'job', name, '--ignore-not-found', '-o', 'json'], capture_output=True,
                           text=True, check=True)
-# A second invocation must not replace a running preparation job and interrupt an in-progress model
-# download.
+# Leave a running preparation job alone so a second invocation does not interrupt its download.
 if existing.stdout and json.loads(existing.stdout).get('status', {}).get('active', 0):
     raise RuntimeError('Model job is already running; inspect its progress rather than interrupt it')
 run('delete', 'job', name, '--ignore-not-found')
@@ -49,8 +48,7 @@ try:
         time.sleep(5)
     else:
         raise TimeoutError('Model provisioning deadline exceeded')
-# Withdraw temporary download access even when provisioning fails; inference does not require general
-# internet egress.
+# Remove temporary download access even if provisioning fails. Inference needs no general internet egress.
 finally:
     subprocess.run(command + ['logs', 'job/' + name], check=False)
     if not args.check:

@@ -15,7 +15,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public record Actor(UUID subject, String token, Set<String> roles, Instant expiresAt) {
+public record Actor(
+        UUID subject,
+        String token,
+        Set<String> roles,
+        Instant expiresAt) {
 
     public static Actor from(Jwt jwt) {
         Map<String, Object> access = jwt.getClaimAsMap("realm_access");

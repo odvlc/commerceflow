@@ -1,13 +1,11 @@
-# Explicitly prepares/checks pinned models; application startup does not silently download model
-# weights.
+# Prepares or checks pinned models. Application startup never downloads model weights.
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: ai-model-prepare-v1
   namespace: commerceflow
 spec:
-  # Do not silently restart a failed preparation run; inspect its logs and rerun explicitly after
-  # fixing the cause.
+  # Inspect a failed preparation run and fix its cause before rerunning it.
   backoffLimit: 0
   activeDeadlineSeconds: 3600
   template:

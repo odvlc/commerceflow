@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# Summarizes retained scenario evidence without upgrading procedural success into an independent
-# factual-grounding score.
+# Summarizes scenario evidence. Procedural success does not establish factual accuracy.
 """Summarize retained synthetic local-model evidence; this is not a factual-grounding judge."""
 import argparse
 import json
@@ -19,8 +18,7 @@ if len(keys) != len(set(keys)):
 corpus = json.loads(
     (Path(__file__).resolve().parent.parent / 'ai-service/src/test/resources/evaluation-cases.json').read_text())
 expected = {(repeat, case['id']) for repeat in range(1, 4) for case in corpus}
-# Require the exact scenario/repeat set; duplicated or missing cases cannot be counted as a complete
-# evaluation.
+# Require every scenario and repeat exactly once before reporting a complete evaluation.
 if args.require_complete and set(keys) != expected:
     raise ValueError(f'Incomplete evaluation: {len(expected - set(keys))} missing scenarios')
 

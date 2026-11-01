@@ -130,7 +130,9 @@ service dependencies inherit these choices.
                     <version>${versions-maven-plugin.version}</version>
                     <configuration>
                         <ignoredVersions>
-                            <ignoredVersion>(?i)(^|.*[-._+])(alpha|beta|rc|cr|milestone|preview|pre|snapshot|nightly|ea|dev|m[0-9]+)([-._+].*|[0-9].*|$)</ignoredVersion>
+                            <ignoredVersion>
+                                (?i)(^|.*[-._+])(alpha|beta|rc|cr|milestone|preview|pre|snapshot|nightly|ea|dev|m[0-9]+)([-._+].*|[0-9].*|$)
+                            </ignoredVersion>
                         </ignoredVersions>
                     </configuration>
                 </plugin>

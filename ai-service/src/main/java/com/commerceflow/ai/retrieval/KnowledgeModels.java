@@ -30,7 +30,11 @@ public final class KnowledgeModels {
 
     }
 
-    public record ImportResult(UUID documentId, long version, UUID jobId, String state) {
+    public record ImportResult(
+            UUID documentId,
+            long version,
+            UUID jobId,
+            String state) {
 
     }
 
@@ -47,16 +51,30 @@ public final class KnowledgeModels {
     }
 
     public record Chunk(
-            UUID id, UUID documentId, long version, int ordinal, String heading, String content) {
+            UUID id,
+            UUID documentId,
+            long version,
+            int ordinal,
+            String heading,
+            String content) {
 
     }
 
-    public record IndexJob(UUID id, UUID documentId, long version, String generation, int attempts) {
+    public record IndexJob(
+            UUID id,
+            UUID documentId,
+            long version,
+            String generation,
+            int attempts) {
 
     }
 
     public record JobView(
-            UUID id, String state, String indexName, long documents, String errorCode) {
+            UUID id,
+            String state,
+            String indexName,
+            long documents,
+            String errorCode) {
 
     }
 
@@ -73,7 +91,10 @@ public final class KnowledgeModels {
 
     }
 
-    public record SearchResult(List<Evidence> items, boolean semantic, boolean degraded) {
+    public record SearchResult(
+            List<Evidence> items,
+            boolean semantic,
+            boolean degraded) {
 
     }
 }

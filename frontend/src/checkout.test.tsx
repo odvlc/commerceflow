@@ -1,5 +1,4 @@
-// Verifies duplicate-click and ambiguous-retry guards; these client tests complement server
-// idempotency enforcement.
+// Tests duplicate-click and ambiguous-retry guards. The server enforces idempotency separately.
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {cleanup, fireEvent, render, screen, waitFor,} from "@testing-library/react";
 import {CheckoutAction} from "./CheckoutAction";
@@ -9,7 +8,7 @@ afterEach(cleanup);
 describe("checkout retries", () => {
     it("retains the idempotency key across an ambiguous failure and changes it for different contents", () => {
         sessionStorage.clear();
-        // The same serialized intent simulates retrying after losing the original HTTP response.
+        // Retry the same serialized intent after losing the first HTTP response.
         const key = checkoutKey("customer-a:product-a:1");
         expect(checkoutKey("customer-a:product-a:1")).toBe(key);
         expect(checkoutKey("customer-a:product-a:2")).not.toBe(key);

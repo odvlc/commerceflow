@@ -115,7 +115,9 @@ public class RunStore {
                 == 1;
     }
 
-    public record History(String role, String content) {
+    public record History(
+            String role,
+            String content) {
 
     }
 

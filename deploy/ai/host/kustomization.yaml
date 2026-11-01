@@ -1,10 +1,10 @@
-# Uses a generated exact private proxy endpoint/policy for host inference; rendering an address
-# alone does not prove connectivity.
+# Uses a generated private proxy endpoint and policy for host inference. Render and verify the address
+# before applying this overlay.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: commerceflow
 resources:
   - ../base
-  # Render the exact private proxy IP and policy before building this overlay; it is not a public host
-  # inference endpoint.
+  # Render the private proxy IP and policy before building this overlay. The endpoint is private to
+  # the kind network.
   - .generated-endpoint.yaml

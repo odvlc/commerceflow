@@ -125,8 +125,7 @@ class KafkaDeliveryIntegrationTest {
 
     @Test
     void actualKafkaReplaysHaveOneTransactionalBusinessEffect() throws Exception {
-        // Replay the same envelope through the broker; transport redelivery must not repeat the
-        // stock decrement.
+        // Replay the envelope through Kafka and verify it does not decrement stock twice.
         var product = UUID.randomUUID();
         var order = UUID.randomUUID();
         inventory.setStock(product, 10, null);
@@ -157,8 +156,7 @@ class KafkaDeliveryIntegrationTest {
 
     @Test
     void failedBusinessEffectRollsBackDedupMarker() {
-        // A marker committed without its business effect would make later retries silently drop
-        // legitimate work.
+        // Verify the marker and business effect commit together so a retry cannot drop valid work.
         var event = UUID.randomUUID();
         assertThatThrownBy(
                 () ->
@@ -181,8 +179,7 @@ class KafkaDeliveryIntegrationTest {
 
     @Test
     void brokerOutageRetainsOutboxAndRecoveryPreservesAggregateOrder() {
-        // Publish failure must leave durable work pending and block later events for that aggregate
-        // until the earlier one is delivered.
+        // Keep later aggregate events pending when an earlier publish fails.
         var order = UUID.randomUUID();
         new TransactionTemplate(transactions)
                 .executeWithoutResult(

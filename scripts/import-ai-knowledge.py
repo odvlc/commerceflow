@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# Imports curated versioned fixtures through the ADMIN API and waits for indexing; it does not
-# write Elasticsearch or foreign databases directly.
+# Imports curated, versioned fixtures through the ADMIN API and waits for indexing.
 """Import versioned synthetic local knowledge through the ADMIN API; never access another service database."""
 import json
 import os
@@ -29,7 +28,7 @@ def call(path, body=None, key=None):
                      timeout=15) as response:
             return json.load(response)
     except HTTPError as error:
-        # Report only public ProblemDetail fields, never request headers or the caller's token.
+        # Report public ProblemDetail fields only. Never include request headers or tokens.
         try:
             problem = json.loads(error.read(16384))
         except (ValueError, UnicodeError):
@@ -39,7 +38,7 @@ def call(path, body=None, key=None):
         code = problem.get("code", "REQUEST_REJECTED")
         message = f"Knowledge API HTTP {error.code} ({code}): {problem.get('detail', 'Request rejected')}"
         if error.code == 409 and code in {"IDEMPOTENCY_CONFLICT", "KNOWLEDGE_VERSION_CONFLICT"}:
-            # A new key alone cannot authorize different content at an already published version.
+            # A new key cannot change the content of an already published version.
             message += (
                 "\nIf fixture text or metadata changed, increase that source's version in"
                 " knowledge/manifest.json and rerun. Keep its sourceId unchanged; do not delete"
@@ -51,16 +50,14 @@ def call(path, body=None, key=None):
 for entry in json.loads(root.joinpath("knowledge/manifest.json").read_text()):
     relative = entry.pop("file")
     path = (root / "knowledge" / relative).resolve()
-    # Resolve fixture paths before reading so the manifest cannot import arbitrary files outside curated
-    # knowledge.
+    # Resolve fixture paths before reading to keep imports inside the curated knowledge directory.
     if not path.is_relative_to((root / "knowledge").resolve()):
         raise ValueError("Knowledge fixture escaped its directory")
     entry["content"] = path.read_text()
     result = call("/imports", entry, "ai-knowledge-" + entry["sourceId"] + "-v" + str(entry["version"]))
     for attempt in range(90):
         job = call("/jobs/" + result["jobId"])
-        # Import acceptance alone does not prove retrievability; wait for the durable projection job to
-        # finish.
+        # Wait for the durable projection job before checking that imported content is retrievable.
         if job["state"] == "SUCCEEDED":
             print("Indexed", entry["sourceId"], "version", entry["version"])
             break

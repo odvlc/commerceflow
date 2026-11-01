@@ -1,6 +1,5 @@
 /*
- * Bootstraps the independently deployable notification-service; shared helpers are imported
- * without sharing service persistence.
+ * Starts the notification service with shared support and its own persistence.
  */
 package com.commerceflow.notification;
 
@@ -14,8 +13,7 @@ import org.springframework.context.annotation.Import;
 public class NotificationApplication {
 
     public static void main(String[] args) {
-        // Start this service context only; its configuration supplies the owned database and enabled
-        // infrastructure helpers.
+        // Load shared support in the notification service context.
         SpringApplication.run(NotificationApplication.class, args);
     }
 }

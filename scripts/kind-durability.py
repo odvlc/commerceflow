@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# Tests real pod/process loss with synthetic orders/carts and rebuild checkpoints while preserving
-# existing persistent volumes.
+# Tests Pod/process loss with synthetic orders and carts while preserving persistent volumes.
 """Verify real local order/database/cart PVC durability and interrupted AI index rebuilding. Synthetic data only."""
 import json
 import os
@@ -114,8 +113,7 @@ try:
     state = wait(lambda: kube('exec', 'postgres-0', '--', 'psql', '-U', 'postgres', '-d', 'ai', '-Atc', sql,
                               capture_output=True).stdout.strip().splitlines(), lambda value: value and value[0] == 't',
                  20)
-    # Require both unfinished durable work and a released old session lock before claiming an
-    # interrupted rebuild was recovered.
+    # Confirm pending work remains and the old session lock was released before marking recovery successful.
     assert state == ['t', 'RUNNING'], 'Required an interrupted rebuild with its old session lock released'
     report['rebuildStateAfterKill'] = 'RUNNING'
     report['exclusiveIndexLockAvailableAfterKill'] = True
@@ -130,7 +128,7 @@ try:
         'SIGKILL during RUNNING rebuild recovered the same generation/job and restored cited knowledge without waiting ten minutes')
     report['complete'] = True
 finally:
-    # Retain an auditable inactive test version; never delete/overwrite a user's source or a PVC.
+    # Keep an auditable inactive test version. Do not delete source files or PVCs.
     try:
         if imported is not None:
             admin = login_ready('admin')

@@ -1,5 +1,4 @@
-// Guards an issued checkout immediately with a ref so repeated clicks cannot race the asynchronous
-// React state update.
+// Set a ref before React updates state so rapid clicks cannot issue two checkouts.
 import {useRef, useState} from "react";
 
 export function CheckoutAction({
@@ -14,13 +13,13 @@ export function CheckoutAction({
 
     async function submit() {
         if (lock.current || disabled) return;
-        // The ref changes synchronously; a second click can arrive before React applies pending state.
+        // A second click can arrive before React applies the pending state update.
         lock.current = true;
         setPending(true);
         try {
             await onCheckout();
         } finally {
-            // Release on both success and failure so the same retained checkout intent can be retried.
+            // Let the user retry the same checkout intent after either outcome.
             lock.current = false;
             setPending(false);
         }

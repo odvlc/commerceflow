@@ -1,5 +1,5 @@
-# Scrapes authenticated service metrics; render local overrides when the development service-
-# client secret changes.
+# Scrapes authenticated service metrics. Render local overrides when the development service-client
+# secret changes.
 # Public local-development credential; update alongside SERVICE_CLIENT_SECRET if overridden.
 global:
   scrape_interval: 15s

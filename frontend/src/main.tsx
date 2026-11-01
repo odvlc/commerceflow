@@ -1,5 +1,4 @@
-// Initializes identity before mounting private views; authentication setup failure is surfaced in
-// the application.
+// Initializes identity before mounting private views and surfaces setup failures in the app.
 import {createRoot} from "react-dom/client";
 import App from "./App";
 import {initializeAuth} from "./auth";
@@ -7,7 +6,7 @@ import "./styles.css";
 
 let initialError = "";
 try {
-    // Resolve the existing Keycloak session before React decides which private panels are available.
+    // Resolve the Keycloak session before React renders private panels.
     await initializeAuth();
 } catch {
     initialError =

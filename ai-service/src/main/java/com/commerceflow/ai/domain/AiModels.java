@@ -20,11 +20,13 @@ public final class AiModels {
     private AiModels() {
     }
 
-    public record CreateConversation(@NotNull @Pattern(regexp = "CUSTOMER|SUPPORT") String mode) {
+    public record CreateConversation(
+            @NotNull @Pattern(regexp = "CUSTOMER|SUPPORT") String mode) {
 
     }
 
-    public record SendMessage(@NotBlank @Size(max = 4000) String content) {
+    public record SendMessage(
+            @NotBlank @Size(max = 4000) String content) {
 
     }
 
@@ -35,17 +37,30 @@ public final class AiModels {
 
     }
 
-    public record Page<T>(List<T> items, int page, int size, long totalElements) {
+    public record Page<T>(
+            List<T> items,
+            int page,
+            int size,
+            long totalElements) {
 
     }
 
     public record Conversation(
-            UUID id, UUID ownerId, String mode, long version, Instant createdAt, Instant updatedAt) {
+            UUID id,
+            UUID ownerId,
+            String mode,
+            long version,
+            Instant createdAt,
+            Instant updatedAt) {
 
     }
 
     public record Citation(
-            String sourceId, long version, String title, String heading, String chunkId) {
+            String sourceId,
+            long version,
+            String title,
+            String heading,
+            String chunkId) {
 
     }
 

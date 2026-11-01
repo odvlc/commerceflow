@@ -1,11 +1,9 @@
-# Scopes local workloads and their policies to commerceflow; deleting this namespace is not a
-# routine restart.
+# Scopes local workloads and policies to commerceflow. Deleting the namespace removes those resources.
 {
   "apiVersion": "v1",
   "kind": "Namespace",
   "metadata": {
-    # Scripts target this namespace explicitly; renaming it also requires updating their fixed local-
-    # context commands.
+    # Scripts use this namespace in their local cluster commands.
     "name": "commerceflow"
   }
 }

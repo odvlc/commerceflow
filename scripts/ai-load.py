@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# Supplies credentials to reproducible local k6 scenarios without putting bearer tokens in
-# command-line arguments.
+# Supplies credentials to local k6 scenarios through the environment, not command-line arguments.
 """Run reproducible local k6 scenarios without passing a credential on the command line."""
 import argparse
 import json
@@ -41,8 +40,7 @@ output = root / ".cache/verification" / ("ai-load-" + args.scenario + ("-cold" i
     "-" + args.label if args.label else "") + ".json")
 output.parent.mkdir(parents=True, exist_ok=True)
 k6 = settings.get("K6", str(root / ".cache/tools/k6-v2.3.0-macos-arm64/k6"))
-# Run k6 with credentials in the child environment rather than exposing a bearer token as a command
-# argument.
+# Pass credentials through the child environment so process listings do not expose bearer tokens.
 subprocess.run([k6, "run", "--summary-export", str(output), str(root / "performance/ai/load.js")], env=settings,
                check=True)
 print("Sanitized local load summary:", output)

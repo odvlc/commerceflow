@@ -1,7 +1,4 @@
-/*
- * Shares storefront layout, responsive breakpoints and copilot styles; component state remains in
- * React rather than CSS.
- */
+/* Storefront layout, responsive breakpoints, and copilot styles. Component state lives in React. */
 :root {
     font-family: Inter,
     ui-sans-serif,
@@ -886,7 +883,7 @@ footer > span {
     border: 0;
 }
 
-/* Honor the user motion preference without removing focus/selection feedback. */
+/* Respect reduced-motion preferences while keeping focus and selection feedback. */
 @media (prefers-reduced-motion: reduce) {
     * {
         transition: none !important;
@@ -931,7 +928,7 @@ footer > span {
     }
 }
 
-/* Reflow the storefront for narrow viewports instead of forcing horizontal desktop layout. */
+/* Reflow the storefront on narrow screens. */
 @media (max-width: 720px) {
     .announcement span {
         display: none;
@@ -1106,8 +1103,7 @@ footer > span {
     background: #ece8df;
 }
 
-/* Preserve answer whitespace as text; the component does not interpret generated content as trusted
- * HTML. */
+/* Preserve answer whitespace. Render generated content as text, never trusted HTML. */
 .copilot-answer {
     white-space: pre-wrap;
     overflow-wrap: anywhere;

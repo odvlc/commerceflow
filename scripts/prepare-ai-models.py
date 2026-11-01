@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# Explicitly prepares pinned local models; check mode verifies existing weights and never silently
-# downloads them.
+# Prepares pinned local models. Check mode verifies existing weights without downloading them.
 """Explicitly provision, digest-check and optionally warm pinned loopback Ollama models. No cloud inference."""
 import argparse
 import json
@@ -46,7 +45,7 @@ def installed():
 
 present = installed()
 missing = [model for model in lock['models'] if model['name'] not in present]
-# Check mode must remain read-only with respect to model downloads, even when a pinned model is absent.
+# Keep check mode read-only when a pinned model is missing.
 if missing and not args.check:
     if args.container_storage:
         usage = subprocess.run(['docker', 'compose', '-f', 'infra/compose.yaml', 'exec', '-T', 'ollama',
@@ -76,8 +75,7 @@ for expected in lock['models']:
                     print(expected['name'], progress[0], str(percent) + '%', flush=True)
                     last = progress
     actual = installed().get(expected['name'])
-    # Reject changed weights behind the same tag instead of silently accepting a different evaluation
-    # model.
+    # Reject changed weights behind the same tag so evaluations use the pinned model.
     if not actual or actual['digest'] != expected['digest']:
         raise RuntimeError(
             'Missing or changed model digest for ' + expected['name'] + '; run explicit model preparation')

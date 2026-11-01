@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
-# Combines browser workflows, exact stock checks and monitoring evidence against the native local
-# demonstration stack.
+# Runs browser workflows, stock checks, and monitoring checks against the local demo stack.
 set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
 mkdir -p .cache/verification
 python3 scripts/demo.py seed
 npm run --prefix frontend test:e2e
-# Verify exact committed/released quantities after browser workflows, not just the visible success
-# messages.
+# Verify committed and released quantities after each browser workflow.
 python3 scripts/demo.py verify
 python3 scripts/metrics-snapshot.py
 curl -fsS -u local-admin:local-grafana-only http://localhost:3001/api/search > .cache/verification/demo-dashboards.json

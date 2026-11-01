@@ -1,5 +1,5 @@
-// Keeps AI DTOs and authenticated SSE replay separate from storefront APIs; event cursors refer to
-// persisted public progress.
+// Keeps AI DTOs and authenticated SSE replay separate from storefront APIs. Cursors refer to
+// persisted public events.
 import {accessToken} from "./auth";
 import {ApiError, mutation, request} from "./api";
 
@@ -110,7 +110,7 @@ export async function streamRun(
 ): Promise<void> {
     const token = await accessToken();
     if (!token) throw new ApiError(401, "Sign in again to reconnect.");
-    // fetch supports bearer headers and a replay cursor without placing credentials in the URL.
+    // Send bearer credentials in headers and the replay cursor in Last-Event-ID.
     const response = await fetch(
         (import.meta.env.VITE_API_BASE_URL || "/api/v1") + `/ai/runs/${run}/events`,
         {
@@ -143,8 +143,7 @@ export async function streamRun(
                 /\r\n/g,
                 "\n",
             );
-            // Enforce the frame bound before JSON parsing so an unterminated server frame cannot grow
-            // memory indefinitely.
+            // Check the frame size before parsing so an unterminated event cannot grow memory indefinitely.
             if (buffer.length > 128000)
                 throw new Error("Copilot event exceeds the supported size.");
             let boundary: number;
@@ -160,7 +159,7 @@ export async function streamRun(
                     if (line.startsWith("data:")) data.push(line.slice(5).trimStart());
                 }
                 if (data.length && Number.isSafeInteger(id) && id > after) {
-                    // Advance only after delivery so reconnect can replay events the consumer did not accept.
+                    // Advance the cursor after delivery so reconnect can replay an unaccepted event.
                     onEvent({id, type, payload: JSON.parse(data.join("\n"))});
                     after = id;
                 }
@@ -168,8 +167,7 @@ export async function streamRun(
             if (done) break;
         }
     } finally {
-        // Release the fetch stream on errors/abort as well as normal completion; server run state
-        // remains independent.
+        // Release the fetch stream on completion, error, or abort. The server run continues independently.
         await reader.cancel().catch(() => undefined);
         reader.releaseLock();
     }

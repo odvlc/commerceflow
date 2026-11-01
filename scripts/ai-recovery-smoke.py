@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# Interrupts real AI execution and withholds a real Cart response; cleanup restores temporary
-# fault routing while preserving volumes.
+# Interrupts real AI execution and delays a Cart response. Cleanup restores routing and preserves volumes.
 """Exercise real local Compose AI process loss and an acknowledged-but-lost Cart response. Preserves volumes."""
 import argparse
 import json
@@ -23,8 +22,7 @@ args = parser.parse_args()
 base = local_url(
     os.environ.get('BASE_URL', 'http://localhost:3000' if args.target == 'kind' else 'http://localhost:8080'))
 token = login('alice')
-# Keep completion false until every required recovery assertion passes; partial evidence must not look
-# fully accepted.
+# Mark completion only after every recovery assertion passes.
 report = {'target': 'local ' + args.target, 'realProcessKill': False, 'complete': False, 'checks': []}
 
 
@@ -103,8 +101,7 @@ def compose(*arguments, **overrides):
                     'items'][
                     0]
             report['lastKilledPodUid'] = pod['metadata']['uid']
-            # Stop the actual container before replacing its Pod; graceful shutdown alone would not
-            # exercise crash recovery.
+            # Kill the container before replacing its Pod to exercise crash recovery.
             container_id = pod['status']['containerStatuses'][0]['containerID'].split('://', 1)[1]
             subprocess.run(
                 ['docker', 'exec', 'commerceflow-control-plane', 'crictl', 'stop', '--timeout=0', container_id],
@@ -165,7 +162,7 @@ acknowledged, release = threading.Event(), threading.Event()
 
 
 class CartResponseDelay(BaseHTTPRequestHandler):
-    # This test-only loopback proxy delays only the real acknowledgment, never fabricates a response.
+    # This test-only loopback proxy delays the real acknowledgment without fabricating a response.
     def log_message(self, *_):
         pass
 
@@ -270,7 +267,7 @@ try:
     report['realProcessKill'] = True
     assert quantity(product) == before + 1
     release.set()
-    # Restore fixed Cart DNS while inference is unavailable: committed execution must not depend on an LLM.
+    # Restore fixed Cart DNS while inference is unavailable. A committed execution must finish without the model.
     restart(AI_OLLAMA_URL='http://host.docker.internal:11439')
     token = login('alice')
     assert not call('/ai/capabilities')['modelReady']

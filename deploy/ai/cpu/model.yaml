@@ -1,5 +1,5 @@
-# Keeps model files on a PVC and requests inference memory up front; retained storage does not
-# prove the full stack fits the host.
+# Keeps model files on a PVC and requests inference memory up front. Check host capacity for the rest
+# of the stack too.
 apiVersion: v1
 kind: Service
 metadata: { name: ollama }
@@ -34,8 +34,7 @@ spec:
             - { name: OLLAMA_MAX_QUEUE, value: "8" }
             - { name: OLLAMA_NO_CLOUD, value: "1" }
           resources:
-            # Reserve inference memory at scheduling time so the model is not started on a node that
-            # cannot accommodate it.
+            # Reserve inference memory before scheduling the model.
             requests: { cpu: "1", memory: 6Gi }
             limits: { cpu: "4", memory: 6Gi }
           securityContext:
@@ -53,8 +52,7 @@ spec:
             tcpSocket: { port: 11434 }
             periodSeconds: 5
             failureThreshold: 36
-  # Keep weights across Pod restarts; readiness still requires the pinned models to pass preparation
-  # checks.
+  # Keep weights across Pod restarts. Readiness requires the pinned models to pass preparation checks.
   volumeClaimTemplates:
     - metadata: { name: models }
       spec:

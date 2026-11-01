@@ -40,7 +40,11 @@ public class ProductController {
     }
 
     public record ProductPage(
-            List<ProductView> items, int page, int size, long totalElements, int totalPages) {
+            List<ProductView> items,
+            int page,
+            int size,
+            long totalElements,
+            int totalPages) {
 
     }
 
@@ -58,8 +62,7 @@ public class ProductController {
     public ProductView get(
             @PathVariable UUID id,
             @RequestHeader(value = "Cache-Control", defaultValue = "") String cacheControl) {
-        // Trusted price callers request no-cache; ordinary catalog reads may use the bounded Redis
-        // cache.
+        // Trusted price reads bypass Redis. Ordinary catalog reads may use the bounded cache.
         return catalog.get(id, cacheControl.toLowerCase(Locale.ROOT).contains("no-cache"));
     }
 
@@ -90,8 +93,7 @@ public class ProductController {
             @Valid @RequestBody ProductInput input,
             @RequestAttribute("correlationId") String correlationId) {
         var result =
-                // Strip the quoted HTTP ETag only after validation; the service checks the expected
-                // database version.
+                // Remove the ETag quotes after validation. The service checks the database version.
                 catalog.update(id, Long.parseLong(version.replace("\"", "")), input, correlationId);
         return ResponseEntity.ok().eTag(Long.toString(result.version())).body(result);
     }

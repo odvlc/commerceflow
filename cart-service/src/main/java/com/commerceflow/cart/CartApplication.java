@@ -1,6 +1,5 @@
 /*
- * Bootstraps the independently deployable cart-service; shared helpers are imported without
- * sharing service persistence.
+ * Starts the cart service with shared web support and Redis-backed carts.
  */
 package com.commerceflow.cart;
 
@@ -16,8 +15,7 @@ import org.springframework.context.annotation.Import;
 public class CartApplication {
 
     public static void main(String[] args) {
-        // Start this service context only; its configuration supplies the owned database and enabled
-        // infrastructure helpers.
+        // Load shared web support in the cart service context.
         SpringApplication.run(CartApplication.class, args);
     }
 }

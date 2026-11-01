@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
-# Explicit destructive teardown of the named local cluster, including its PVC data; do not use as
-# a recovery step.
+# Destructively removes the named local cluster and its PVC data. Use recovery scripts to restart workloads.
 set -euo pipefail
-# This explicit teardown destroys the local cluster and its PVC data.
 kind delete cluster --name commerceflow
 if docker inspect commerceflow-kind-model-proxy >/dev/null 2>&1; then
-  # Remove only the task-owned inference proxy after deleting the named cluster; unrelated Docker
-  # containers remain untouched.
+  # Remove the task-owned inference proxy. Leave unrelated Docker containers untouched.
   docker rm -f commerceflow-kind-model-proxy >/dev/null
 fi

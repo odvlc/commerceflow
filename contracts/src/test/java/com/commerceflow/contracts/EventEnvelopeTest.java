@@ -30,17 +30,15 @@ class EventEnvelopeTest {
         // Reject unsupported wire contracts at decoding boundaries instead of sending malformed
         // envelopes into business handlers.
         assertThatIllegalArgumentException()
-                .isThrownBy(
-                        () -> new EventEnvelope<>(
-                                UUID.randomUUID(),
-                                "Test",
-                                2,
-                                UUID.randomUUID(),
-                                "test",
-                                Instant.now(),
-                                "value"));
+                .isThrownBy(() -> new EventEnvelope<>(
+                        UUID.randomUUID(),
+                        "Test",
+                        2,
+                        UUID.randomUUID(),
+                        "test",
+                        Instant.now(),
+                        "value"));
         assertThatIllegalArgumentException()
-                .isThrownBy(
-                        () -> EventEnvelope.create("Test", UUID.randomUUID(), "\n".repeat(129), "value"));
+                .isThrownBy(() -> EventEnvelope.create("Test", UUID.randomUUID(), "\n".repeat(129), "value"));
     }
 }

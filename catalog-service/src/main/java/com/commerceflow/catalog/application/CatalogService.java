@@ -53,8 +53,7 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public Page<ProductView> list(int page, int size, String category) {
-        var paging =
-                PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.asc("id")));
+        var paging = PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.asc("id")));
         return (category == null
                 ? products.findByActiveTrue(paging)
                 : products.findByActiveTrueAndCategory(category, paging))
@@ -63,9 +62,7 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public Page<ProductView> adminList(int page, int size) {
-        return products
-                .findAll(
-                        PageRequest.of(page, size, Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("id"))))
+        return products.findAll(PageRequest.of(page, size, Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("id"))))
                 .map(ProductView::from);
     }
 
@@ -77,8 +74,7 @@ public class CatalogService {
     @Transactional(readOnly = true)
     public ProductView get(UUID id, boolean fresh) {
         var storage = cache.getIfAvailable();
-        // Fresh reads bypass both cache lookup and refill so checkout validates current authoritative
-        // prices.
+        // Fresh reads bypass Redis so checkout validates current catalog prices.
         if (!fresh && storage != null) {
             var hit = storage.get(id);
             if (hit.isPresent())
@@ -96,8 +92,7 @@ public class CatalogService {
     @Transactional
     public ProductView create(String key, ProductInput input, String correlationId) {
         String hash = hash(json.writeValueAsString(input));
-        // Database-scoped serialization makes concurrent retries safe without poisoning the
-        // transaction.
+        // Database-scoped serialization keeps concurrent retries in order within the transaction.
         jdbc.sql("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))")
                 .param("key", key)
                 .query(Object.class)
@@ -120,12 +115,10 @@ public class CatalogService {
     }
 
     @Transactional
-    public ProductView update(
-            UUID id, long expectedVersion, ProductInput input, String correlationId) {
+    public ProductView update(UUID id, long expectedVersion, ProductInput input, String correlationId) {
         var product = required(id);
         if (product.getVersion() != expectedVersion)
-            throw new BusinessException(
-                    HttpStatus.CONFLICT, "VERSION_CONFLICT", "Product changed; reload before editing");
+            throw new BusinessException(HttpStatus.CONFLICT, "VERSION_CONFLICT", "Product changed; reload before editing");
         revise(product, input);
         // Detect optimistic write failure before appending the event for the revised product.
         products.flush();
@@ -166,8 +159,7 @@ public class CatalogService {
         var id = product.getId();
         var version = product.getVersion();
         TransactionSynchronizationManager
-                // Invalidate after commit; invalidating before commit would let a reader refill from
-                // old database state.
+                // Invalidate after commit so readers cannot refill the cache from old database state.
                 .registerSynchronization(
                         new TransactionSynchronization() {
                             @Override
@@ -189,9 +181,7 @@ public class CatalogService {
 
     private static String hash(String value) {
         try {
-            return HexFormat.of()
-                    .formatHex(
-                            MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
         }

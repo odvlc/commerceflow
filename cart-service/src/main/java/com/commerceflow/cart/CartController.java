@@ -30,11 +30,14 @@ import java.util.UUID;
 @Validated
 public class CartController {
 
-    public record AddItem(@NotNull UUID productId, @Min(1) @Max(1000) int quantity) {
+    public record AddItem(
+            @NotNull UUID productId,
+            @Min(1) @Max(1000) int quantity) {
 
     }
 
-    public record SetQuantity(@Min(1) @Max(1000) int quantity) {
+    public record SetQuantity(
+            @Min(1) @Max(1000) int quantity) {
 
     }
 
@@ -46,10 +49,9 @@ public class CartController {
 
     @GetMapping
     public ResponseEntity<CartService.CartView> get(@AuthenticationPrincipal Jwt jwt) {
-        // The subject comes from the validated JWT; clients cannot select another customer cart.
+        // Use the validated JWT subject as the cart owner.
         var cart = carts.get(UUID.fromString(jwt.getSubject()));
-        // Expose the same revision in ETag and the body so approval clients can submit an exact If-
-        // Match.
+        // Return the revision in the ETag and body so approval clients can send it in If-Match.
         return ResponseEntity.ok().eTag(cart.revision()).body(cart);
     }
 

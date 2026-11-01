@@ -65,9 +65,8 @@ public class KnowledgeStore {
         String hash = RequestHash.sha256(json.writeValueAsString(input));
         lock("knowledge-request:" + owner + ":" + key);
         var old =
-                jdbc.sql(
-                                "SELECT request_hash,result::text FROM knowledge_requests WHERE owner_id=:owner AND"
-                                        + " request_key=:key")
+                jdbc.sql("SELECT request_hash,result::text FROM knowledge_requests" +
+                                " WHERE owner_id=:owner AND request_key=:key")
                         .param("owner", owner)
                         .param("key", key)
                         .query((r, n) -> Map.entry(r.getString(1), r.getString(2)))
@@ -78,42 +77,34 @@ public class KnowledgeStore {
             return json.readValue(old.get().getValue(), ImportResult.class);
         }
         lock("knowledge-source:" + input.sourceId());
-        var existing =
-                jdbc.sql("SELECT * FROM knowledge_documents WHERE source_id=:source")
-                        .param("source", input.sourceId())
-                        .query(this::map)
-                        .optional();
+        var existing = jdbc.sql("SELECT * FROM knowledge_documents WHERE source_id=:source")
+                .param("source", input.sourceId())
+                .query(this::map)
+                .optional();
         UUID id = existing.map(Document::id).orElseGet(UUID::randomUUID);
         ImportResult result;
         // Reject stale source revisions; importing an identical version is allowed only when its
         // content fingerprint matches.
         if (existing.isPresent() && existing.get().version() >= input.version()) {
-            String previous =
-                    jdbc.sql("SELECT content_hash FROM knowledge_documents WHERE id=:id")
-                            .param("id", id)
-                            .query(String.class)
-                            .single();
+            String previous = jdbc.sql("SELECT content_hash FROM knowledge_documents WHERE id=:id")
+                    .param("id", id)
+                    .query(String.class)
+                    .single();
             if (existing.get().version() != input.version() || !previous.equals(hash))
-                throw AiStore.conflict(
-                        "KNOWLEDGE_VERSION_CONFLICT", "Source version is stale or has changed contents");
-            result =
-                    jdbc.sql(
-                                    "SELECT id,state FROM knowledge_index_jobs WHERE document_id=:id AND"
-                                            + " source_version=:version AND generation='current'")
-                            .param("id", id)
-                            .param("version", input.version())
-                            .query(
-                                    (r, n) ->
-                                            new ImportResult(
-                                                    id, input.version(), r.getObject(1, UUID.class), r.getString(2)))
-                            .single();
+                throw AiStore.conflict("KNOWLEDGE_VERSION_CONFLICT", "Source version is stale or has changed contents");
+            result = jdbc.sql("SELECT id,state FROM knowledge_index_jobs" +
+                            " WHERE document_id=:id AND source_version=:version AND generation='current'")
+                    .param("id", id)
+                    .param("version", input.version())
+                    .query((r, n) ->
+                            new ImportResult(
+                                    id, input.version(), r.getObject(1, UUID.class), r.getString(2)))
+                    .single();
         } else {
-            jdbc.sql(
-                            "INSERT INTO"
-                                    + " knowledge_documents(id,source_id,version,content_hash,title,audience,content,active)"
-                                    + " VALUES(:id,:source,:version,:hash,:title,:audience,:content,:active) ON"
-                                    + " CONFLICT(id) DO UPDATE SET"
-                                    + " version=excluded.version,content_hash=excluded.content_hash,title=excluded.title,audience=excluded.audience,content=excluded.content,active=excluded.active,updated_at=now()")
+            jdbc.sql("INSERT INTO knowledge_documents(id,source_id,version,content_hash,title,audience,content,active)"
+                            + " VALUES(:id,:source,:version,:hash,:title,:audience,:content,:active) ON"
+                            + " CONFLICT(id) DO UPDATE SET"
+                            + " version=excluded.version,content_hash=excluded.content_hash,title=excluded.title,audience=excluded.audience,content=excluded.content,active=excluded.active,updated_at=now()")
                     .param("id", id)
                     .param("source", input.sourceId())
                     .param("version", input.version())
@@ -136,13 +127,9 @@ public class KnowledgeStore {
                     heading = text.replaceFirst("^#+\\s*", "").split("\n")[0];
                 for (int start = 0; start < text.length(); start += 1400) {
                     String chunk = text.substring(start, Math.min(text.length(), start + 1400));
-                    UUID chunkId =
-                            UUID.nameUUIDFromBytes(
-                                    (id + ":" + input.version() + ":" + ordinal).getBytes(StandardCharsets.UTF_8));
-                    jdbc.sql(
-                                    "INSERT INTO"
-                                            + " knowledge_chunks(id,document_id,source_version,ordinal,heading,content,content_hash)"
-                                            + " VALUES(:id,:document,:version,:ordinal,:heading,:content,:hash)")
+                    UUID chunkId = UUID.nameUUIDFromBytes((id + ":" + input.version() + ":" + ordinal).getBytes(StandardCharsets.UTF_8));
+                    jdbc.sql("INSERT INTO knowledge_chunks(id,document_id,source_version,ordinal,heading,content,content_hash)"
+                                    + " VALUES(:id,:document,:version,:ordinal,:heading,:content,:hash)")
                             .param("id", chunkId)
                             .param("document", id)
                             .param("version", input.version())
@@ -154,9 +141,8 @@ public class KnowledgeStore {
                 }
             }
             UUID job = UUID.randomUUID();
-            jdbc.sql(
-                            "INSERT INTO knowledge_index_jobs(id,document_id,source_version)"
-                                    + " VALUES(:job,:id,:version)")
+            jdbc.sql("INSERT INTO knowledge_index_jobs(id,document_id,source_version)"
+                            + " VALUES(:job,:id,:version)")
                     .param("job", job)
                     .param("id", id)
                     .param("version", input.version())
@@ -164,9 +150,8 @@ public class KnowledgeStore {
             outbox.append("KnowledgeChanged", id, correlation, new KnowledgeChanged(id, input.version()));
             result = new ImportResult(id, input.version(), job, "PENDING");
         }
-        jdbc.sql(
-                        "INSERT INTO knowledge_requests(owner_id,request_key,request_hash,result)"
-                                + " VALUES(:owner,:key,:hash,CAST(:result AS jsonb))")
+        jdbc.sql("INSERT INTO knowledge_requests(owner_id,request_key,request_hash,result)"
+                        + " VALUES(:owner,:key,:hash,CAST(:result AS jsonb))")
                 .param("owner", owner)
                 .param("key", key)
                 .param("hash", hash)

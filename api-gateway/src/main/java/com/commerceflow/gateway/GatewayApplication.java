@@ -1,6 +1,5 @@
 /*
- * Bootstraps the independently deployable api-gateway; shared helpers are imported without sharing
- * service persistence.
+ * Starts the gateway with shared web support and no service database.
  */
 package com.commerceflow.gateway;
 
@@ -15,8 +14,7 @@ import org.springframework.context.annotation.Import;
 public class GatewayApplication {
 
     public static void main(String[] args) {
-        // Start this service context only; its configuration supplies the owned database and enabled
-        // infrastructure helpers.
+        // Load shared web support in the gateway context.
         SpringApplication.run(GatewayApplication.class, args);
     }
 }

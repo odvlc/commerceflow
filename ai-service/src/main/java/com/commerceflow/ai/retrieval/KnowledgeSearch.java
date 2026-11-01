@@ -51,8 +51,7 @@ public class KnowledgeSearch {
             var lexical = index.query(query, mode, 20);
             var hits = lexical;
             boolean semantic = false, degraded = false;
-            // Only embedding failure degrades to lexical hits; an unavailable lexical/search backend
-            // remains an explicit retrieval failure.
+            // Embedding failures fall back to lexical search. Lexical backend failures remain retrieval errors.
             if (index.semanticEnabled())
                 try {
                     var vectors = index.vector(text, mode, 20);
@@ -67,7 +66,7 @@ public class KnowledgeSearch {
                 var value = hit.path("_source");
                 String source = value.path("sourceId").asText();
                 long version = value.path("sourceVersion").asLong();
-                // Elasticsearch can lag revocation/version changes; PostgreSQL makes the final access check.
+                // PostgreSQL checks access because Elasticsearch may lag revocation or version changes.
                 if (!store.permitted(source, version, mode))
                     continue;
                 String chunk = value.path("chunkId").asText();

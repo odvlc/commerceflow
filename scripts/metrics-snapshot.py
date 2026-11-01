@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# Collects authenticated metrics through the chosen native or Compose path without exposing
-# internal management ports.
+# Collects authenticated metrics through native or Compose services without exposing management ports.
 """Collect authenticated Prometheus snapshots from the local application ports."""
 import json
 import os
@@ -12,8 +11,8 @@ from urllib.request import Request, urlopen
 
 output = Path(os.environ.get("METRICS_OUTPUT", ".cache/verification/metrics"))
 output.mkdir(parents=True, exist_ok=True)
-# Container services intentionally have no host management ports. Read the samples that Prometheus
-# obtained using its service-account OAuth2 credentials instead of publishing those ports.
+# Container services have no host management ports. Read the samples Prometheus collected with its OAuth2
+# service account.
 if os.environ.get("METRICS_MODE", "native") == "compose":
     base = os.environ.get("PROMETHEUS_URL", "http://localhost:9090").rstrip("/")
     if urlparse(base).hostname not in {"localhost", "127.0.0.1", "::1"}:
@@ -30,8 +29,7 @@ if os.environ.get("METRICS_MODE", "native") == "compose":
 
     targets = query('up{job="commerceflow"}')
     expected = 8 if os.environ.get("AI_ENABLED", "false").lower() == "true" else 7
-    # Require real healthy scrape samples for every enabled service; an empty successful query is not
-    # verification.
+    # Require healthy scrape samples for every enabled service. An empty query is not verification.
     if len(targets) != expected or any(item["value"][1] != "1" for item in targets):
         raise RuntimeError("Expected all authenticated CommerceFlow scrape targets to be healthy")
     output.joinpath("compose-targets.json").write_text(json.dumps(targets, indent=2))

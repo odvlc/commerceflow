@@ -37,8 +37,7 @@ public class PaymentConsumer {
         var event = codec.decode(record);
         try (var ignored = MDC.putCloseable("correlationId", event.correlationId())) {
             switch (event.eventType()) {
-                // Command replay must reuse persisted payment identity rather than authorize another
-                // simulated charge.
+                // Reuse the persisted payment identity on replay to avoid another simulated charge.
                 case "AuthorizePayment" -> processed.once(
                         event.eventId(),
                         () ->

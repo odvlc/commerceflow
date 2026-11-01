@@ -23,7 +23,11 @@ import java.util.UUID;
 public class TrustedCatalog {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Quote(UUID id, BigDecimal price, String currency, boolean active) {
+    public record Quote(
+            UUID id,
+            BigDecimal price,
+            String currency,
+            boolean active) {
 
     }
 
@@ -44,13 +48,11 @@ public class TrustedCatalog {
             var quote = client.get()
                     .uri("/api/v1/products/{id}", productId)
                     .header("X-Correlation-ID", correlation)
-                    // The quote is authoritative for checkout, so a stale detail-cache value
-                    // cannot set the order total.
+                    // Use the checkout quote for the order total, not a potentially stale cached detail.
                     .header("Cache-Control", "no-cache")
                     .retrieve()
                     .body(Quote.class);
-            // Validate the service response too; a successful HTTP status is not sufficient evidence of
-            // a usable price.
+            // Check the response body as well as its HTTP status before using the price.
             if (quote == null
                     || !productId.equals(quote.id())
                     || !quote.active()

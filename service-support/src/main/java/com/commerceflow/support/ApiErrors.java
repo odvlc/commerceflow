@@ -55,10 +55,8 @@ public class ApiErrors {
                 r);
     }
 
-    private ProblemDetail problem(
-            HttpStatus status, String code, String detail, HttpServletRequest request) {
-        // Build the public problem response from a controlled message rather than exposing an
-        // infrastructure stack trace.
+    private ProblemDetail problem(HttpStatus status, String code, String detail, HttpServletRequest request) {
+        // Use a controlled public message; never expose an infrastructure stack trace.
         var problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setTitle(code);
         problem.setProperty("code", code);

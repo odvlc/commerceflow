@@ -1,5 +1,4 @@
-// Coordinates storefront, checkout and administration views; server authorization remains
-// authoritative for every role-dependent action.
+// Coordinates storefront, checkout, and administration views. The server enforces role permissions.
 import type {FormEvent} from "react";
 import {useEffect, useRef, useState} from "react";
 import {identity, login, logout, roles} from "./auth";
@@ -116,8 +115,7 @@ export default function App({initialError = ""}: { initialError?: string }) {
                 items,
                 scenario,
             });
-            // Keep the same key for this exact customer/cart/scenario after an ambiguous checkout
-            // response.
+            // Reuse this key for the same customer, cart, and scenario after an ambiguous response.
             const key = checkoutKey(intent);
             const order = await mutation<Order>(
                 "/orders",
@@ -410,8 +408,7 @@ function Products({
     const rememberRef = useRef(remember);
     rememberRef.current = remember;
     useEffect(() => {
-        // A changed filter or unmounted product view invalidates its in-flight request to avoid stale
-        // list updates.
+        // Ignore an in-flight response after filters change or the product view unmounts.
         const abort = new AbortController();
         setLoading(true);
         setError("");
@@ -813,8 +810,7 @@ function Admin({
             if (editing)
                 await request(`/admin/products/${editing.id}`, {
                     method: "PUT",
-                    // Administrative edits carry the version that was loaded; a conflict requires
-                    // reloading rather than overwriting.
+                    // Include the loaded version in admin edits. Reload after a conflict before trying again.
                     headers: {"If-Match": `"${editing.version}"`},
                     body: JSON.stringify(form),
                 });

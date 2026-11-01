@@ -1,6 +1,5 @@
 /*
- * Bootstraps the independently deployable order-service; shared helpers are imported without
- * sharing service persistence.
+ * Starts the order service with shared support and its own persistence.
  */
 package com.commerceflow.order;
 
@@ -14,8 +13,7 @@ import org.springframework.context.annotation.Import;
 public class OrderApplication {
 
     public static void main(String[] args) {
-        // Start this service context only; its configuration supplies the owned database and enabled
-        // infrastructure helpers.
+        // Load shared support in the order service context.
         SpringApplication.run(OrderApplication.class, args);
     }
 }

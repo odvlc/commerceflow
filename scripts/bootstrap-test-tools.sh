@@ -1,20 +1,18 @@
 #!/usr/bin/env bash
-# Prepares pinned native test dependencies under the ignored cache; these processes are separate
-# from persistent runtime infrastructure.
+# Prepares pinned native test tools in the ignored cache. They do not replace runtime infrastructure.
 set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TOOLS="$PROJECT_ROOT/.cache/tools"
 REDIS_VERSION=8.10.2
 REDIS_SHA256=b9ffee226b5eecdba98a679260dad764b2a4ebd90dce4ad5ac9e9f3eef9c02b3
-# All downloaded/native build outputs stay in the ignored cache rather than modifying application
-# source.
+# Keep downloaded tools and native build outputs in the ignored cache.
 mkdir -p "$TOOLS"
 if [ ! -x "$TOOLS/redis-$REDIS_VERSION/src/redis-server" ]; then
   curl --fail --location --retry 3 "https://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz" -o "$TOOLS/redis-$REDIS_VERSION.tar.gz"
   printf '%s  %s\n' "$REDIS_SHA256" "$TOOLS/redis-$REDIS_VERSION.tar.gz" | shasum -a 256 -c -
   tar -xzf "$TOOLS/redis-$REDIS_VERSION.tar.gz" -C "$TOOLS"
 fi
-# Build core only: CommerceFlow needs strings, hashes and Lua, not optional Redis modules.
+# Build Redis core with strings, hashes, and Lua. Optional modules are not needed.
 make -C "$TOOLS/redis-$REDIS_VERSION/src" -j4 redis-server
 "$TOOLS/redis-$REDIS_VERSION/src/redis-server" --version
 

@@ -1,5 +1,4 @@
-# Defines additive network allow rules; broad selectors must not accidentally bypass the stricter
-# AI overlay boundaries.
+# Defines additive network allow rules. Broad selectors can bypass the narrower AI overlay rules.
 {
   "apiVersion": "networking.k8s.io/v1",
   "kind": "NetworkPolicy",
@@ -8,8 +7,7 @@
   },
   "spec": {
     "podSelector": { },
-    # Policies combine allowed traffic additively; a broad base allow can defeat a stricter optional-
-    # service policy.
+    # Allowed traffic is additive. A broad base rule can override a narrower optional-service policy.
     "policyTypes": [
       "Ingress",
       "Egress"

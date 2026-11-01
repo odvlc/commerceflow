@@ -1,12 +1,11 @@
-# Adds the AI-owned database/role to existing PostgreSQL state without resetting passwords or
-# recreating persisted data.
+# Adds the AI database and role to existing PostgreSQL state while preserving passwords and data.
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: ai-db-provision-v1
 spec:
-  # Retry bounded provisioning failures; the job must remain additive and preserve existing role
-  # ownership/passwords.
+  # Retry provisioning failures. This job only adds the AI database and role; it preserves existing
+  # ownership and passwords.
   backoffLimit: 2
   activeDeadlineSeconds: 180
   template:

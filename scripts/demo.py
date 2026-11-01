@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# Seeds/verifies synthetic loopback commerce data through authenticated APIs instead of writing
-# foreign service databases.
+# Seeds and verifies synthetic commerce data through authenticated loopback APIs.
 """Seed/verify synthetic loopback-only demonstration data using real Keycloak PKCE login."""
 import base64
 import hashlib
@@ -87,8 +86,7 @@ if len(sys.argv) < 2 or sys.argv[1] == "seed":
                            {"Idempotency-Key": "commerceflow-demo-" + sku})
         try:
             stock = call("/admin/inventory/" + product["id"])
-            # Never overwrite demo stock while an outstanding order owns a reservation; finish those
-            # workflows first.
+            # Finish outstanding orders before resetting demo stock they may have reserved.
             if stock["reservedQuantity"]:
                 raise RuntimeError("Finish pending demo orders before reseeding stock")
             quantity = {"availableQuantity": 25, "version": stock["version"]}
@@ -100,7 +98,7 @@ if len(sys.argv) < 2 or sys.argv[1] == "seed":
         products.append({"id": product["id"], "sku": sku})
     state.parent.mkdir(parents=True, exist_ok=True)
     state.write_text(json.dumps(products, indent=2))
-    # Explicitly exercise cache-aside reads without using cached prices for checkout.
+    # Exercise cache-aside reads; checkout still uses current prices from the catalog.
     call("/products/" + products[0]["id"])
     call("/products/" + products[0]["id"])
     print("Seeded six synthetic products, stock and cached detail reads")
