@@ -33,12 +33,10 @@ public class TrustedCatalog {
 
     private final RestClient client;
 
-    public TrustedCatalog(
-            RestClient.Builder builder,
-            @Value("${catalog.base-url:http://localhost:8081}") String baseUrl) {
-        var factory =
-                new JdkClientHttpRequestFactory(
-                        HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build());
+    public TrustedCatalog(RestClient.Builder builder,
+                          @Value("${catalog.base-url:http://localhost:8081}") String baseUrl) {
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build());
         factory.setReadTimeout(Duration.ofSeconds(3));
         client = builder.baseUrl(baseUrl).requestFactory(factory).build();
     }

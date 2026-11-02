@@ -78,6 +78,7 @@ public class CartService {
             return result
             """,
             String.class);
+
     private static final DefaultRedisScript<String> READ = new DefaultRedisScript<>("""
             local raw=redis.call('GET',KEYS[1])
             if raw then
@@ -127,10 +128,11 @@ public class CartService {
         String revision = expectedRevision == null ? "" : expectedRevision.replace("\"", "");
         if (!Set.of("ADD", "SET", "DELETE").contains(operation) || quantity < 0 || quantity > 1000)
             throw new BusinessException(HttpStatus.BAD_REQUEST, "INVALID_CART_OPERATION", "Invalid cart operation");
+
         try {
             // Hash the operation contents so a reused key cannot authorize a different write.
             String hash = RequestHash.sha256(operation + ":" + product + ":" + quantity);
-            var raw = redis.execute(
+            String raw = redis.execute(
                     MUTATE,
                     List.of(key(customer), "cf:cart:{" + customer + "}:requests"),
                     operation,
@@ -156,12 +158,12 @@ public class CartService {
     private CartView view(String raw, UUID customer) {
         if (raw == null)
             throw unavailable();
-        var document = json.readValue(raw, Document.class);
-        var items = document.items().entrySet().stream()
+        Document document = json.readValue(raw, Document.class);
+        List<CartItem> items = document.items().entrySet().stream()
                 .map(e -> new CartItem(UUID.fromString(e.getKey()), e.getValue()))
                 .sorted(Comparator.comparing(CartItem::productId))
                 .toList();
-        var remaining = redis.getExpire(key(customer));
+        Long remaining = redis.getExpire(key(customer));
         return new CartView(items, document.version(), remaining == null ? 0 : Math.max(0, remaining), document.incarnation() == null ? "" : document.incarnation() + ":" + document.version());
     }
 

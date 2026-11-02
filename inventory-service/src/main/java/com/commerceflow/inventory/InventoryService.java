@@ -23,7 +23,9 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -202,19 +204,16 @@ public class InventoryService {
 
     private Reservation finish(UUID orderId, String target, String correlation) {
         lockOrder(orderId);
-        var current =
-                jdbc.sql("SELECT status FROM reservation_orders WHERE order_id=:id")
-                        .param("id", orderId)
-                        .query(String.class)
-                        .optional();
+        Optional<String> current = jdbc.sql("SELECT status FROM reservation_orders WHERE order_id=:id")
+                .param("id", orderId)
+                .query(String.class)
+                .optional();
         if (current.isEmpty()) {
             if (!target.equals("RELEASED"))
-                throw error(
-                        HttpStatus.CONFLICT, "RESERVATION_MISSING", "Cannot commit a missing reservation");
+                throw error(HttpStatus.CONFLICT, "RESERVATION_MISSING", "Cannot commit a missing reservation");
             // A cancellation tombstone prevents a late ReserveInventory from taking stock.
-            jdbc.sql(
-                            "INSERT INTO reservation_orders(order_id,status,expires_at,correlation_id) VALUES"
-                                    + " (:id,'RELEASED',now(),:correlation)")
+            jdbc.sql("INSERT INTO reservation_orders(order_id,status,expires_at,correlation_id) VALUES"
+                            + " (:id,'RELEASED',now(),:correlation)")
                     .param("id", orderId)
                     .param("correlation", correlation)
                     .update();
@@ -222,23 +221,21 @@ public class InventoryService {
             outbox.append("InventoryResult", orderId, correlation, new InventoryResult(target, null));
             return new Reservation(orderId, target);
         } else if (current.get().equals("RESERVED")) {
-            var rows =
-                    jdbc.sql(
-                                    "SELECT product_id,quantity FROM reservations WHERE order_id=:id ORDER BY"
-                                            + " product_id")
-                            .param("id", orderId)
-                            .query((rs, n) -> new StockItem(rs.getObject(1, UUID.class), rs.getInt(2)))
-                            .list();
+            List<StockItem> rows = jdbc.sql("SELECT product_id,quantity FROM reservations" +
+                            " WHERE order_id=:id ORDER BY product_id")
+                    .param("id", orderId)
+                    .query((rs, n) -> new StockItem(
+                            rs.getObject(1, UUID.class),
+                            rs.getInt(2)))
+                    .list();
             for (var item : rows) {
-                int changed =
-                        jdbc.sql(
-                                        "UPDATE inventory SET"
-                                                + " reserved_quantity=reserved_quantity-:quantity,available_quantity=available_quantity+:released,version=version+1"
-                                                + " WHERE product_id=:id AND reserved_quantity>=:quantity")
-                                .param("quantity", item.quantity())
-                                .param("released", target.equals("RELEASED") ? item.quantity() : 0)
-                                .param("id", item.productId())
-                                .update();
+                int changed = jdbc.sql("UPDATE inventory"
+                                + " SET reserved_quantity=reserved_quantity-:quantity,available_quantity=available_quantity+:released,version=version+1"
+                                + " WHERE product_id=:id AND reserved_quantity>=:quantity")
+                        .param("quantity", item.quantity())
+                        .param("released", target.equals("RELEASED") ? item.quantity() : 0)
+                        .param("id", item.productId())
+                        .update();
                 if (changed != 1)
                     throw new IllegalStateException("Reservation accounting invariant violated");
             }
@@ -254,23 +251,24 @@ public class InventoryService {
             jdbc.sql("UPDATE reservation_orders SET status='RELEASED' WHERE order_id=:id")
                     .param("id", orderId)
                     .update();
-        } else
+        } else {
             throw error(
                     HttpStatus.CONFLICT,
                     "ILLEGAL_RESERVATION_TRANSITION",
                     "Cannot transition " + current.get() + " to " + target);
+        }
         outbox.append("InventoryResult", orderId, correlation, new InventoryResult(target, null));
         return new Reservation(orderId, target);
     }
 
     @Transactional
     public int signalExpired() {
-        var expired =
-                jdbc.sql(
-                                "SELECT order_id,correlation_id FROM reservation_orders WHERE status='RESERVED' AND"
-                                        + " expires_at<now() AND expiry_notified_at IS NULL FOR UPDATE SKIP LOCKED")
-                        .query((rs, row) -> Map.entry(rs.getObject(1, UUID.class), rs.getString(2)))
-                        .list();
+        List<Map.Entry<UUID, String>> expired = jdbc.sql("SELECT order_id,correlation_id FROM reservation_orders"
+                        + " WHERE status='RESERVED' AND expires_at<now() AND expiry_notified_at IS NULL FOR UPDATE SKIP LOCKED")
+                .query((rs, row) -> Map.entry(
+                        rs.getObject(1, UUID.class),
+                        rs.getString(2)))
+                .list();
         for (var entry : expired) {
             // Payment may still authorize. The orchestrator requests release after reconciliation.
             outbox.append(

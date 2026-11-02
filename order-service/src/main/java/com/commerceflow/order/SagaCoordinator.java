@@ -33,19 +33,19 @@ import static com.commerceflow.order.OrderState.PENDING_INVENTORY;
 @Service
 public class SagaCoordinator {
 
-    private final OrderRepository orders;
+    private final OrderRepository orderRepository;
     private final OutboxStore outbox;
     private final JdbcClient jdbc;
     private final Duration timeout;
     private final MeterRegistry metrics;
 
     public SagaCoordinator(
-            OrderRepository orders,
+            OrderRepository orderRepository,
             OutboxStore outbox,
             JdbcClient jdbc,
             @Value("${saga.step-timeout:PT60S}") Duration timeout,
             MeterRegistry metrics) {
-        this.orders = orders;
+        this.orderRepository = orderRepository;
         this.outbox = outbox;
         this.jdbc = jdbc;
         this.timeout = timeout;
@@ -54,12 +54,12 @@ public class SagaCoordinator {
 
     @Transactional
     public void inventory(UUID id, InventoryResult result) {
-        var order = orders.required(id, true);
+        OrderRepository.Row order = orderRepository.required(id, true);
         switch (result.status()) {
             case "RESERVED" -> {
                 if (order.status() != PENDING_INVENTORY)
                     return;
-                orders.step(id, "RESERVE_INVENTORY", "SUCCEEDED", null);
+                orderRepository.step(id, "RESERVE_INVENTORY", "SUCCEEDED", null);
                 move(order, AWAITING_PAYMENT);
                 command(
                         order,
@@ -70,20 +70,20 @@ public class SagaCoordinator {
             case "REJECTED" -> {
                 if (order.status() != PENDING_INVENTORY)
                     return;
-                orders.recordReason(id, "INSUFFICIENT_STOCK".equals(result.reason()) ? "INSUFFICIENT_STOCK" : "INVENTORY_REJECTED");
-                orders.step(id, "RESERVE_INVENTORY", "FAILED", result.reason());
+                orderRepository.recordReason(id, "INSUFFICIENT_STOCK".equals(result.reason()) ? "INSUFFICIENT_STOCK" : "INVENTORY_REJECTED");
+                orderRepository.step(id, "RESERVE_INVENTORY", "FAILED", result.reason());
                 move(order, CANCELLED);
             }
             case "COMMITTED" -> {
                 if (order.status() != COMMITTING_INVENTORY)
                     return;
-                orders.step(id, "COMMIT_INVENTORY", "SUCCEEDED", null);
+                orderRepository.step(id, "COMMIT_INVENTORY", "SUCCEEDED", null);
                 move(order, CONFIRMED);
             }
             case "RELEASED" -> {
                 if (order.status() != CANCELLING_INVENTORY)
                     return;
-                orders.step(id, "RELEASE_INVENTORY", "SUCCEEDED", null);
+                orderRepository.step(id, "RELEASE_INVENTORY", "SUCCEEDED", null);
                 move(order, CANCELLED);
             }
             default -> throw new IllegalArgumentException("Unknown inventory result " + result.status());
@@ -92,13 +92,13 @@ public class SagaCoordinator {
 
     @Transactional
     public void payment(UUID id, PaymentResult result) {
-        var order = orders.required(id, true);
+        OrderRepository.Row order = orderRepository.required(id, true);
         switch (result.status()) {
             case "AUTHORIZED" -> {
                 // A late authorization cannot revive a cancelled order. Payment reconciliation handles the issued operation.
                 if (order.status() != AWAITING_PAYMENT)
                     return;
-                orders.step(id, "AUTHORIZE_PAYMENT", "SUCCEEDED", null);
+                orderRepository.step(id, "AUTHORIZE_PAYMENT", "SUCCEEDED", null);
                 move(order, COMMITTING_INVENTORY);
                 command(order, "COMMIT_INVENTORY", "CommitInventory", new Command("PAYMENT_AUTHORIZED"));
             }
@@ -106,8 +106,8 @@ public class SagaCoordinator {
                 if (order.status() != AWAITING_PAYMENT && order.status() != CANCELLING_PAYMENT)
                     return;
                 if (result.status().equals("DECLINED"))
-                    orders.recordReason(id, "PAYMENT_DECLINED");
-                orders.step(
+                    orderRepository.recordReason(id, "PAYMENT_DECLINED");
+                orderRepository.step(
                         id,
                         order.status() == CANCELLING_PAYMENT ? "CANCEL_PAYMENT" : "AUTHORIZE_PAYMENT",
                         result.status().equals("DECLINED") ? "FAILED" : "SUCCEEDED",
@@ -125,7 +125,7 @@ public class SagaCoordinator {
 
     @Transactional
     public void expiring(UUID id) {
-        var order = orders.required(id, true);
+        var order = orderRepository.required(id, true);
         reconcile(order, "RESERVATION_EXPIRED");
     }
 
@@ -137,23 +137,23 @@ public class SagaCoordinator {
                 .query(UUID.class)
                 .list();
         for (var id : ids)
-            reconcile(orders.required(id, true), "STEP_TIMEOUT");
+            reconcile(orderRepository.required(id, true), "STEP_TIMEOUT");
         return ids.size();
     }
 
     private void reconcile(OrderRepository.Row order, String reason) {
         switch (order.status()) {
             case PENDING_INVENTORY -> {
-                orders.recordReason(order.id(), "RESERVATION_EXPIRED".equals(reason) ? "RESERVATION_EXPIRED" : "INVENTORY_TIMEOUT");
-                orders.step(order.id(), "RESERVE_INVENTORY", "FAILED", reason);
+                orderRepository.recordReason(order.id(), "RESERVATION_EXPIRED".equals(reason) ? "RESERVATION_EXPIRED" : "INVENTORY_TIMEOUT");
+                orderRepository.step(order.id(), "RESERVE_INVENTORY", "FAILED", reason);
                 move(order, CANCELLING_INVENTORY);
                 command(order, "RELEASE_INVENTORY", "ReleaseInventory", new Command(reason));
             }
             // A timeout leaves payment status uncertain. Cancel or reconcile it before releasing inventory.
             case AWAITING_PAYMENT -> {
-                orders.recordReason(order.id(), "RESERVATION_EXPIRED".equals(reason) ? "RESERVATION_EXPIRED" : "PAYMENT_TIMEOUT");
+                orderRepository.recordReason(order.id(), "RESERVATION_EXPIRED".equals(reason) ? "RESERVATION_EXPIRED" : "PAYMENT_TIMEOUT");
                 // Record the timeout and request cancellation. Elapsed time does not prove no charge occurred.
-                orders.step(order.id(), "AUTHORIZE_PAYMENT", "FAILED", reason);
+                orderRepository.step(order.id(), "AUTHORIZE_PAYMENT", "FAILED", reason);
                 move(order, CANCELLING_PAYMENT);
                 command(order, "CANCEL_PAYMENT", "CancelPayment", new Command(reason));
             }
@@ -176,7 +176,7 @@ public class SagaCoordinator {
     }
 
     private void move(OrderRepository.Row order, OrderState target) {
-        orders.move(order, target, Instant.now().plus(timeout));
+        orderRepository.move(order, target, Instant.now().plus(timeout));
         outbox.append(
                 "OrderStatusChanged",
                 order.id(),
@@ -193,7 +193,7 @@ public class SagaCoordinator {
 
     private void command(OrderRepository.Row order, String step, String event, Object payload) {
         // Count a step attempt when issuing its command, not when a duplicate result is received.
-        orders.step(order.id(), step, "PENDING", null);
+        orderRepository.step(order.id(), step, "PENDING", null);
         outbox.append(event, order.id(), order.correlation(), payload);
     }
 

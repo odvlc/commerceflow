@@ -5,6 +5,13 @@ Maintenance: Documents Keycloak identity, role/scope and resource ownership boun
 services.
 -->
 
+OpenID Connect (OIDC) adds sign-in and identity information to OAuth 2.0. In CommerceFlow, React
+uses OIDC to sign the user in through Keycloak and obtain an access token for the APIs.
+Authorization Code with PKCE (Proof Key for Code Exchange) protects the browser login exchange:
+the app creates a one-time verifier and sends its derived challenge with the login request. When
+the app exchanges the returned authorization code for tokens, it proves possession of the verifier.
+This lets a public browser client complete login without storing a client secret.
+
 Keycloak owns passwords, login sessions and token signing. The local realm fixture is
 `infra/keycloak/commerceflow-realm.json`. Its public development users are alice/bob (CUSTOMER),
 admin (ADMIN), and support (SUPPORT); passwords are `local-<username>-only`. These credentials
@@ -27,7 +34,10 @@ scope and are not gateway routes.
 The gateway relays the bearer token to backends; each backend independently validates it. Configure
 `SECURITY_ISSUER` to the browser-visible Keycloak realm URL and `SECURITY_JWK_SET_URI` to a
 reachable internal certs URL when container DNS differs. Tokens are never signed by application
-code. Test-only JWKS signing fixtures supplement real Keycloak PKCE tests.
+code. For cart requests, the gateway forwards the browser's access token, and Cart Service validates
+it before the authenticated subject is used as the customer UUID passed to `CartService`. This
+keeps cart data scoped to the signed-in user. Test-only JWKS signing fixtures supplement real
+Keycloak PKCE tests.
 
 Development Compose infrastructure binds host ports to loopback and uses plaintext within its local
 network. It is not a hardened remote deployment. Production identity secrets, TLS, network

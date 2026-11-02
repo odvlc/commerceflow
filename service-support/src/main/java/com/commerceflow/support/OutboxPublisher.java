@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -46,7 +47,7 @@ public class OutboxPublisher {
     @Transactional
     public int publishBatch() {
         // Only the earliest unpublished event per aggregate is eligible, even during retry backoff.
-        var batch = jdbc.sql("""
+        List<Pending> batch = jdbc.sql("""
                         SELECT e.* FROM outbox_events e
                         WHERE e.published_at IS NULL AND e.next_attempt_at<=now()
                         AND NOT EXISTS (SELECT 1 FROM outbox_events earlier WHERE earlier.aggregate_id=e.aggregate_id
@@ -70,8 +71,7 @@ public class OutboxPublisher {
                         // SQL and Kafka writes atomic.
                         .get(8, TimeUnit.SECONDS);
                 // A crash before this commit sends the event again. Consumers deduplicate replays.
-                jdbc.sql("UPDATE outbox_events SET published_at=now(),attempts=attempts+1,last_error=NULL"
-                                + " WHERE id=:id")
+                jdbc.sql("UPDATE outbox_events SET published_at=now(),attempts=attempts+1,last_error=NULL WHERE id=:id")
                         .param("id", event.id())
                         .update();
                 metrics.counter("commerceflow.outbox.delivered").increment();
@@ -82,8 +82,7 @@ public class OutboxPublisher {
                 // Bound exponential retry delay while leaving the durable unpublished event available
                 // for later recovery.
                 long delay = Math.min(60_000, 250L * (1L << Math.min(8, event.attempts())));
-                jdbc.sql("UPDATE outbox_events SET"
-                                + " attempts=attempts+1,next_attempt_at=:next,last_error=:error WHERE id=:id")
+                jdbc.sql("UPDATE outbox_events SET attempts=attempts+1,next_attempt_at=:next,last_error=:error WHERE id=:id")
                         .param("id", event.id())
                         .param("next", Timestamp.from(Instant.now().plusMillis(delay)))
                         .param("error", failure.getClass().getSimpleName())

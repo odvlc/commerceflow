@@ -27,42 +27,43 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 public class CatalogService {
 
-    private final ProductRepository products;
+    private final ProductRepository productRepository;
     private final JdbcClient jdbc;
     private final JsonMapper json;
     private final OutboxStore outbox;
-    private final ObjectProvider<ProductCache> cache;
+    private final ObjectProvider<ProductCache> productCache;
 
     public CatalogService(
-            ProductRepository products,
+            ProductRepository productRepository,
             JdbcClient jdbc,
             JsonMapper json,
             OutboxStore outbox,
-            ObjectProvider<ProductCache> cache) {
-        this.products = products;
+            ObjectProvider<ProductCache> productCache) {
+        this.productRepository = productRepository;
         this.jdbc = jdbc;
         this.json = json;
         this.outbox = outbox;
-        this.cache = cache;
+        this.productCache = productCache;
     }
 
     @Transactional(readOnly = true)
     public Page<ProductView> list(int page, int size, String category) {
         var paging = PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.asc("id")));
         return (category == null
-                ? products.findByActiveTrue(paging)
-                : products.findByActiveTrueAndCategory(category, paging))
+                ? productRepository.findByActiveTrue(paging)
+                : productRepository.findByActiveTrueAndCategory(category, paging))
                 .map(ProductView::from);
     }
 
     @Transactional(readOnly = true)
     public Page<ProductView> adminList(int page, int size) {
-        return products.findAll(PageRequest.of(page, size, Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("id"))))
+        return productRepository.findAll(PageRequest.of(page, size, Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("id"))))
                 .map(ProductView::from);
     }
 
@@ -73,19 +74,19 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public ProductView get(UUID id, boolean fresh) {
-        var storage = cache.getIfAvailable();
+        ProductCache cache = productCache.getIfAvailable();
         // Fresh reads bypass Redis so checkout validates current catalog prices.
-        if (!fresh && storage != null) {
-            var hit = storage.get(id);
+        if (!fresh && cache != null) {
+            var hit = cache.get(id);
             if (hit.isPresent())
                 return hit.get();
         }
-        var product = required(id);
+        Product product = required(id);
         if (!product.isActive())
             throw missing();
-        var result = ProductView.from(product);
-        if (!fresh && storage != null)
-            storage.put(result);
+        ProductView result = ProductView.from(product);
+        if (!fresh && cache != null)
+            cache.put(result);
         return result;
     }
 
@@ -97,7 +98,7 @@ public class CatalogService {
                 .param("key", key)
                 .query(Object.class)
                 .single();
-        var existing = products.findByIdempotencyKey(key);
+        Optional<Product> existing = productRepository.findByIdempotencyKey(key);
         if (existing.isPresent()) {
             if (!existing.get().getRequestHash().equals(hash))
                 throw new BusinessException(
@@ -106,22 +107,22 @@ public class CatalogService {
                         "Key already used with different contents");
             return ProductView.from(existing.get());
         }
-        var product = new Product(UUID.randomUUID(), key, hash);
+        Product product = new Product(UUID.randomUUID(), key, hash);
         revise(product, input);
         // Flush first so the outgoing snapshot contains the database-assigned optimistic version.
-        products.saveAndFlush(product);
+        productRepository.saveAndFlush(product);
         emit(product, correlationId);
         return ProductView.from(product);
     }
 
     @Transactional
     public ProductView update(UUID id, long expectedVersion, ProductInput input, String correlationId) {
-        var product = required(id);
+        Product product = required(id);
         if (product.getVersion() != expectedVersion)
             throw new BusinessException(HttpStatus.CONFLICT, "VERSION_CONFLICT", "Product changed; reload before editing");
         revise(product, input);
         // Detect optimistic write failure before appending the event for the revised product.
-        products.flush();
+        productRepository.flush();
         emit(product, correlationId);
         return ProductView.from(product);
     }
@@ -156,23 +157,23 @@ public class CatalogService {
                         product.isActive(),
                         product.getVersion(),
                         product.getUpdatedAt()));
-        var id = product.getId();
-        var version = product.getVersion();
+        UUID id = product.getId();
+        Long version = product.getVersion();
         TransactionSynchronizationManager
                 // Invalidate after commit so readers cannot refill the cache from old database state.
                 .registerSynchronization(
                         new TransactionSynchronization() {
                             @Override
                             public void afterCommit() {
-                                var storage = cache.getIfAvailable();
-                                if (storage != null)
-                                    storage.invalidate(id, version);
+                                ProductCache cache = productCache.getIfAvailable();
+                                if (cache != null)
+                                    cache.invalidate(id, version);
                             }
                         });
     }
 
     private Product required(UUID id) {
-        return products.findById(id).orElseThrow(CatalogService::missing);
+        return productRepository.findById(id).orElseThrow(CatalogService::missing);
     }
 
     private static BusinessException missing() {

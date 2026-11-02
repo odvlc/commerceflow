@@ -25,16 +25,15 @@ public class GatewayRoutes {
     @Bean
     @ConditionalOnProperty(name = "AI_ENABLED", havingValue = "true")
     RouterFunction<ServerResponse> aiRoutes(@Value("${AI_URL:http://localhost:8087}") String target) {
-        // With the feature flag absent, no AI route is registered; the commerce routes remain
-        // available.
-        return proxy("ai", target, "/api/v1/ai/**", "/api/v1/admin/ai/**");
+        // With the feature flag absent, no AI route is registered; the commerce routes remain available.
+        return proxy("ai", target,
+                "/api/v1/ai/**",
+                "/api/v1/admin/ai/**");
     }
 
     @Bean
     RouterFunction<ServerResponse> catalogRoutes(@Value("${CATALOG_URL:http://localhost:8081}") String target) {
-        return proxy(
-                "catalog",
-                target,
+        return proxy("catalog", target,
                 "/api/v1/products/**",
                 "/api/v1/admin/products/**",
                 "/api/v1/admin/search/**");
@@ -42,33 +41,38 @@ public class GatewayRoutes {
 
     @Bean
     RouterFunction<ServerResponse> orderRoutes(@Value("${ORDER_URL:http://localhost:8082}") String target) {
-        return proxy("orders", target, "/api/v1/orders/**", "/api/v1/admin/orders/**");
+        return proxy("orders", target,
+                "/api/v1/orders/**",
+                "/api/v1/admin/orders/**");
     }
 
     @Bean
     RouterFunction<ServerResponse> inventoryRoutes(@Value("${INVENTORY_URL:http://localhost:8083}") String target) {
-        return proxy("inventory", target, "/api/v1/admin/inventory/**");
+        return proxy("inventory", target,
+                "/api/v1/admin/inventory/**");
     }
 
     @Bean
     RouterFunction<ServerResponse> paymentRoutes(@Value("${PAYMENT_URL:http://localhost:8084}") String target) {
-        return proxy("payment", target, "/api/v1/admin/payments/**");
+        return proxy("payment", target,
+                "/api/v1/admin/payments/**");
     }
 
     @Bean
     RouterFunction<ServerResponse> cartRoutes(@Value("${CART_URL:http://localhost:8085}") String target) {
-        return proxy("cart", target, "/api/v1/cart/**");
+        return proxy("cart", target,
+                "/api/v1/cart/**");
     }
 
     @Bean
     RouterFunction<ServerResponse> notificationRoutes(@Value("${NOTIFICATION_URL:http://localhost:8086}") String target) {
-        return proxy("notifications", target, "/api/v1/notifications/**");
+        return proxy("notifications", target,
+                "/api/v1/notifications/**");
     }
 
     private RouterFunction<ServerResponse> proxy(String name, String target, String... paths) {
-        // Combine only declared path patterns; service selection never comes from a caller-supplied
-        // URL.
-        var predicate = Arrays.stream(paths)
+        // Combine only declared path patterns; service selection never comes from a caller-supplied URL.
+        RequestPredicate predicate = Arrays.stream(paths)
                 .map(RequestPredicates::path)
                 .reduce(RequestPredicate::or)
                 .orElseThrow();

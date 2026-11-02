@@ -26,11 +26,9 @@ public class OutboxStore {
     @Transactional(propagation = Propagation.MANDATORY)
     public UUID append(String type, UUID aggregate, String correlation, Object payload) {
         // Persist the envelope identity now so a later publisher retry sends the same event ID.
-        var event = EventEnvelope.create(type, aggregate, correlation, payload);
-        jdbc.sql("""
-                        INSERT INTO outbox_events(id,aggregate_id,event_type,payload,created_at)
-                        VALUES (:id,:aggregate,:type,CAST(:payload AS jsonb),:created)
-                        """)
+        EventEnvelope<Object> event = EventEnvelope.create(type, aggregate, correlation, payload);
+        jdbc.sql("INSERT INTO outbox_events(id,aggregate_id,event_type,payload,created_at)" +
+                        " VALUES (:id,:aggregate,:type,CAST(:payload AS jsonb),:created)")
                 .param("id", event.eventId())
                 .param("aggregate", aggregate)
                 .param("type", type)

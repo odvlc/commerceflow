@@ -44,7 +44,7 @@ public class NotificationService {
     }
 
     @Transactional
-    public void record(UUID eventId, UUID order, OrderStatus result, String correlation) {
+    public void handleOrderStatus(UUID eventId, UUID order, OrderStatus result, String correlation) {
         String message = switch (result.status()) {
             case "CONFIRMED" -> "Your order is confirmed.";
             case "CANCELLED" -> "Your order was cancelled. Reserved stock has been released.";
@@ -74,14 +74,14 @@ public class NotificationService {
     }
 
     @Transactional(readOnly = true)
-    public NotificationPage list(UUID customer, int page, int size) {
+    public NotificationPage list(UUID customerId, int page, int size) {
         var total = jdbc.sql("SELECT count(*) FROM notifications WHERE customer_id=:id")
-                .param("id", customer)
+                .param("id", customerId)
                 .query(Long.class)
                 .single();
-        var items = jdbc.sql("SELECT id,order_id,status,message,created_at FROM notifications WHERE"
-                        + " customer_id=:id ORDER BY created_at DESC,id LIMIT :size OFFSET :offset")
-                .param("id", customer)
+        var items = jdbc.sql("SELECT id,order_id,status,message,created_at FROM notifications"
+                        + " WHERE customer_id=:id ORDER BY created_at DESC,id LIMIT :size OFFSET :offset")
+                .param("id", customerId)
                 .param("size", size)
                 // Promote before multiplication so a large validated page number cannot
                 // overflow a 32-bit offset.

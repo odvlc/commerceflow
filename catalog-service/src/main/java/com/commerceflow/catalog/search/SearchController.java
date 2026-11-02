@@ -35,29 +35,29 @@ public class SearchController {
     public ProductSearch.SearchPage search(
             @RequestParam(required = false) @Size(max = 200) String q,
             @RequestParam(required = false) @Size(max = 80) String category,
+
             @RequestParam(required = false)
             @DecimalMin("0")
             @DecimalMax("999999999.99")
             @Digits(integer = 9, fraction = 2)
             BigDecimal minPrice,
+
             @RequestParam(required = false)
             @DecimalMin("0")
             @DecimalMax("999999999.99")
             @Digits(integer = 9, fraction = 2)
             BigDecimal maxPrice,
+
             @RequestParam(defaultValue = "USD") @Pattern(regexp = "USD|EUR|GBP") String currency,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
-            @RequestParam(defaultValue = "relevance")
-            @Pattern(regexp = "relevance|priceAsc|priceDesc|newest")
-            String sort) {
+            @RequestParam(defaultValue = "relevance") @Pattern(regexp = "relevance|priceAsc|priceDesc|newest") String sort) {
         return search.search(q, category, minPrice, maxPrice, currency, page, size, sort);
     }
 
     @PostMapping("/api/v1/admin/search/rebuild")
     public ProductSearch.RebuildResult rebuild() {
-        // Rebuild through the service alias workflow instead of letting callers choose an arbitrary
-        // index.
+        // Rebuild through the service alias workflow instead of letting callers choose an arbitrary index.
         return search.rebuild();
     }
 }

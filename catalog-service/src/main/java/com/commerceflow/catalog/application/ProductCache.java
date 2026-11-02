@@ -43,6 +43,7 @@ public class ProductCache {
                             return 1
                             """,
                     Long.class);
+
     private final StringRedisTemplate redis;
     private final JsonMapper json;
     private final MeterRegistry metrics;
@@ -64,8 +65,7 @@ public class ProductCache {
     public Optional<ProductView> get(UUID id) {
         try {
             String raw = redis.opsForValue().get(keys(id).getFirst());
-            metrics
-                    .counter(raw == null ? "commerceflow.cache.misses" : "commerceflow.cache.hits")
+            metrics.counter(raw == null ? "commerceflow.cache.misses" : "commerceflow.cache.hits")
                     .increment();
             return raw == null ? Optional.empty() : Optional.of(json.readValue(raw, ProductView.class));
         } catch (RuntimeException error) {
@@ -99,8 +99,7 @@ public class ProductCache {
     }
 
     private List<String> keys(UUID id) {
-        // Redis hash tags co-locate value and version keys so each Lua script remains a single-slot
-        // operation.
+        // Redis hash tags co-locate value and version keys so each Lua script remains a single-slot operation.
         return List.of("cf:product:{" + id + "}:value", "cf:product:{" + id + "}:version");
     }
 

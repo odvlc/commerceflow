@@ -49,6 +49,7 @@
     - [Maintain Markdown tables of contents](#maintain-markdown-tables-of-contents)
 
     - [Omit single-item tables of contents](#omit-single-item-tables-of-contents)
+    - [Explain OIDC and PKCE](#explain-oidc-and-pkce)
 
 <!-- TOC END -->
 
@@ -241,6 +242,11 @@ Docker/kind acceptance. See [AI evaluation](docs/ai-evaluation.md) and retained
 
 ## Execution log, decisions and blockers
 
+- Updated the README technology table with direct-use module/folder locations and clarified that
+  only catalog actively uses JPA; the other listed JDBC modules use JDBC persistence. Documentation
+  change only; application tests were not run.
+- Removed the unused JPA starter and `spring.jpa` settings from inventory, order and payment; these
+  modules persist through JDBC. Catalog retains JPA. Application tests were not run for this cleanup.
 - Initial inspection (2026-10-17): only `CODEX_PROMPT.md` and IDE metadata exist; directory has no Git repository.
   Existing files preserved.
 - Java 25.0.4.1 is installed. `mvn`, `docker`, `kubectl`, and `kind` are not on PATH. Node/npm and Python are available.
@@ -686,3 +692,10 @@ deployment, Git initialization/commit or persisted user-data deletion was perfor
   Verify table entry counts and preservation of existing content with Python, and run
   `git diff --check`; both checks passed. Knowledge fixture contents and versions are unchanged.
   This documentation change required no runtime tests.
+
+### Explain OIDC and PKCE
+
+- [x] Add plain-language OIDC and PKCE definitions to [security.md](docs/security.md), including
+  how browser login through Keycloak supplies the token that Cart Service validates and maps to
+  the customer UUID. Verify the `CartService` method flow and run `git diff --check`; both passed.
+  Documentation-only change; no runtime tests were needed.

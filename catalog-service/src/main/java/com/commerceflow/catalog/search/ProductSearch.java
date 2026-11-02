@@ -8,6 +8,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch._types.VersionType;
 import com.commerceflow.catalog.api.ProductView;
+import com.commerceflow.catalog.domain.Product;
 import com.commerceflow.catalog.persistence.ProductRepository;
 import com.commerceflow.contracts.CheckoutEvents.ProductChanged;
 import com.commerceflow.support.BusinessException;
@@ -18,9 +19,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.query.StringQuery;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -29,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -58,8 +62,8 @@ public class ProductSearch {
     public record SearchPage(
             List<SearchItem> items,
             long totalElements,
-            int page, int
-            size) {
+            int page,
+            int size) {
 
     }
 
@@ -69,27 +73,27 @@ public class ProductSearch {
 
     }
 
-    private final ElasticsearchClient client;
-    private final ElasticsearchOperations operations;
+    private final ElasticsearchClient elasticsearchClient;
+    private final ElasticsearchOperations searchOperations;
     private final JdbcClient jdbc;
-    private final ProductRepository products;
-    private final EntityManager entities;
+    private final ProductRepository productRepository;
+    private final EntityManager entityManager;
     private final JsonMapper json;
     private final MeterRegistry metrics;
 
     public ProductSearch(
-            ElasticsearchClient client,
-            ElasticsearchOperations operations,
+            ElasticsearchClient elasticsearchClient,
+            ElasticsearchOperations searchOperations,
             JdbcClient jdbc,
-            ProductRepository products,
-            EntityManager entities,
+            ProductRepository productRepository,
+            EntityManager entityManager,
             JsonMapper json,
             MeterRegistry metrics) {
-        this.client = client;
-        this.operations = operations;
+        this.elasticsearchClient = elasticsearchClient;
+        this.searchOperations = searchOperations;
         this.jdbc = jdbc;
-        this.products = products;
-        this.entities = entities;
+        this.productRepository = productRepository;
+        this.entityManager = entityManager;
         this.json = json;
         this.metrics = metrics;
     }
@@ -113,6 +117,7 @@ public class ProductSearch {
             int page,
             int size,
             String sort) {
+
         if ((long) page * size + size > 10_000
                 || minimum != null && maximum != null && minimum.compareTo(maximum) > 0)
             throw new BusinessException(
@@ -146,26 +151,26 @@ public class ProductSearch {
             var query =
                     new StringQuery(
                             json.writeValueAsString(
-                                    Map.of("bool", Map.of("must", List.of(match), "filter", filters))),
+                                    Map.of("bool", Map.of("must", List.of(match),
+                                            "filter", filters))),
                             PageRequest.of(page, size),
                             ordering);
             query.setTrackTotalHits(true);
-            var hits = operations.search(query, ProductDocument.class);
-            var items =
-                    hits.getSearchHits().stream()
-                            .map(
-                                    hit -> {
-                                        var d = hit.getContent();
-                                        return new SearchItem(
-                                                UUID.fromString(d.id()),
-                                                d.sku(),
-                                                d.name(),
-                                                d.description(),
-                                                d.category(),
-                                                BigDecimal.valueOf(d.priceMinor(), 2),
-                                                d.currency());
-                                    })
-                            .toList();
+            SearchHits<ProductDocument> hits = searchOperations.search(query, ProductDocument.class);
+            List<SearchItem> items = hits.getSearchHits()
+                    .stream()
+                    .map(hit -> {
+                        ProductDocument d = hit.getContent();
+                        return new SearchItem(
+                                UUID.fromString(d.id()),
+                                d.sku(),
+                                d.name(),
+                                d.description(),
+                                d.category(),
+                                BigDecimal.valueOf(d.priceMinor(), 2),
+                                d.currency());
+                    })
+                    .toList();
             return new SearchPage(items, hits.getTotalHits(), page, size);
         } catch (RuntimeException error) {
             metrics.counter("commerceflow.search.failures").increment();
@@ -200,38 +205,40 @@ public class ProductSearch {
             createIndex(index, false);
             int page = 0;
             while (true) {
-                var batch = products.findAll(PageRequest.of(page++, 500, Sort.by("id")));
-                for (var product : batch) {
-                    var p = ProductView.from(product);
-                    write(
-                            index,
-                            new ProductChanged(
-                                    p.id(),
-                                    p.sku(),
-                                    p.name(),
-                                    p.description(),
-                                    p.category(),
-                                    p.price(),
-                                    p.currency(),
-                                    p.active(),
-                                    p.version(),
-                                    p.updatedAt()));
+                Page<Product> batch = productRepository.findAll(PageRequest.of(page++, 500, Sort.by("id")));
+                for (Product product : batch) {
+                    ProductView p = ProductView.from(product);
+                    write(index, new ProductChanged(
+                            p.id(),
+                            p.sku(),
+                            p.name(),
+                            p.description(),
+                            p.category(),
+                            p.price(),
+                            p.currency(),
+                            p.active(),
+                            p.version(),
+                            p.updatedAt()));
                     count++;
                 }
-                entities.clear();
+                entityManager.clear();
                 if (!batch.hasNext())
                     break;
             }
-            client.indices().refresh(r -> r.index(index));
-            client
-                    .indices()
-                    .updateAliases(
-                            a ->
-                                    a.actions(v -> v.remove(r -> r.index("*").alias(READ_ALIAS).mustExist(false)))
-                                            .actions(v -> v.remove(r -> r.index("*").alias(WRITE_ALIAS).mustExist(false)))
-                                            .actions(v -> v.add(r -> r.index(index).alias(READ_ALIAS)))
-                                            .actions(
-                                                    v -> v.add(r -> r.index(index).alias(WRITE_ALIAS).isWriteIndex(true))));
+
+            elasticsearchClient.indices().refresh(r -> r.index(index));
+            elasticsearchClient.indices()
+                    .updateAliases(a -> a.actions(v -> v.remove(r -> r.index("*")
+                                    .alias(READ_ALIAS)
+                                    .mustExist(false)))
+                            .actions(v -> v.remove(r -> r.index("*")
+                                    .alias(WRITE_ALIAS)
+                                    .mustExist(false)))
+                            .actions(v -> v.add(r -> r.index(index)
+                                    .alias(READ_ALIAS)))
+                            .actions(v -> v.add(r -> r.index(index)
+                                    .alias(WRITE_ALIAS)
+                                    .isWriteIndex(true))));
             return new RebuildResult(index, count);
         } catch (IOException | RuntimeException error) {
             throw new BusinessException(
@@ -248,34 +255,32 @@ public class ProductSearch {
     }
 
     private void ensureIndex() throws IOException {
-        if (client.indices().existsAlias(r -> r.name(READ_ALIAS)).value())
+        if (elasticsearchClient.indices().existsAlias(r -> r.name(READ_ALIAS)).value())
             return;
         try {
             createIndex("cf-products-v1", true);
         } catch (ElasticsearchException error) {
-            if (!client.indices().existsAlias(r -> r.name(READ_ALIAS)).value())
+            if (!elasticsearchClient.indices().existsAlias(r -> r.name(READ_ALIAS)).value())
                 throw error;
         }
     }
 
     private void createIndex(String index, boolean aliases) throws IOException {
-        try (var mapping =
-                     Objects.requireNonNull(getClass().getResourceAsStream("/search/product-index.json"))) {
-            client
-                    .indices()
-                    .create(
-                            r -> {
-                                r.index(index).withJson(mapping);
-                                if (aliases)
-                                    r.aliases(READ_ALIAS, a -> a).aliases(WRITE_ALIAS, a -> a.isWriteIndex(true));
-                                return r;
-                            });
+        try (InputStream mapping = Objects.requireNonNull(getClass().getResourceAsStream("/search/product-index.json"))) {
+            elasticsearchClient.indices()
+                    .create(r -> {
+                        r.index(index).withJson(mapping);
+                        if (aliases)
+                            r.aliases(READ_ALIAS, a -> a)
+                                    .aliases(WRITE_ALIAS, a -> a.isWriteIndex(true));
+                        return r;
+                    });
         }
     }
 
     private void write(String index, ProductChanged product) throws IOException {
         try {
-            client.index(
+            elasticsearchClient.index(
                     r -> r.index(index)
                             .id(product.id().toString())
                             // Elasticsearch external versions start at one, so offset the zero-based product version.

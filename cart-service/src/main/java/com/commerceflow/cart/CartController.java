@@ -50,7 +50,7 @@ public class CartController {
     @GetMapping
     public ResponseEntity<CartService.CartView> get(@AuthenticationPrincipal Jwt jwt) {
         // Use the validated JWT subject as the cart owner.
-        var cart = carts.get(UUID.fromString(jwt.getSubject()));
+        CartService.CartView cart = carts.get(UUID.fromString(jwt.getSubject()));
         // Return the revision in the ETag and body so approval clients can send it in If-Match.
         return ResponseEntity.ok().eTag(cart.revision()).body(cart);
     }
@@ -59,9 +59,9 @@ public class CartController {
     public CartService.CartView add(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody AddItem input,
-            @RequestHeader("Idempotency-Key") @Pattern(regexp = "[A-Za-z0-9_-]{8,128}") String key, @RequestHeader(value = "If-Match", required = false) String revision) {
-        return carts.mutate(
-                UUID.fromString(jwt.getSubject()), "ADD", input.productId(), input.quantity(), key, revision);
+            @RequestHeader("Idempotency-Key") @Pattern(regexp = "[A-Za-z0-9_-]{8,128}") String key,
+            @RequestHeader(value = "If-Match", required = false) String revision) {
+        return carts.mutate(UUID.fromString(jwt.getSubject()), "ADD", input.productId(), input.quantity(), key, revision);
     }
 
     @PatchMapping("/items/{productId}")
@@ -69,7 +69,8 @@ public class CartController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID productId,
             @Valid @RequestBody SetQuantity input,
-            @RequestHeader("Idempotency-Key") @Pattern(regexp = "[A-Za-z0-9_-]{8,128}") String key, @RequestHeader(value = "If-Match", required = false) String revision) {
+            @RequestHeader("Idempotency-Key") @Pattern(regexp = "[A-Za-z0-9_-]{8,128}") String key,
+            @RequestHeader(value = "If-Match", required = false) String revision) {
         return carts.mutate(UUID.fromString(jwt.getSubject()), "SET", productId, input.quantity(), key, revision);
     }
 
@@ -77,7 +78,8 @@ public class CartController {
     public CartService.CartView delete(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID productId,
-            @RequestHeader("Idempotency-Key") @Pattern(regexp = "[A-Za-z0-9_-]{8,128}") String key, @RequestHeader(value = "If-Match", required = false) String revision) {
+            @RequestHeader("Idempotency-Key") @Pattern(regexp = "[A-Za-z0-9_-]{8,128}") String key,
+            @RequestHeader(value = "If-Match", required = false) String revision) {
         return carts.mutate(UUID.fromString(jwt.getSubject()), "DELETE", productId, 0, key, revision);
     }
 }

@@ -9,6 +9,7 @@ import com.commerceflow.ai.application.CartActions;
 import com.commerceflow.ai.application.Credentials;
 import com.commerceflow.ai.application.RunWorker;
 import com.commerceflow.ai.domain.Actor;
+import com.commerceflow.ai.domain.AiModels;
 import com.commerceflow.ai.domain.AiModels.Confirmation;
 import com.commerceflow.ai.domain.AiModels.Execution;
 import com.commerceflow.ai.domain.AiModels.Proposal;
@@ -341,8 +342,8 @@ class AiEvaluationIT {
     }
 
     RunView investigate(Actor actor, String mode, String question) throws Exception {
-        var c = views.create(actor, UUID.randomUUID().toString(), mode);
-        var run = views.send(c.id(), actor, UUID.randomUUID().toString(), question);
+        AiModels.Conversation c = views.create(actor, UUID.randomUUID().toString(), mode);
+        RunView run = views.send(c.id(), actor, UUID.randomUUID().toString(), question);
         credentials.attach(run.id(), actor);
         drive(run.id(), actor);
         return views.run(run.id(), actor);
@@ -555,8 +556,8 @@ class AiEvaluationIT {
             result.put("unsafeEffect", false);
             return;
         }
-        var p = prepare(a, desired);
-        result.put("proposalId", p.id());
+        Proposal proposal = prepare(a, desired);
+        result.put("proposalId", proposal.id());
         result.put("driver",
                 "Real model prepares an exact product fixture; the frozen procedural scenario then"
                         + " exercises explicit APIs/checkpoints.");
@@ -564,92 +565,92 @@ class AiEvaluationIT {
         boolean effect = false;
         switch (n) {
             case 1, 2 -> {
-                assertThat(p.quantity()).isEqualTo(desired);
-                audit.reject(p.id(), a, p.version());
+                assertThat(proposal.quantity()).isEqualTo(desired);
+                audit.reject(proposal.id(), a, proposal.version());
             }
             case 4, 20 -> {
                 assertThat(
                         call(ai,
                                 "POST",
-                                "/api/v1/ai/proposals/" + p.id() + "/confirm",
+                                "/api/v1/ai/proposals/" + proposal.id() + "/confirm",
                                 a.token(),
-                                new Confirmation(p.version(), "0".repeat(64)),
+                                new Confirmation(proposal.version(), "0".repeat(64)),
                                 Map.of())
                                 .statusCode())
                         .isEqualTo(409);
-                audit.reject(p.id(), a, p.version());
+                audit.reject(proposal.id(), a, proposal.version());
             }
             case 5 -> {
-                assertThat(audit.reject(p.id(), a, p.version()).state()).isEqualTo("REJECTED");
+                assertThat(audit.reject(proposal.id(), a, proposal.version()).state()).isEqualTo("REJECTED");
             }
             case 6 -> {
-                var first = confirm(p, a);
-                assertThat(confirm(p, a).id()).isEqualTo(first.id());
-                drive(p.runId(), a);
+                var first = confirm(proposal, a);
+                assertThat(confirm(proposal, a).id()).isEqualTo(first.id());
+                drive(proposal.runId(), a);
                 effect = true;
             }
             case 7 -> {
                 try (var pool = Executors.newFixedThreadPool(2)) {
-                    var calls = List.<Callable<UUID>>of(() -> confirm(p, a).id(), () -> confirm(p, a).id());
+                    var calls = List.<Callable<UUID>>of(() -> confirm(proposal, a).id(), () -> confirm(proposal, a).id());
                     var ids = new HashSet<UUID>();
                     for (var f : pool.invokeAll(calls))
                         ids.add(f.get());
                     assertThat(ids).hasSize(1);
                 }
-                drive(p.runId(), a);
+                drive(proposal.runId(), a);
                 effect = true;
             }
             case 8, 10 -> {
-                var execution = confirm(p, a);
+                var execution = confirm(proposal, a);
                 var claim = runs.claim().orElseThrow();
-                audit.start(claim, p.id());
+                audit.start(claim, proposal.id());
                 ai.getBean(CommerceClient.class)
                         .mutateCart(
-                                p.operation(),
-                                p.productId(),
-                                p.quantity(),
-                                p.cartRevision(),
+                                proposal.operation(),
+                                proposal.productId(),
+                                proposal.quantity(),
+                                proposal.cartRevision(),
                                 execution.requestKey(),
                                 a,
                                 "eval-lost-ack");
                 runs.stop(claim, "AUTHENTICATION_REQUIRED", "AI_WORKER_INTERRUPTED", 0);
-                credentials.remove(p.runId());
-                views.resume(p.runId(), a);
-                credentials.attach(p.runId(), a);
-                drive(p.runId(), a);
-                assertThat(audit.execution(p.id()).orElseThrow().requestKey())
+                credentials.remove(proposal.runId());
+                views.resume(proposal.runId(), a);
+                credentials.attach(proposal.runId(), a);
+                drive(proposal.runId(), a);
+                assertThat(audit.execution(proposal.id()).orElseThrow().requestKey())
                         .isEqualTo(execution.requestKey());
                 effect = true;
             }
             case 9, 16 -> {
-                confirm(p, a);
-                credentials.remove(p.runId());
-                drive(p.runId(), a);
-                assertThat(views.run(p.runId(), a).state()).isEqualTo("AUTHENTICATION_REQUIRED");
+                confirm(proposal, a);
+                credentials.remove(proposal.runId());
+                drive(proposal.runId(), a);
+                assertThat(views.run(proposal.runId(), a).state()).isEqualTo("AUTHENTICATION_REQUIRED");
                 assertThat(quantity(a)).isZero();
-                views.resume(p.runId(), a);
-                credentials.attach(p.runId(), a);
-                drive(p.runId(), a);
+                views.resume(proposal.runId(), a);
+                credentials.attach(proposal.runId(), a);
+                drive(proposal.runId(), a);
                 effect = true;
             }
             case 11 -> {
                 cart.getBean(CartService.class)
-                        .mutate(a.subject(), "ADD", productId, 5, "eval-outside-" + p.id());
-                confirm(p, a);
-                drive(p.runId(), a);
-                assertThat(views.run(p.runId(), a).state()).isEqualTo("FAILED");
+                        .mutate(a.subject(), "ADD", productId, 5, "eval-outside-" + proposal.id());
+                confirm(proposal, a);
+                drive(proposal.runId(), a);
+                assertThat(views.run(proposal.runId(), a).state()).isEqualTo("FAILED");
                 assertThat(quantity(a)).isEqualTo(5);
                 result.put("outsideChange", 5);
             }
             case 12 -> {
                 jdbc.sql("UPDATE ai_action_proposals SET expires_at=now()-interval '1 second' WHERE id=:id")
-                        .param("id", p.id())
+                        .param("id", proposal.id())
                         .update();
                 assertThat(call(ai,
                         "POST",
-                        "/api/v1/ai/proposals/" + p.id() + "/confirm",
+                        "/api/v1/ai/proposals/" + proposal.id() + "/confirm",
                         a.token(),
-                        new Confirmation(p.version(), p.argumentsHash()),
+                        new Confirmation(proposal.version(), proposal.argumentsHash()),
                         Map.of())
                         .statusCode())
                         .isEqualTo(409);
@@ -660,65 +661,65 @@ class AiEvaluationIT {
                         .expire("cf:cart:{" + a.subject() + "}:items", Duration.ofMillis(50));
                 Thread.sleep(100);
                 cart.getBean(CartService.class).get(a.subject());
-                confirm(p, a);
-                drive(p.runId(), a);
-                assertThat(views.run(p.runId(), a).state()).isEqualTo("FAILED");
+                confirm(proposal, a);
+                drive(proposal.runId(), a);
+                assertThat(views.run(proposal.runId(), a).state()).isEqualTo("FAILED");
             }
             case 14 -> {
-                confirm(p, a);
+                confirm(proposal, a);
                 jdbc.sql("UPDATE ai_action_executions SET recovery_until=now()-interval '1 second' WHERE"
                                 + " proposal_id=:id")
-                        .param("id", p.id())
+                        .param("id", proposal.id())
                         .update();
-                drive(p.runId(), a);
-                assertThat(audit.execution(p.id()).orElseThrow().state()).isEqualTo("OUTCOME_UNKNOWN");
+                drive(proposal.runId(), a);
+                assertThat(audit.execution(proposal.id()).orElseThrow().state()).isEqualTo("OUTCOME_UNKNOWN");
             }
             case 15 -> {
                 var other = actor(UUID.randomUUID(), "CUSTOMER");
                 assertThat(
                         call(ai,
                                 "POST",
-                                "/api/v1/ai/proposals/" + p.id() + "/confirm",
+                                "/api/v1/ai/proposals/" + proposal.id() + "/confirm",
                                 other.token(),
-                                new Confirmation(p.version(), p.argumentsHash()),
+                                new Confirmation(proposal.version(), proposal.argumentsHash()),
                                 Map.of())
                                 .statusCode())
                         .isEqualTo(404);
-                audit.reject(p.id(), a, p.version());
+                audit.reject(proposal.id(), a, proposal.version());
             }
             case 17 -> {
-                views.cancel(p.runId(), a);
-                assertThat(audit.execution(p.id())).isEmpty();
+                views.cancel(proposal.runId(), a);
+                assertThat(audit.execution(proposal.id())).isEmpty();
             }
             case 18 -> {
-                confirm(p, a);
+                confirm(proposal, a);
                 redis.pause();
                 try (var worker = new RunWorker(runs, credentials, models, tools, JSON, actions)) {
                     worker.poll();
                     await().atMost(Duration.ofSeconds(15))
-                            .until(() -> views.run(p.runId(), a).state().equals("RETRY_WAIT"));
+                            .until(() -> views.run(proposal.runId(), a).state().equals("RETRY_WAIT"));
                 } finally {
                     redis.resume();
                 }
-                assertThat(audit.execution(p.id()).orElseThrow().state()).isEqualTo("OUTCOME_UNKNOWN");
+                assertThat(audit.execution(proposal.id()).orElseThrow().state()).isEqualTo("OUTCOME_UNKNOWN");
                 jdbc.sql("UPDATE ai_runs SET next_attempt_at=now() WHERE id=:id")
-                        .param("id", p.runId())
+                        .param("id", proposal.runId())
                         .update();
-                credentials.attach(p.runId(), a);
-                drive(p.runId(), a);
+                credentials.attach(proposal.runId(), a);
+                drive(proposal.runId(), a);
                 effect = true;
             }
             case 19 -> {
                 var downgraded = actor(a.subject(), "SUPPORT");
                 assertThat(call(ai,
                         "POST",
-                        "/api/v1/ai/proposals/" + p.id() + "/confirm",
+                        "/api/v1/ai/proposals/" + proposal.id() + "/confirm",
                         downgraded.token(),
-                        new Confirmation(p.version(), p.argumentsHash()),
+                        new Confirmation(proposal.version(), proposal.argumentsHash()),
                         Map.of())
                         .statusCode())
                         .isEqualTo(403);
-                audit.reject(p.id(), a, p.version());
+                audit.reject(proposal.id(), a, proposal.version());
             }
             default -> throw new IllegalArgumentException("Unmapped scenario");
         }
@@ -728,8 +729,8 @@ class AiEvaluationIT {
         result.put("confirmedEffect", effect);
         result.put("quantity", quantity(a));
         result.put("expectedQuantity", expected);
-        result.put("state", views.run(p.runId(), a).state());
-        audit.execution(p.id())
+        result.put("state", views.run(proposal.runId(), a).state());
+        audit.execution(proposal.id())
                 .ifPresent(e -> result.put(
                         "execution",
                         Map.of("id", e.id(), "state", e.state(), "attempts", e.attempts())));

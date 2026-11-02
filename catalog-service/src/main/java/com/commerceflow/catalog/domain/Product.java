@@ -34,8 +34,7 @@ public class Product {
     private String currency;
     private boolean active;
 
-    // Hibernate increments this on flush and rejects a competing update against the same previous
-    // version.
+    // Hibernate increments this on flush and rejects a competing update against the same previous version.
     @Version
     private Long version;
     private Instant createdAt;

@@ -5,6 +5,7 @@
 package com.commerceflow.catalog.application;
 
 import com.commerceflow.contracts.CheckoutEvents.ProductChanged;
+import com.commerceflow.contracts.EventEnvelope;
 import com.commerceflow.contracts.Topics;
 import com.commerceflow.support.EventCodec;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -31,10 +32,10 @@ public class CacheInvalidationConsumer {
     public void handle(ConsumerRecord<String, String> record) {
         // Decode the wire envelope before applying its source-version invalidation; malformed delivery
         // follows Kafka retry policy.
-        var event = codec.decode(record);
+        EventEnvelope<?> event = codec.decode(record);
         if (!event.eventType().equals("ProductChanged"))
             throw new IllegalArgumentException("Unexpected catalog event");
-        var product = codec.payload(event, ProductChanged.class);
+        ProductChanged product = codec.payload(event, ProductChanged.class);
         if (!cache.invalidate(product.id(), product.version()))
             throw new IllegalStateException("Cache invalidation unavailable");
     }

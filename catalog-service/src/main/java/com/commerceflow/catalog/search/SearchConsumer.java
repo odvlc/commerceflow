@@ -5,6 +5,7 @@
 package com.commerceflow.catalog.search;
 
 import com.commerceflow.contracts.CheckoutEvents.ProductChanged;
+import com.commerceflow.contracts.EventEnvelope;
 import com.commerceflow.contracts.Topics;
 import com.commerceflow.support.EventCodec;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -31,10 +32,10 @@ public class SearchConsumer {
     public void handle(ConsumerRecord<String, String> record) {
         // Version checks in the index write make repeated or delayed catalog events safe without a
         // shared service database.
-        var event = codec.decode(record);
+        EventEnvelope<?> event = codec.decode(record);
         if (!event.eventType().equals("ProductChanged"))
             throw new IllegalArgumentException("Unexpected catalog event");
-        var product = codec.payload(event, ProductChanged.class);
+        ProductChanged product = codec.payload(event, ProductChanged.class);
         if (!product.id().equals(event.aggregateId()))
             throw new IllegalArgumentException("Product id differs from aggregate");
         search.index(product);

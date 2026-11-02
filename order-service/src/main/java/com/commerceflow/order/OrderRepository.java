@@ -124,10 +124,13 @@ public class OrderRepository {
     }
 
     public OrderView view(Row order) {
-        var items = jdbc.sql("SELECT product_id,quantity,unit_price FROM order_items WHERE order_id=:id ORDER BY"
-                        + " product_id")
+        var items = jdbc.sql("SELECT product_id,quantity,unit_price FROM order_items"
+                        + " WHERE order_id=:id ORDER BY product_id")
                 .param("id", order.id())
-                .query((rs, n) -> new Line(rs.getObject(1, UUID.class), rs.getInt(2), rs.getBigDecimal(3)))
+                .query((rs, n) -> new Line(
+                        rs.getObject(1, UUID.class),
+                        rs.getInt(2),
+                        rs.getBigDecimal(3)))
                 .list();
         return new OrderView(
                 order.id(),
